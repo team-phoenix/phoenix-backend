@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/input">
+        <file>gamecontrollerdb.txt</file>
+    </qresource>
+</RCC>
