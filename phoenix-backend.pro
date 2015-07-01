@@ -77,5 +77,12 @@ CONFIG += c++11
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
 
-# Default rules for deployment.
-include(deployment.pri)
+# Check if the config file exists
+!exists( ../common.pri) {
+    warning( "Didn't find common.pri. Defaulting to deployment.pri, it's still good!" )
+    include( deployment.pri )
+} else {
+    include( ../common.pri )
+}
+
+
