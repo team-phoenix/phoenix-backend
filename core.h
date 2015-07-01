@@ -9,10 +9,6 @@
 #include <QMap>
 #include <QLibrary>
 #include <QObject>
-#include <QMutex>
-#include <QMutexLocker>
-
-#include <atomic>
 
 #include "libretro.h"
 #include "logging.h"
@@ -122,13 +118,10 @@ class Core: public QObject {
         QString qmlSaveDirectory;
         QString qmlSystemDirectory;
 
-
     public:
 
         Core();
         ~Core();
-
-        QMutex inputMutex;
 
         InputManager *inputManager;
 
