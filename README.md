@@ -3,6 +3,15 @@ A Libretro frontend encapsulated in a QML object.
 
 This is the backend repositiory for the [**Phoenix**](https://github.com/team-phoenix/Phoenix) frontend.
 
+## Add to Project
+```c++
+    #In YOUR_PROJECT_NAME.pro
+    
+    INCLUDEPATH += ../path/to/phoenix-backend
+    
+    LIBS += -L../path/to/phoenix-backend -lphoenix-backend
+```
+
 ###Example Usage
 
 ####From C++
