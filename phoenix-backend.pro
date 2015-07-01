@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-TARGET = Phoenix
+TARGET = phoenix-backend
 
 QT += qml quick widgets multimedia concurrent
 
