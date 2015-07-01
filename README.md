@@ -4,10 +4,22 @@ A Libretro frontend encapsulated in a QML object.
 This is the backend repositiory for the [**Phoenix**](https://github.com/team-phoenix/Phoenix) frontend.
 
 ## Add to Project
+
+####Dependencies
+1. [libsamplerate](http://www.mega-nerd.com/SRC/), (optional if only using the **InputManager**)
+2. [SDL2](https://www.libsdl.org/download-2.0.php), (optional if only using the **VideoItem**)
 ```c++
     #In YOUR_PROJECT_NAME.pro
     
     INCLUDEPATH += ../path/to/phoenix-backend
+    
+    #In order to use the video renderer, you will need to also include libsamplerate
+    LIBS += -lsamplerate
+    
+    #To use the input manager, you will need to include SDL2
+    INCLUDEPATH += /SDL2/include
+    LIBS += /SDL2/lib
+    LIBS += -lSDL2
     
     LIBS += -L../path/to/phoenix-backend -lphoenix-backend
 ```
