@@ -57,7 +57,6 @@ win32 {
         depends.files += C:/SDL2/bin/SDL2.dll
     }
     INSTALLS += depends
-    RC_FILE = phoenix.rc
 }
 
 else {
