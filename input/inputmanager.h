@@ -19,6 +19,9 @@ class InputManager : public QObject {
         Q_PROPERTY( bool gamepadControlsFrontend READ gamepadControlsFrontend
                     WRITE setGamepadControlsFrontend NOTIFY gamepadControlsFrontendChanged )
 
+        Q_PROPERTY( int count READ count NOTIFY countChanged )
+
+
     public:
 
         explicit InputManager( QObject *parent = 0 );
@@ -27,6 +30,7 @@ class InputManager : public QObject {
         // One keyboard is reserved for being always active.
         Keyboard *keyboard;
 
+        int count() const;
         int size() const;
 
         InputDevice *at( int index );
@@ -58,12 +62,15 @@ class InputManager : public QObject {
         // Iterate through, and expose inputDevices to QML.
         void emitConnectedDevices();
 
+        InputDevice *get( int index );
+
     signals:
 
         void gamepadControlsFrontendChanged();
         void device( InputDevice *device );
-        void deviceAdded( InputDevice *device );
+        void deviceAdded( InputDevice *device  );
         void incomingEvent( InputDeviceEvent *event );
+        void countChanged();
 
     private:
 

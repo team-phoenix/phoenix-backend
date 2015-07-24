@@ -25,12 +25,12 @@ class Keyboard : public InputDevice {
         InputDeviceMapping &mapping();
 
         bool loadMapping() override;
-        void saveMapping() override;
 
     public slots:
 
         void insert( const int &event, int16_t pressed );
-        void setMapping( const QVariantMap mapping ) override;
+        void setMappings( const QString key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override;
+        void saveMappings() override;
 
     private:
 

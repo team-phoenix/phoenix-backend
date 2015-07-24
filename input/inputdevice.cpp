@@ -29,7 +29,8 @@ InputDevice::InputDevice( const InputDevice::LibretroType type, const QString na
     deviceType( type ),
     deviceName( name ),
     qmlEditMode( false ),
-    qmlResetMapping( false ) {
+    qmlResetMapping( false ),
+    qmlPort( 0 ) {
     setRetroButtonCount( 15 );
 }
 
@@ -75,6 +76,10 @@ InputStateMap *InputDevice::states() {
     return deviceStates.get();
 }
 
+int InputDevice::port() const {
+    return qmlPort;
+}
+
 void InputDevice::setName( const QString name ) {
     deviceName = name;
     emit nameChanged();
@@ -90,12 +95,13 @@ void InputDevice::setResetMapping( const bool reset ) {
     emit resetMappingChanged();
 }
 
-void InputDevice::setType( const InputDevice::LibretroType type ) {
-    deviceType = type;
+void InputDevice::setPort(const int port) {
+    qmlPort = port;
+    emit portChanged();
 }
 
-void InputDevice::saveMapping() {
-    return;
+void InputDevice::setType( const InputDevice::LibretroType type ) {
+    deviceType = type;
 }
 
 bool InputDevice::loadMapping() {
@@ -103,7 +109,7 @@ bool InputDevice::loadMapping() {
 }
 
 void InputDevice::selfDestruct() {
-    saveMapping();
+    saveMappings();
     delete this;
 }
 
@@ -127,11 +133,6 @@ void InputDevice::insert( const InputDeviceEvent::Event &value, const int16_t &s
 
     deviceStates->insert( value, state );
     mutex.unlock();
-}
-
-void InputDevice::setMapping( const QVariantMap mapping ) {
-    Q_UNUSED( mapping );
-    return;
 }
 
 //

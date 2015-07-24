@@ -36,7 +36,7 @@ class Joystick : public InputDevice {
         SDL_Joystick *sdlJoystick() const;
         SDL_JoystickID instanceID() const;
 
-        QHash< QString, int > &sdlMapping();
+        QVariantMap &sdlMapping();
 
         void setSDLIndex( const int index );
 
@@ -53,15 +53,14 @@ class Joystick : public InputDevice {
         void close();
 
         bool loadMapping() override;
-        void saveMapping() override;
+        void saveMappings() override;
 
-        void emitEditModeEvent( int event, int state );
+        void emitEditModeEvent( int event, int state, const InputDeviceEvent::EditEventType type );
         void emitInputDeviceEvent( InputDeviceEvent::Event event, int state );
 
     public slots:
 
-        void setMapping( QVariantMap mapping ) override;
-
+        void setMappings( const QString key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
 
     private:
 
@@ -85,11 +84,13 @@ class Joystick : public InputDevice {
         QVector<int> mSDLAxisVector;
 
         SDL_GameController *device;
-        QHash<QString, int> sdlControllerMapping;
 
-        void loadSDLMapping( SDL_GameController *device );
+        bool loadSDLMapping( SDL_GameController *device );
 
         bool hasDigitalTriggers( const QString &guid );
+
+        void fillSDLArrays();
+        void fillSDLArrays( const QString &key, const int &numberValue );
 
 };
 

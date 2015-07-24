@@ -41,6 +41,11 @@ InputManager::~InputManager() {
 
 }
 
+int InputManager::count() const
+{
+    return size();
+}
+
 int InputManager::size() const {
     return deviceList.size();
 }
@@ -136,7 +141,9 @@ void InputManager::emitConnectedDevices() {
 
     emit deviceAdded( keyboard );
 
-    for( auto inputDevice : deviceList ) {
+    for( int i = 0; i < deviceList.size(); ++i ) {
+
+        auto *inputDevice = deviceList.at( i );
 
         if( inputDevice ) {
             emit deviceAdded( inputDevice );
@@ -144,5 +151,9 @@ void InputManager::emitConnectedDevices() {
 
     }
 
+}
+
+InputDevice *InputManager::get(int index) {
+    return at( index );
 }
 

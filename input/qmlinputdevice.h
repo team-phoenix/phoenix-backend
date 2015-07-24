@@ -59,6 +59,8 @@ class QMLInputDevice : public InputDevice {
         bool leftTrigger() const;
         bool rightTrigger() const;
 
+
+
     public slots:
 
         void insert( const InputDeviceEvent::Event &value, const int &state );
@@ -124,6 +126,15 @@ class QMLInputDevice : public InputDevice {
         void setRightShoulder( const bool &state );
         void setLeftTrigger( const bool &state );
         void setRightTrigger( const bool &state );
+
+        void saveMappings()  {
+
+        }
+        void setMappings( const QString key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override {
+            Q_UNUSED( key );
+            Q_UNUSED( mapping );
+            Q_UNUSED( type );
+        }
 
 };
 

@@ -31,6 +31,8 @@ using InputStateMap = QHash<InputDeviceEvent::Event, int16_t>;
 class InputDevice : public QObject {
         Q_OBJECT
         Q_PROPERTY( QString name READ name WRITE setName NOTIFY nameChanged )
+        Q_PROPERTY( int port READ port WRITE setPort NOTIFY portChanged )
+
         Q_PROPERTY( int retroButtonCount READ retroButtonCount NOTIFY retroButtonCountChanged )
         Q_PROPERTY( bool editMode READ editMode WRITE setEditMode NOTIFY editModeChanged )
         Q_PROPERTY( bool resetMapping READ resetMapping WRITE setResetMapping NOTIFY resetMappingChanged )
@@ -66,21 +68,26 @@ class InputDevice : public QObject {
         bool resetMapping() const;// QML
         LibretroType type() const;
         InputStateMap *states();
+        int port() const;
 
         // Setters
         void setName( const QString name ); // QML
         void setEditMode( const bool edit ); // QML
         void setResetMapping( const bool reset ); // QML
+        void setPort( const int port ); // QML
 
         void setType( const LibretroType type );
-
-        virtual void saveMapping();
 
         virtual bool loadMapping();
 
         // This is the only you we should be deleting the InputDevice.
         // This function calls saveMapping() before it deletes itself.
         void selfDestruct();
+
+        QVariantMap &mappingRef() {
+            return qmlDeviceMapping;
+        }
+
 
     public slots:
 
@@ -91,7 +98,24 @@ class InputDevice : public QObject {
         virtual void insert( const InputDeviceEvent::Event &value, const int16_t &state );
 
         // Set the device -> SDL2 gamepad mapping
-        virtual void setMapping( const QVariantMap mapping );
+        virtual void setMappings( const QString key
+                                  , const QVariant mapping
+                                  , const InputDeviceEvent::EditEventType ) = 0;
+
+        bool mappingCollision( const QString key, const QVariant mapping ) {
+            Q_UNUSED( key );
+            Q_UNUSED( mapping );
+            return false;
+        }
+
+        // This should only be called and used by QML.
+        QVariantMap mapping() {
+            return qmlDeviceMapping;
+        }
+
+        virtual void saveMappings() = 0;
+
+
 
     protected:
 
@@ -104,6 +128,7 @@ class InputDevice : public QObject {
         void nameChanged(); // QML
         void retroButtonCountChanged(); // QML
         void resetMappingChanged(); // QML
+        void portChanged(); // QML
 
         // The inputDeviceEvent signal is used to connect to the QMLInputDevice
         // and shouldn't be connected to anything else.
@@ -112,7 +137,7 @@ class InputDevice : public QObject {
         // The editModeEvent signal is used for changing the InputDevice's internal button map.
         // This should be connected to any time the user wants to change the mapping.
         // After this mapping has been edited, this signal can be disconnected.
-        void editModeEvent( int event, int state ); // QML
+        void editModeEvent( const int event, const int state, const InputDeviceEvent::EditEventType type ); // QML
 
     private:
 
@@ -132,6 +157,9 @@ class InputDevice : public QObject {
         int qmlRetroButtonCount;
         bool qmlEditMode;
         bool qmlResetMapping;
+        int qmlPort;
+
+        QVariantMap qmlDeviceMapping;
 
 };
 

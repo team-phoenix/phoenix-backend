@@ -37,12 +37,19 @@ class InputDeviceEvent : public QObject {
 
         Q_ENUMS( Event )
 
+        enum class EditEventType {
+            ButtonEvent = 0,
+            AxisEvent,
+        };
+
+
         static QString toString( const InputDeviceEvent::Event &event );
 
         static Event toEvent( const QString button );
 
 };
 
+Q_DECLARE_METATYPE( InputDeviceEvent::EditEventType )
 Q_DECLARE_METATYPE( InputDeviceEvent::Event )
 
 #endif // INPUTDEVICEEVENT
