@@ -98,7 +98,7 @@ class InputDevice : public QObject {
         virtual void insert( const InputDeviceEvent::Event &value, const int16_t &state );
 
         // Set the device -> SDL2 gamepad mapping
-        virtual void setMappings( const QString key
+        virtual void setMappings( const QVariant key
                                   , const QVariant mapping
                                   , const InputDeviceEvent::EditEventType ) = 0;
 
@@ -114,7 +114,6 @@ class InputDevice : public QObject {
         }
 
         virtual void saveMappings() = 0;
-
 
 
     protected:
@@ -137,7 +136,7 @@ class InputDevice : public QObject {
         // The editModeEvent signal is used for changing the InputDevice's internal button map.
         // This should be connected to any time the user wants to change the mapping.
         // After this mapping has been edited, this signal can be disconnected.
-        void editModeEvent( const int event, const int state, const InputDeviceEvent::EditEventType type ); // QML
+        void editModeEvent( const QVariant event, const int state, const InputDeviceEvent::EditEventType type ); // QML
 
     private:
 

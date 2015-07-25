@@ -8,6 +8,7 @@ InputManager::InputManager( QObject *parent )
       keyboard( new Keyboard() ),
       sdlEventLoop( this ) {
 
+
     keyboard->loadMapping();
 
     connect( &sdlEventLoop, &SDLEventLoop::deviceConnected, this, &InputManager::insert );
@@ -41,8 +42,7 @@ InputManager::~InputManager() {
 
 }
 
-int InputManager::count() const
-{
+int InputManager::count() const {
     return size();
 }
 
@@ -69,8 +69,7 @@ void InputManager::setGamepadControlsFrontend( const bool control ) {
     emit gamepadControlsFrontendChanged();
 }
 
-void InputManager::registerTypes()
-{
+void InputManager::registerTypes() {
     qmlRegisterType<InputManager>( "vg.phoenix.backend", 1, 0, "InputManager" );
     qmlRegisterType<InputDeviceEvent>( "vg.phoenix.backend", 1, 0, "InputDeviceEvent" );
     qmlRegisterType<QMLInputDevice>( "vg.phoenix.backend", 1, 0, "QMLInputDevice" );
@@ -83,11 +82,13 @@ void InputManager::insert( InputDevice *device ) {
 
     device->loadMapping();
     mutex.lock();
-    auto *joystick = static_cast<Joystick *>( device );
+    auto *joystick = device;
 
-    deviceList[ joystick->sdlIndex() ] = joystick;
+    deviceList[ joystick->port() ] = joystick;
 
     mutex.unlock();
+
+    mDeviceNameMapping.insert( joystick->name(), joystick->port() );
     emit deviceAdded( joystick );
 
 }
@@ -153,7 +154,13 @@ void InputManager::emitConnectedDevices() {
 
 }
 
-InputDevice *InputManager::get(int index) {
-    return at( index );
+InputDevice *InputManager::get( const QString name ) {
+    if( keyboard->name() == name ) {
+        return keyboard;
+    }
+
+    auto port = mDeviceNameMapping.value( name, -1 );
+    Q_ASSERT( port != -1 );
+    return at( port );
 }
 

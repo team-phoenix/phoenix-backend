@@ -29,14 +29,14 @@ class Keyboard : public InputDevice {
     public slots:
 
         void insert( const int &event, int16_t pressed );
-        void setMappings( const QString key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override;
+        void setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override;
         void saveMappings() override;
 
     private:
 
         void loadDefaultMapping();
 
-        InputDeviceMapping deviceMapping;
+        InputDeviceMapping mDeviceMapping;
 
 };
 

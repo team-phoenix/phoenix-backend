@@ -9,7 +9,7 @@ Joystick::Joystick( const int joystickIndex, QObject *parent )
       mSDLButtonVector( SDL_CONTROLLER_BUTTON_MAX, SDL_CONTROLLER_BUTTON_INVALID ),
       mSDLAxisVector( SDL_CONTROLLER_AXIS_MAX, SDL_CONTROLLER_BUTTON_INVALID ) {
 
-    setSDLIndex( joystickIndex );
+    setPort( joystickIndex );
     device = SDL_GameControllerOpen( joystickIndex );
     setName( SDL_GameControllerName( device ) );
     qmlInstanceID = SDL_JoystickInstanceID( SDL_GameControllerGetJoystick( device ) );
@@ -66,10 +66,6 @@ int Joystick::hatCount() const {
 
 int Joystick::axisCount() const {
     return qmlAxisCount;
-}
-
-int Joystick::sdlIndex() const {
-    return qmlSdlIndex;
 }
 
 qreal Joystick::deadZone() const {
@@ -137,11 +133,6 @@ SDL_JoystickID Joystick::instanceID() const {
     return qmlInstanceID;
 }
 
-void Joystick::setSDLIndex( const int index ) {
-    qmlSdlIndex = index;
-    setPort( index );
-}
-
 void Joystick::close() {
     Q_ASSERT_X( device, "InputDevice" , "the device was deleted by an external source" );
     SDL_GameControllerClose( device );
@@ -191,10 +182,10 @@ void Joystick::fillSDLArrays( const QString &key, const int &numberValue ) {
     }
 }
 
-void Joystick::setMappings( const QString key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
-    mappingRef().insert( key, newMapping );
+void Joystick::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
+    mappingRef().insert( key.toString(), newMapping );
 
-    auto byteArray = key.toLocal8Bit();
+    auto byteArray = key.toString().toLocal8Bit();
 
     if( type == InputDeviceEvent::EditEventType::ButtonEvent ) {
         mSDLButtonVector[ SDL_GameControllerGetButtonFromString( byteArray.constData() ) ] = newMapping.toInt();

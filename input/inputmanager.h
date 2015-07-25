@@ -5,6 +5,7 @@
 #include <QList>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QHash>
 
 #include "input/sdleventloop.h"
 #include "input/inputdevice.h"
@@ -62,13 +63,13 @@ class InputManager : public QObject {
         // Iterate through, and expose inputDevices to QML.
         void emitConnectedDevices();
 
-        InputDevice *get( int index );
+        InputDevice *get( const QString name );
 
     signals:
 
         void gamepadControlsFrontendChanged();
         void device( InputDevice *device );
-        void deviceAdded( InputDevice *device  );
+        void deviceAdded( InputDevice *device );
         void incomingEvent( InputDeviceEvent *event );
         void countChanged();
 
@@ -79,6 +80,8 @@ class InputManager : public QObject {
         QList<InputDevice *> deviceList;
 
         SDLEventLoop sdlEventLoop;
+
+        QHash<QString, int> mDeviceNameMapping;
 
 
 };

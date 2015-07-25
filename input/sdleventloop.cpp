@@ -220,7 +220,7 @@ void SDLEventLoop::pollEvents() {
 
                     if( joystick->instanceID() == sdlEvent.cdevice.which ) {
 
-                        emit deviceRemoved( joystick->sdlIndex() );
+                        emit deviceRemoved( joystick->port() );
                         sdlDeviceList[ index ] = nullptr;
                         deviceLocationMap.remove( sdlEvent.cbutton.which );
                         forceEventsHandling = true;

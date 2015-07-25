@@ -22,7 +22,7 @@ QString InputDeviceEvent::toString( const InputDeviceEvent::Event &event ) {
             return "back";
 
         case Up:
-            return "dup";
+            return "dpup";
 
         case Down:
             return "dpdown";

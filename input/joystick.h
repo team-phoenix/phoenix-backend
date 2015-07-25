@@ -24,7 +24,6 @@ class Joystick : public InputDevice {
         int ballCount() const;
         int hatCount() const;
         int axisCount() const;
-        int sdlIndex() const;
         qreal deadZone() const;
         bool analogMode() const;
         bool digitalTriggers() const;
@@ -37,8 +36,6 @@ class Joystick : public InputDevice {
         SDL_JoystickID instanceID() const;
 
         QVariantMap &sdlMapping();
-
-        void setSDLIndex( const int index );
 
         // This value will be set to 'true' if the
         // core detects a libretro core that
@@ -60,7 +57,7 @@ class Joystick : public InputDevice {
 
     public slots:
 
-        void setMappings( const QString key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
+        void setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
 
     private:
 
@@ -68,7 +65,6 @@ class Joystick : public InputDevice {
         QString qmlGuid;
         QString qmlMappingString;
         int qmlInstanceID;
-        int qmlSdlIndex;
         int qmlButtonCount;
         int qmlAxisCount;
         int qmlHatCount;
