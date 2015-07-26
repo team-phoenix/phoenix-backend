@@ -65,6 +65,8 @@ class InputManager : public QObject {
 
         InputDevice *get( const QString name );
 
+        bool eventFilter( QObject *object, QEvent *event );
+
     signals:
 
         void gamepadControlsFrontendChanged();

@@ -3,11 +3,22 @@
 #include "qmlinputdevice.h"
 #include <qqml.h>
 
+#include <QApplication>
+#include <QWindow>
+
 InputManager::InputManager( QObject *parent )
     : QObject( parent ),
       keyboard( new Keyboard() ),
       sdlEventLoop( this ) {
 
+
+    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
+
+    auto *window =  QApplication::topLevelWindows().at( 0 );
+
+    Q_ASSERT( window );
+
+    window->installEventFilter( this );
 
     keyboard->loadMapping();
 
@@ -162,5 +173,17 @@ InputDevice *InputManager::get( const QString name ) {
     auto port = mDeviceNameMapping.value( name, -1 );
     Q_ASSERT( port != -1 );
     return at( port );
+}
+
+bool InputManager::eventFilter( QObject *object, QEvent *event ) {
+
+    if( event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease ) {
+        auto *keyEvent = static_cast<QKeyEvent *>( event );
+        keyboard->insert( keyEvent->key(), event->type() == QEvent::KeyPress );
+        return true;
+    }
+
+    return QObject::eventFilter( object, event );
+
 }
 

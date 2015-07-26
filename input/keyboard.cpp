@@ -46,9 +46,8 @@ void Keyboard::loadDefaultMapping() {
 
 void Keyboard::insert( const int &event, int16_t pressed ) {
 
-    qDebug() << editMode();
     if( editMode() ) {
-        emit editModeEvent( QKeySequence( event ).toString( QKeySequence::NativeText ), pressed, InputDeviceEvent::EditEventType::ButtonEvent );
+        emit editModeEvent( event, pressed, InputDeviceEvent::EditEventType::ButtonEvent );
         return;
     }
 
@@ -61,41 +60,19 @@ void Keyboard::insert( const int &event, int16_t pressed ) {
 }
 
 void Keyboard::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
-    Q_UNUSED( newMapping );
-    Q_UNUSED( key );
     Q_UNUSED( type );
 
-    //åmDeviceMapping.insert( mappingRef().insert(  ) );
+    auto oldValue = mappingRef().value( key.toString() ).toInt();
 
+    mDeviceMapping.remove( oldValue );
+
+    auto newValue = InputDeviceEvent::toEvent( key.toString() );
+
+    Q_ASSERT( newValue != InputDeviceEvent::Unknown );
+
+    mDeviceMapping.insert( newMapping.toInt(), newValue );
 
     mappingRef().insert( key.toString(), QKeySequence( newMapping.toInt() ).toString( QKeySequence::NativeText ) );
-    /*
-    for ( auto &newKey : newMapping.keys() ) {
-        auto newValue = newMapping.value( newKey ).toInt();
-
-        bool foundCollision = false;
-        for ( auto &oldKey : mapping().keys() ) {
-            auto oldValue = InputDeviceEvent::toString( mapping().value( oldKey ) );
-
-
-            if ( oldValue == newKey ) {
-                foundCollision = true;
-                qDebug() << name() << oldValue  << newKey  << ":" << oldKey << "==>" << QString::number( newValue );
-
-                mapping().remove( oldKey );
-                mapping().insert( QString::number( newValue ), InputDeviceEvent::toEvent( newKey ) );
-                break;
-            }
-        }
-
-        if ( !foundCollision ) {
-            qDebug() << "no collision " << QString::number( newValue ) << mapping()[ newV ];
-            mapping().insert( QString::number( newValue ), InputDeviceEvent::toEvent( newKey )  );
-        }
-
-    }
-    */
-    // To do...
 
 }
 
