@@ -33,8 +33,6 @@ class InputManager : public QObject {
         int count() const;
         int size() const;
 
-        InputDevice *at( int index );
-
         void pollStates();
 
         bool gamepadControlsFrontend() const;
@@ -61,6 +59,8 @@ class InputManager : public QObject {
 
         // Iterate through, and expose inputDevices to QML.
         void emitConnectedDevices();
+
+        InputDevice *at( int index );
 
         InputDevice *get( const QString name );
 
