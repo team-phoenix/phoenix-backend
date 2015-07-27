@@ -5,6 +5,7 @@
 
 #include <QApplication>
 #include <QWindow>
+#include <QQmlEngine>
 
 InputManager::InputManager( QObject *parent )
     : QObject( parent ),
@@ -150,6 +151,7 @@ void InputManager::swap( const int index1, const int index2 ) {
 
 void InputManager::emitConnectedDevices() {
 
+    QQmlEngine::setObjectOwnership( keyboard, QQmlEngine::CppOwnership );
     emit deviceAdded( keyboard );
 
     for( int i = 0; i < deviceList.size(); ++i ) {
@@ -157,6 +159,7 @@ void InputManager::emitConnectedDevices() {
         auto *inputDevice = deviceList.at( i );
 
         if( inputDevice ) {
+            QQmlEngine::setObjectOwnership( inputDevice, QQmlEngine::CppOwnership );
             emit deviceAdded( inputDevice );
         }
 
