@@ -98,7 +98,7 @@ class InputDevice : public QObject {
         virtual void insert( const InputDeviceEvent::Event &value, const int16_t &state );
 
         // Set the device -> SDL2 gamepad mapping
-        virtual void setMappings( const QVariant key
+        virtual bool setMappings( const QVariant key
                                   , const QVariant mapping
                                   , const InputDeviceEvent::EditEventType ) = 0;
 

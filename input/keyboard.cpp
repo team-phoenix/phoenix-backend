@@ -59,64 +59,104 @@ void Keyboard::insert( const int &event, int16_t pressed ) {
 
 }
 
-void Keyboard::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
+bool Keyboard::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
     Q_UNUSED( type );
 
-    auto oldValue = mappingRef().value( key.toString() ).toInt();
-
-    mDeviceMapping.remove( oldValue );
-
     auto newValue = InputDeviceEvent::toEvent( key.toString() );
+    auto intMapping = newMapping.toInt();
+
 
     Q_ASSERT( newValue != InputDeviceEvent::Unknown );
 
-    mDeviceMapping.insert( newMapping.toInt(), newValue );
+    bool collision = false;
 
-    mappingRef().insert( key.toString(), QKeySequence( newMapping.toInt() ).toString( QKeySequence::NativeText ) );
+    for( auto &key : mDeviceMapping.keys() ) {
+        if( key == intMapping ) {
+            collision = true;
+            break;
+        }
+    }
+
+    if( !collision ) {
+        auto oldSequence = QKeySequence( mappingRef().value( key.toString() ).toString() );
+
+        Q_ASSERT( oldSequence.count() == 1 );
+
+        auto oldValue = oldSequence[ 0 ];
+
+        Q_ASSERT( oldValue > 0 );
+
+        mDeviceMapping.remove( oldValue );
+        mDeviceMapping.insert( intMapping, newValue );
+        mappingRef().insert( key.toString(), QKeySequence( intMapping ).toString( QKeySequence::NativeText ) );
+    }
+
+    return !collision;
 
 }
 
 bool Keyboard::loadMapping() {
 
-    qDebug() << "LOAD MAPPING";
-    loadDefaultMapping();
-    return true;
-    /*
     QSettings settings;
 
-    if( !QFile::exists( settings.fileName() ) ) {
-        return false;
-    }
+    if( QFile::exists( settings.fileName() ) ) {
 
-    settings.beginGroup( name() );
+        settings.beginGroup( QStringLiteral( "Input" ) );
+        auto mapping = settings.value( name() );
 
-    for( int i = 0; i < InputDeviceEvent::Unknown; ++i ) {
+        auto splitValues = mapping.toString().split( "," );
 
-        auto event = static_cast<InputDeviceEvent::Event>( i );
-        auto eventString = InputDeviceEvent::toString( event );
+        for( auto &subMapping : splitValues ) {
+            auto valueList = subMapping.split( ":" );
 
-        auto key = settings.value( eventString );
+            if( valueList.size() < 2 ) {
+                continue;
+            }
 
-        if( key.isValid() ) {
-            mDeviceMapping.insert( key.toInt(), event );
-            mappingRef().insert( InputDeviceEvent::toString( event ), key );
+            auto eventString = valueList.at( 0 );
+            auto mapping = valueList.at( 1 ).toInt();
+
+            mDeviceMapping.insert( mapping, InputDeviceEvent::toEvent( eventString ) );
+            mappingRef().insert( eventString, QKeySequence( mapping ).toString( QKeySequence::NativeText ) );
+
         }
 
+        if( mDeviceMapping.isEmpty() ) {
+            loadDefaultMapping();
+        }
+
+    } else {
+        loadDefaultMapping();
     }
 
-    return !mDeviceMapping.isEmpty();*/
+    return true;
 
 }
 
 void Keyboard::saveMappings() {
 
+    Q_ASSERT( !mDeviceMapping.isEmpty() );
+
+    if( mDeviceMapping.size() == 0 ) {
+        return;
+    }
+
     QSettings settings;
-    settings.beginGroup( name() );
+    settings.beginGroup( QStringLiteral( "Input" ) );
+
+    QString mappingString = name() + QStringLiteral( "," );
+
 
     for( auto &key : mDeviceMapping.keys() ) {
         auto value = mDeviceMapping.value( key );
-        settings.setValue( InputDeviceEvent::toString( value ), key );
+        mappingString += InputDeviceEvent::toString( value ) + QStringLiteral( ":" )
+                         + QString::number( key ) + QStringLiteral( "," );
+
     }
+
+    settings.setValue( name(), mappingString );
+
+    qDebug() << "Keyboard mapping: " << mappingString;
 
     qDebug() << settings.fileName();
 

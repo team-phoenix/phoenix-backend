@@ -77,7 +77,7 @@ InputDeviceEvent::Event InputDeviceEvent::toEvent( const QString button ) {
         return Event::Start;
     }
 
-    else if( button == "select" ) {
+    else if( button == "back" ) {
         return Event::Select;
     }
 

@@ -22,7 +22,6 @@ class InputManager : public QObject {
 
         Q_PROPERTY( int count READ count NOTIFY countChanged )
 
-
     public:
 
         explicit InputManager( QObject *parent = 0 );

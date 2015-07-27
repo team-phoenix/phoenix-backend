@@ -130,10 +130,12 @@ class QMLInputDevice : public InputDevice {
         void saveMappings()  {
 
         }
-        void setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override {
+        bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override {
             Q_UNUSED( key );
             Q_UNUSED( mapping );
             Q_UNUSED( type );
+
+            return false;
         }
 
 };

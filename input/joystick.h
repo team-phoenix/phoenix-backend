@@ -57,7 +57,7 @@ class Joystick : public InputDevice {
 
     public slots:
 
-        void setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
+        bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
 
     private:
 

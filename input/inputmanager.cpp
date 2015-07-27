@@ -11,7 +11,6 @@ InputManager::InputManager( QObject *parent )
       keyboard( new Keyboard() ),
       sdlEventLoop( this ) {
 
-
     Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
 
     auto *window =  QApplication::topLevelWindows().at( 0 );
@@ -180,6 +179,7 @@ bool InputManager::eventFilter( QObject *object, QEvent *event ) {
     if( event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease ) {
         auto *keyEvent = static_cast<QKeyEvent *>( event );
         keyboard->insert( keyEvent->key(), event->type() == QEvent::KeyPress );
+        keyEvent->accept();
         return true;
     }
 

@@ -182,7 +182,7 @@ void Joystick::fillSDLArrays( const QString &key, const int &numberValue ) {
     }
 }
 
-void Joystick::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
+bool Joystick::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
     mappingRef().insert( key.toString(), newMapping );
 
     auto byteArray = key.toString().toLocal8Bit();
@@ -192,6 +192,8 @@ void Joystick::setMappings( const QVariant key, const QVariant newMapping, const
     } else if( type == InputDeviceEvent::EditEventType::AxisEvent ) {
         mSDLAxisVector[ SDL_GameControllerGetAxisFromString( byteArray.constData() ) ] = newMapping.toInt();
     }
+
+    return true;
 
 }
 
