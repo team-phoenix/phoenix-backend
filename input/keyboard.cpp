@@ -85,8 +85,8 @@ bool Keyboard::setMappings( const QVariant key, const QVariant newMapping, const
         auto oldValue = oldSequence[ 0 ];
 
         Q_ASSERT( oldValue > 0 );
+        Q_ASSERT( mDeviceMapping.remove( oldValue ) > 0 );
 
-        mDeviceMapping.remove( oldValue );
         mDeviceMapping.insert( intMapping, newValue );
         mappingRef().insert( key.toString(), QKeySequence( intMapping ).toString( QKeySequence::NativeText ) );
     }
@@ -155,8 +155,6 @@ void Keyboard::saveMappings() {
     }
 
     settings.setValue( name(), mappingString );
-
-    qDebug() << "Keyboard mapping: " << mappingString;
 
     qDebug() << settings.fileName();
 

@@ -25,7 +25,6 @@
 #include "audiooutput.h"
 #include "logging.h"
 
-#include "input/keyboard.h"
 #include "input/inputmanager.h"
 
 class VideoItem : public QQuickItem {
@@ -82,10 +81,6 @@ class VideoItem : public QQuickItem {
     private:
 
         InputManager *qmlInputManager;
-
-        // Listen for keyboard events, pass them along to the keyboard controller object (Keyboard)
-        void keyPressEvent( QKeyEvent *event );
-        void keyReleaseEvent( QKeyEvent *event );
 
         //
         // Controller

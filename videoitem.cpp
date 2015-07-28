@@ -273,14 +273,6 @@ void VideoItem::handleWindowChanged( QQuickWindow *window ) {
 
 }
 
-void VideoItem::keyPressEvent( QKeyEvent *event ) {
-    qmlInputManager->keyboard->insert( event->key(), true );
-}
-
-void VideoItem::keyReleaseEvent( QKeyEvent *event ) {
-    qmlInputManager->keyboard->insert( event->key() , false );
-}
-
 bool VideoItem::limitFrameRate() {
     return false;
 }

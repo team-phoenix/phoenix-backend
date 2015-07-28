@@ -100,6 +100,7 @@ void InputManager::insert( InputDevice *device ) {
     mutex.unlock();
 
     mDeviceNameMapping.insert( joystick->name(), joystick->port() );
+    QQmlEngine::setObjectOwnership( joystick, QQmlEngine::CppOwnership );
     emit deviceAdded( joystick );
 
 }
