@@ -172,8 +172,6 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             // Force an update to keep the render thread from pausing
             update();
 
-
-
             break;
 
         case Core::STATEFINISHED:
@@ -209,7 +207,8 @@ void VideoItem::slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_forma
 
 void VideoItem::setCore( QString libretroCore ) {
 
-    corePath = QUrl( libretroCore ).toLocalFile();
+    corePath = libretroCore;//QUrl( libretroCore ).toLocalFile();
+    qDebug() << corePath << libretroCore;
 
     // qCDebug( phxController ) << "emit signalLoadCore(" << corePath << ")";
     emit signalLoadCore( corePath );
@@ -218,7 +217,7 @@ void VideoItem::setCore( QString libretroCore ) {
 
 void VideoItem::setGame( QString game ) {
 
-    gamePath = QUrl( game ).toLocalFile();
+    gamePath = game;// QUrl( game ).toLocalFile();
 
     // qCDebug( phxController ) << "emit signalLoadGame(" << gamePath << ")";
     emit signalLoadGame( gamePath );
@@ -280,7 +279,6 @@ bool VideoItem::limitFrameRate() {
 QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
 
-
     QSGSimpleTextureNode *textureNode = static_cast<QSGSimpleTextureNode *>( node );
 
     if( !textureNode ) {
@@ -324,7 +322,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
     // One half of the vsync loop
     // Now that the texture is sent out to be drawn, tell core to make a new frame
     if( coreState == Core::STATEREADY ) {
-        //emit signalFrame();
+        emit signalFrame();
     }
 
     return textureNode;
