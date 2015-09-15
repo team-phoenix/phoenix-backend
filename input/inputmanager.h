@@ -84,6 +84,9 @@ class InputManager : public QObject {
 
         QHash<QString, int> mDeviceNameMapping;
 
+        void installKeyboardFilter();
+
+        void removeKeyboardFilter();
 
 };
 

@@ -12,14 +12,6 @@ InputManager::InputManager( QObject *parent )
       keyboard( new Keyboard() ),
       sdlEventLoop( this ) {
 
-    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
-
-    auto *window =  QApplication::topLevelWindows().at( 0 );
-
-    Q_ASSERT( window );
-
-    window->installEventFilter( this );
-
     keyboard->loadMapping();
 
     connect( &sdlEventLoop, &SDLEventLoop::deviceConnected, this, &InputManager::insert );
@@ -130,6 +122,7 @@ void InputManager::setRun( bool run ) {
 
     if( run ) {
         sdlEventLoop.stop();
+        installKeyboardFilter();
 
         for( auto device : deviceList ) {
             if( device ) {
@@ -140,6 +133,7 @@ void InputManager::setRun( bool run ) {
 
     else {
         sdlEventLoop.start();
+        removeKeyboardFilter();
     }
 
     mutex.unlock();
@@ -189,5 +183,25 @@ bool InputManager::eventFilter( QObject *object, QEvent *event ) {
 
     return QObject::eventFilter( object, event );
 
+}
+
+void InputManager::installKeyboardFilter()
+{
+    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
+
+    auto *window =  QApplication::topLevelWindows().at( 0 );
+
+    Q_ASSERT( window );
+
+    window->installEventFilter( this );
+}
+
+void InputManager::removeKeyboardFilter()
+{
+    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
+    auto *window =  QApplication::topLevelWindows().at( 0 );
+
+    Q_ASSERT( window );
+    window->removeEventFilter( this );
 }
 
