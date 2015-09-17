@@ -8,7 +8,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     coreThread( nullptr ), coreState( Core::STATEUNINITIALIZED ),
     avInfo(), pixelFormat(),
     corePath( "" ), gamePath( "" ),
-    width( 0 ), height( 0 ), pitch( 0 ), coreFPS( 0.0 ), hostFPS( 0.0 ),
+    width( 0 ), height( 0 ), pitch( 0 ), coreFPS( 0.0 ), hostFPS( 0.0 ), aspectRatio( 1.0 ),
     texture( nullptr ),
     frameTimer() {
 
@@ -100,8 +100,7 @@ void VideoItem::setInputManager( InputManager *manager ) {
 
 }
 
-void VideoItem::registerTypes()
-{
+void VideoItem::registerTypes() {
     qmlRegisterType<VideoItem>( "vg.phoenix.backend", 1, 0, "VideoItem" );
 
     // Don't let the Qt police find out we're declaring these structs as metatypes
@@ -194,7 +193,7 @@ void VideoItem::slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_forma
     this->pixelFormat = pixelFormat;
 
     // TODO: Set this properly, either with testing and averages (RA style) or via EDID (proposed)
-    double monitorRefreshRate = QGuiApplication::primaryScreen()->refreshRate();
+    double monitorRefreshRate = 60.0;
 
     emit signalAudioFormat( avInfo.timing.sample_rate, avInfo.timing.fps, monitorRefreshRate );
     emit signalVideoFormat( pixelFormat,
@@ -240,6 +239,9 @@ void VideoItem::slotVideoFormat( retro_pixel_format pixelFormat, int width, int 
     this->pitch = pitch;
     this->coreFPS = coreFPS;
     this->hostFPS = hostFPS;
+    this->aspectRatio = (double)width / height;
+
+    emit aspectRatioChanged( aspectRatio );
 
 }
 

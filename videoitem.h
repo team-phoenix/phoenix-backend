@@ -32,6 +32,7 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( QString libretroCore MEMBER corePath WRITE setCore )
         Q_PROPERTY( QString game MEMBER gamePath WRITE setGame )
         Q_PROPERTY( InputManager *inputManager READ inputManager WRITE setInputManager NOTIFY inputManagerChanged )
+        Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
 
     public:
 
@@ -45,8 +46,7 @@ class VideoItem : public QQuickItem {
         static void registerTypes();
 
     signals:
-        void inputManagerChanged();
-        void signalDevice( InputDevice *device );
+
         // Controller
         void signalLoadCore( QString path );
         void signalLoadGame( QString path );
@@ -56,6 +56,12 @@ class VideoItem : public QQuickItem {
         void signalFrame();
         void signalShutdown();
         void signalRunChanged( bool run );
+
+        void signalDevice( InputDevice *device );
+        void inputManagerChanged();
+
+        // Consumer
+        void aspectRatioChanged( double aspectRatio );
 
     public slots:
 
@@ -68,8 +74,7 @@ class VideoItem : public QQuickItem {
                               double coreFPS, double hostFPS );
         void slotVideoData( uchar *data, unsigned width, unsigned height, int pitch );
 
-        void emitFrame()
-        {
+        void emitFrame() {
             emit signalFrame();
         }
 
@@ -129,6 +134,7 @@ class VideoItem : public QQuickItem {
         // Video format info
         int width, height, pitch;
         double coreFPS, hostFPS;
+        double aspectRatio;
 
         // The texture that will hold video frames from core
         QSGTexture *texture;
