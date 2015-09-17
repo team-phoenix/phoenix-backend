@@ -36,6 +36,8 @@ SOURCES += \
 
 LIBS += -lsamplerate
 
+macx { QMAKE_MAC_SDK = macosx10.11 }
+
 win32 {
     CONFIG -= windows
     QMAKE_LFLAGS += $$QMAKE_LFLAGS_WINDOWS
