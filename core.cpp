@@ -80,6 +80,10 @@ QString Core::stateToText( Core::State state ) {
 
         case STATEERROR:
             return "Error";
+        case STATEPAUSED:
+            return "Paused";
+        default:
+            break;
 
     }
 

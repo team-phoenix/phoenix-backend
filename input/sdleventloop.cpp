@@ -50,6 +50,9 @@ void SDLEventLoop::pollEvents() {
         // This is necessary because the instance ID could be any number, and
         // so cannot be used for indexing the deviceLocationMap. The value of the map
         // is the actual index that the sdlDeviceList uses.
+
+        qDebug() << deviceLocationMap.size();
+
         for( auto &key : deviceLocationMap.keys() ) {
 
             auto index = deviceLocationMap[ key ];

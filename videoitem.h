@@ -33,6 +33,7 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( QString game MEMBER gamePath WRITE setGame )
         Q_PROPERTY( InputManager *inputManager READ inputManager WRITE setInputManager NOTIFY inputManagerChanged )
         Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
+        Q_PROPERTY( bool running READ running NOTIFY runningChanged )
 
     public:
 
@@ -44,6 +45,9 @@ class VideoItem : public QQuickItem {
         void setInputManager( InputManager *manager );
 
         static void registerTypes();
+
+        // QML Property Getters
+        bool running() const;
 
     signals:
 
@@ -63,7 +67,27 @@ class VideoItem : public QQuickItem {
         // Consumer
         void aspectRatioChanged( double aspectRatio );
 
+        // QML Signals
+        void runningChanged();
+
+    private slots:
+        void setRunning( const bool running );
+
     public slots:
+
+        void pause()
+        {
+            if ( coreState != Core::STATEPAUSED ) {
+                slotCoreStateChanged( Core::STATEPAUSED, Core::CORENOERROR );
+            }
+        }
+
+        void resume()
+        {
+            if ( coreState != Core::STATEREADY ) {
+                slotCoreStateChanged( Core::STATEREADY, Core::CORENOERROR );
+            }
+        }
 
         // Controller
         void slotCoreStateChanged( Core::State newState, Core::Error error );
@@ -74,9 +98,7 @@ class VideoItem : public QQuickItem {
                               double coreFPS, double hostFPS );
         void slotVideoData( uchar *data, unsigned width, unsigned height, int pitch );
 
-        void emitFrame() {
-            emit signalFrame();
-        }
+        void emitFrame();
 
     private slots:
 
@@ -84,6 +106,9 @@ class VideoItem : public QQuickItem {
         void handleWindowChanged( QQuickWindow *window );
 
     private:
+
+        // QML Varibles
+        bool qmlRunning;
 
         InputManager *qmlInputManager;
 

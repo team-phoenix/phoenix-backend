@@ -111,6 +111,18 @@ void VideoItem::registerTypes() {
     qRegisterMetaType<Core::Error>();
 }
 
+bool VideoItem::running() const
+{
+    return qmlRunning;
+}
+
+void VideoItem::setRunning(const bool running) {
+    if ( qmlRunning != running ) {
+        qmlRunning = running;
+        emit runningChanged();
+    }
+}
+
 void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) {
 
     qCDebug( phxController ) << "slotStateChanged(" << Core::stateToText( newState ) << "," << error << ")";
@@ -126,7 +138,9 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
         case Core::STATEREADY:
 
             // This is mixing control (coreThread) and consumer (render thread) members...
-            coreThread = window()->openglContext()->thread();
+
+            if ( !coreThread ) {
+                coreThread = window()->openglContext()->thread();
 
 
             // Run a timer to make core produce a frame at regular intervals
@@ -157,13 +171,17 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             // Mandatory for OpenGL cores
             // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
 
-            core->moveToThread( coreThread );
-            connect( coreThread, &QThread::finished, core, &Core::deleteLater );
+                core->moveToThread( coreThread );
+                connect( coreThread, &QThread::finished, core, &Core::deleteLater );
 
-            qCDebug( phxController ) << "Begin emulation.";
+                qCDebug( phxController ) << "Begin emulation.";
 
-            // Let all the consumers know emulation began
-            emit signalRunChanged( true );
+                // Let all the consumers know emulation began
+                emit signalRunChanged( true );
+
+            }
+
+            setRunning( true );
 
             // Get core to immediately (sorta) produce the first frame
             emit signalFrame();
@@ -173,7 +191,9 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
 
             break;
 
+        case Core::STATEPAUSED:
         case Core::STATEFINISHED:
+            setRunning( false );
             break;
 
         case Core::STATEERROR:
@@ -182,6 +202,8 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
                     break;
             }
 
+            break;
+        default:
             break;
     }
 
@@ -265,6 +287,10 @@ void VideoItem::slotVideoData( uchar *data, unsigned width, unsigned height, int
 
 }
 
+void VideoItem::emitFrame() {
+    emit signalFrame();
+}
+
 void VideoItem::handleWindowChanged( QQuickWindow *window ) {
 
     if( !window ) {
@@ -288,8 +314,15 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
     }
 
 
-    // It's not time yet. Show a black rectangle.
     if( coreState != Core::STATEREADY ) {
+        if ( coreState == Core::STATEPAUSED ) {
+            textureNode->setTexture( texture );
+            textureNode->setRect( boundingRect() );
+            textureNode->setFiltering( QSGTexture::Linear );
+            textureNode->setTextureCoordinatesTransform( QSGSimpleTextureNode::MirrorVertically |
+                    QSGSimpleTextureNode::MirrorHorizontally );
+            return textureNode;
+        }
         return QQuickItem::updatePaintNode( textureNode, paintData );
     }
 

@@ -129,7 +129,8 @@ class Core: public QObject {
             STATEUNINITIALIZED,
             STATEREADY,
             STATEFINISHED,
-            STATEERROR
+            STATEERROR,
+            STATEPAUSED,
         } State;
 
         typedef enum : int {

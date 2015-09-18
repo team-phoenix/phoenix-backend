@@ -60,7 +60,6 @@ InputDevice *InputManager::at( int index ) {
 
 void InputManager::pollStates() {
     sdlEventLoop.pollEvents();
-
 }
 
 bool InputManager::gamepadControlsFrontend() const {
