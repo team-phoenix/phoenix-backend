@@ -51,8 +51,6 @@ void SDLEventLoop::pollEvents() {
         // so cannot be used for indexing the deviceLocationMap. The value of the map
         // is the actual index that the sdlDeviceList uses.
 
-        qDebug() << deviceLocationMap.size();
-
         for( auto &key : deviceLocationMap.keys() ) {
 
             auto index = deviceLocationMap[ key ];

@@ -111,15 +111,14 @@ void VideoItem::registerTypes() {
     qRegisterMetaType<Core::Error>();
 }
 
-bool VideoItem::running() const
-{
+bool VideoItem::running() const {
     return qmlRunning;
 }
 
-void VideoItem::setRunning(const bool running) {
-    if ( qmlRunning != running ) {
+void VideoItem::setRunning( const bool running ) {
+    if( qmlRunning != running ) {
         qmlRunning = running;
-        emit runningChanged();
+        emit signalRunChanged( running );
     }
 }
 
@@ -139,37 +138,36 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
 
             // This is mixing control (coreThread) and consumer (render thread) members...
 
-            if ( !coreThread ) {
+            if( !coreThread ) {
                 coreThread = window()->openglContext()->thread();
 
+                // Run a timer to make core produce a frame at regular intervals
+                // Disabled at the moment due to the granulatiry being 1ms (not good enough)
 
-            // Run a timer to make core produce a frame at regular intervals
-            // Disabled at the moment due to the granulatiry being 1ms (not good enough)
+                //            // Set up and start the frame timer
+                //            qCDebug( phxController ) << "coreTimer.start("
+                //                                     << ( double )1 / ( avInfo.timing.fps / 1000 )
+                //                                     << "ms (core) =" << ( int )( 1 / ( avInfo.timing.fps / 1000 ) )
+                //                                     << "ms (actual) )";
 
-            //            // Set up and start the frame timer
-            //            qCDebug( phxController ) << "coreTimer.start("
-            //                                     << ( double )1 / ( avInfo.timing.fps / 1000 )
-            //                                     << "ms (core) =" << ( int )( 1 / ( avInfo.timing.fps / 1000 ) )
-            //                                     << "ms (actual) )";
+                //            // Stop when the program stops
+                //            connect( this, &VideoItem::signalShutdown, coreTimer, &QTimer::stop );
 
-            //            // Stop when the program stops
-            //            connect( this, &VideoItem::signalShutdown, coreTimer, &QTimer::stop );
+                //            // Millisecond accuracy on Unix (OS X/Linux)
+                //            // Multimedia timer accuracy on Windows (better?)
+                //            coreTimer->setTimerType( Qt::PreciseTimer );
 
-            //            // Millisecond accuracy on Unix (OS X/Linux)
-            //            // Multimedia timer accuracy on Windows (better?)
-            //            coreTimer->setTimerType( Qt::PreciseTimer );
+                //            // Granulatiry is in the integer range :(
+                //            coreTimer->start( ( int )( 1 / ( avInfo.timing.fps / 1000 ) ) );
 
-            //            // Granulatiry is in the integer range :(
-            //            coreTimer->start( ( int )( 1 / ( avInfo.timing.fps / 1000 ) ) );
+                //            // Have the timer run in the same thread as Core
+                //            // This will mean timeouts are blocking, preventing them from piling up if Core runs too slow
+                //            coreTimer->moveToThread( coreThread );
+                //            connect( coreThread, &QThread::finished, coreTimer, &QTimer::deleteLater );
 
-            //            // Have the timer run in the same thread as Core
-            //            // This will mean timeouts are blocking, preventing them from piling up if Core runs too slow
-            //            coreTimer->moveToThread( coreThread );
-            //            connect( coreThread, &QThread::finished, coreTimer, &QTimer::deleteLater );
-
-            // Place Core into the render thread
-            // Mandatory for OpenGL cores
-            // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
+                // Place Core into the render thread
+                // Mandatory for OpenGL cores
+                // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
 
                 core->moveToThread( coreThread );
                 connect( coreThread, &QThread::finished, core, &Core::deleteLater );
@@ -203,6 +201,7 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             }
 
             break;
+
         default:
             break;
     }
@@ -261,7 +260,7 @@ void VideoItem::slotVideoFormat( retro_pixel_format pixelFormat, int width, int 
     this->pitch = pitch;
     this->coreFPS = coreFPS;
     this->hostFPS = hostFPS;
-    this->aspectRatio = (double)width / height;
+    this->aspectRatio = ( double )width / height;
 
     emit aspectRatioChanged( aspectRatio );
 
@@ -315,7 +314,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
 
 
     if( coreState != Core::STATEREADY ) {
-        if ( coreState == Core::STATEPAUSED ) {
+        if( coreState == Core::STATEPAUSED ) {
             textureNode->setTexture( texture );
             textureNode->setRect( boundingRect() );
             textureNode->setFiltering( QSGTexture::Linear );
@@ -323,6 +322,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
                     QSGSimpleTextureNode::MirrorHorizontally );
             return textureNode;
         }
+
         return QQuickItem::updatePaintNode( textureNode, paintData );
     }
 

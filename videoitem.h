@@ -33,7 +33,7 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( QString game MEMBER gamePath WRITE setGame )
         Q_PROPERTY( InputManager *inputManager READ inputManager WRITE setInputManager NOTIFY inputManagerChanged )
         Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
-        Q_PROPERTY( bool running READ running NOTIFY runningChanged )
+        Q_PROPERTY( bool running READ running NOTIFY signalRunChanged )
 
     public:
 
@@ -66,9 +66,6 @@ class VideoItem : public QQuickItem {
 
         // Consumer
         void aspectRatioChanged( double aspectRatio );
-
-        // QML Signals
-        void runningChanged();
 
     private slots:
         void setRunning( const bool running );
