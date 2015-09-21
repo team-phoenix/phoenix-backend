@@ -34,6 +34,10 @@ SOURCES += \
     input/inputdeviceevent.cpp \
     input/qmlinputdevice.cpp
 
+
+# Externals and system libraries
+INCLUDEPATH += ../externals/quazip/quazip
+LIBS += -L../externals/quazip/quazip -lquazip
 LIBS += -lsamplerate
 
 macx { QMAKE_MAC_SDK = macosx10.11 }
