@@ -36,12 +36,12 @@ LibretroSymbols::LibretroSymbols()
 //
 
 Core::Core()
-    : pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr ),
-      mPoolSize( 30 ) {
+    : mPoolSize( 30 ),
+      pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
+      SRAMDataRaw( nullptr )
+{
 
     Core::core = this;
-
 
     avInfo = new retro_system_av_info;
     systemInfo = new retro_system_info;
@@ -212,7 +212,7 @@ void Core::slotLoadGame( QString path ) {
 
     // Allocate buffers now that we know how large to make them
     // Assume 16-bit stereo audio, 32-bit video
-    for( int i = 0; i < 30; i++ ) {
+    for( int i = 0; i < mPoolSize; i++ ) {
 
         // Allocate a bit extra as some cores' numbers do not add up...
         audioBufferPool[i] = ( int16_t * )calloc( 1, avInfo->timing.sample_rate * 5 );
@@ -819,7 +819,7 @@ void Core::videoRefreshCallback( const void *data, unsigned width, unsigned heig
 
         memcpy( core->videoBufferPool[core->videoBufferPoolIndex], data, height * pitch );
         core->emitVideoData( core->videoBufferPool[core->videoBufferPoolIndex], width, height, pitch );
-        core->videoBufferPoolIndex = ( core->videoBufferPoolIndex + 1 ) % 30;
+        core->videoBufferPoolIndex = ( core->videoBufferPoolIndex + 1 ) % core->mPoolSize;
 
     }
 
@@ -833,7 +833,7 @@ void Core::videoRefreshCallback( const void *data, unsigned width, unsigned heig
     // Flush the audio used so far
     core->emitAudioData( core->audioBufferPool[core->audioPoolCurrentBuffer], core->audioBufferCurrentByte );
     core->audioBufferCurrentByte = 0;
-    core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % 30;
+    core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % core->mPoolSize;
 
     return;
 

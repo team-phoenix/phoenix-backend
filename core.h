@@ -125,6 +125,10 @@ class Core: public QObject {
 
         InputManager *inputManager;
 
+        // Controls the size of the audio and video buffer pools.
+        // This needs to be public in order to be accessed by a static function.
+        const int mPoolSize;
+
         enum State {
             STATEUNINITIALIZED = 0,
             STATEREADY,
@@ -343,7 +347,6 @@ class Core: public QObject {
         // Buffer pool. Since each buffer holds one frame, depending on core, 30 frames = ~500ms
         int16_t *audioBufferPool[30];
         int audioPoolCurrentBuffer;
-        const int mPoolSize;
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
         // Each frame, exactly ( sampleRate * 4 ) bytes should be copied to
