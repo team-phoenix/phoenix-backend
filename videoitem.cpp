@@ -19,11 +19,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     // Ensure the objects are cleaned up when it's time to quit and destroyed once their thread is done
     connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown );
-    connect( this, &VideoItem::signalShutdown, core, [ this ] {
-        if ( coreState() != Core::STATEUNINITIALIZED ) {
-            core->slotShutdown();
-        }
-    });
+    connect( this, &VideoItem::signalShutdown, core, &Core::slotShutdown );
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
 
     // Catch the user exit signal and clean up
@@ -32,7 +28,9 @@ VideoItem::VideoItem( QQuickItem *parent ) :
         qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
 
         // Shut down Core and the consumers
-        emit signalShutdown();
+        if ( coreState() != Core::STATEUNINITIALIZED ) {
+           emit signalShutdown();
+        }
 
         // Stop processing events in the other threads, then block the main thread until they're finished
 
@@ -203,7 +201,7 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
         case Core::STATEFINISHED:
             setRunning( false );
             if ( newState == Core::STATEFINISHED ) {
-                core->slotShutdown();
+               emit signalShutdown();
             }
             break;
 
