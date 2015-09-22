@@ -5,7 +5,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     qmlInputManager( nullptr ),
     audioOutput( new AudioOutput() ), audioOutputThread( new QThread( this ) ),
     core( new Core() ), // coreTimer( new QTimer() ),
-    coreThread( nullptr ), coreState( Core::STATEUNINITIALIZED ),
+    coreThread( nullptr ), qmlCoreState( Core::STATEUNINITIALIZED ),
     avInfo(), pixelFormat(),
     corePath( "" ), gamePath( "" ),
     width( 0 ), height( 0 ), pitch( 0 ), coreFPS( 0.0 ), hostFPS( 0.0 ), aspectRatio( 1.0 ),
@@ -102,6 +102,7 @@ void VideoItem::setInputManager( InputManager *manager ) {
 
 void VideoItem::registerTypes() {
     qmlRegisterType<VideoItem>( "vg.phoenix.backend", 1, 0, "VideoItem" );
+    qmlRegisterType<Core>( "vg.phoenix.backend", 1, 0, "Core" );
 
     // Don't let the Qt police find out we're declaring these structs as metatypes
     // without proper constructors/destructors declared/written
@@ -115,6 +116,11 @@ bool VideoItem::running() const {
     return qmlRunning;
 }
 
+Core::State VideoItem::coreState() const
+{
+    return qmlCoreState;
+}
+
 void VideoItem::setRunning( const bool running ) {
     if( qmlRunning != running ) {
         qmlRunning = running;
@@ -126,7 +132,7 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
 
     qCDebug( phxController ) << "slotStateChanged(" << Core::stateToText( newState ) << "," << error << ")";
 
-    coreState = newState;
+    setCoreState( newState );
 
     switch( newState ) {
 
@@ -192,6 +198,9 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
         case Core::STATEPAUSED:
         case Core::STATEFINISHED:
             setRunning( false );
+            if ( newState == Core::STATEFINISHED ) {
+                core->slotShutdown();
+            }
             break;
 
         case Core::STATEERROR:
@@ -303,6 +312,12 @@ bool VideoItem::limitFrameRate() {
     return false;
 }
 
+void VideoItem::setCoreState(Core::State state)
+{
+    qmlCoreState = state;
+    emit coreStateChanged();
+}
+
 QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
 
@@ -313,8 +328,8 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
     }
 
 
-    if( coreState != Core::STATEREADY ) {
-        if( coreState == Core::STATEPAUSED ) {
+    if( (coreState() ) != Core::STATEREADY ) {
+        if( coreState() == Core::STATEPAUSED ) {
             textureNode->setTexture( texture );
             textureNode->setRect( boundingRect() );
             textureNode->setFiltering( QSGTexture::Linear );
@@ -356,7 +371,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
 
     // One half of the vsync loop
     // Now that the texture is sent out to be drawn, tell core to make a new frame
-    if( coreState == Core::STATEREADY ) {
+    if( coreState() == Core::STATEREADY ) {
         emit signalFrame();
     }
 

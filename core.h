@@ -34,8 +34,8 @@
 // Helper for resolving libretro methods
 #define resolved_sym( name ) symbols.name = ( decltype( symbols.name ) )libretroCore.resolve( #name );
 
-struct LibretroSymbols {
-
+class LibretroSymbols {
+public:
     LibretroSymbols();
 
     // Libretro core functions
@@ -125,15 +125,16 @@ class Core: public QObject {
 
         InputManager *inputManager;
 
-        typedef enum : int {
-            STATEUNINITIALIZED,
+        enum State {
+            STATEUNINITIALIZED = 0,
             STATEREADY,
             STATEFINISHED,
             STATEERROR,
             STATEPAUSED,
-        } State;
+        };
+        Q_ENUMS( State )
 
-        typedef enum : int {
+        enum Error {
 
             // Everything's okay!
             CORENOERROR,
@@ -165,7 +166,8 @@ class Core: public QObject {
             // IO Error, volume was dismounted, network resource not available
             GAMEUNKNOWNERROR
 
-        } Error;
+        };
+        Q_ENUMS( Error )
 
         // Container class for a libretro core variable
         class Variable {
@@ -341,6 +343,7 @@ class Core: public QObject {
         // Buffer pool. Since each buffer holds one frame, depending on core, 30 frames = ~500ms
         int16_t *audioBufferPool[30];
         int audioPoolCurrentBuffer;
+        const int mPoolSize;
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
         // Each frame, exactly ( sampleRate * 4 ) bytes should be copied to

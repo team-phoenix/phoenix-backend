@@ -34,7 +34,7 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( InputManager *inputManager READ inputManager WRITE setInputManager NOTIFY inputManagerChanged )
         Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool running READ running NOTIFY signalRunChanged )
-
+        Q_PROPERTY( Core::State coreState READ coreState NOTIFY coreStateChanged )
     public:
 
         VideoItem( QQuickItem *parent = 0 );
@@ -48,6 +48,8 @@ class VideoItem : public QQuickItem {
 
         // QML Property Getters
         bool running() const;
+
+        Core::State coreState() const;
 
     signals:
 
@@ -64,6 +66,8 @@ class VideoItem : public QQuickItem {
         void signalDevice( InputDevice *device );
         void inputManagerChanged();
 
+        void coreStateChanged();
+
         // Consumer
         void aspectRatioChanged( double aspectRatio );
 
@@ -74,16 +78,24 @@ class VideoItem : public QQuickItem {
 
         void pause()
         {
-            if ( coreState != Core::STATEPAUSED ) {
+            if ( coreState() != Core::STATEPAUSED ) {
                 slotCoreStateChanged( Core::STATEPAUSED, Core::CORENOERROR );
             }
         }
 
         void resume()
         {
-            if ( coreState != Core::STATEREADY ) {
+            if ( coreState() != Core::STATEREADY ) {
                 slotCoreStateChanged( Core::STATEREADY, Core::CORENOERROR );
             }
+        }
+
+        void stop()
+        {
+            if ( coreState() != Core::STATEUNINITIALIZED ) {
+                slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
+            }
+
         }
 
         // Controller
@@ -134,7 +146,8 @@ class VideoItem : public QQuickItem {
         QTimer coreTimer;
 
         // Core's 'current' state (since core lives on another thread, it could be in a different state)
-        Core::State coreState;
+        Core::State qmlCoreState;
+        void setCoreState( Core::State state );
 
         // Timing and format information provided by core once the core/game is loaded
         // Needs to be passed down to all consumers via signals

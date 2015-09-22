@@ -37,7 +37,8 @@ LibretroSymbols::LibretroSymbols()
 
 Core::Core()
     : pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr ) {
+      SRAMDataRaw( nullptr ),
+      mPoolSize( 30 ) {
 
     Core::core = this;
 
@@ -49,7 +50,7 @@ Core::Core()
     audioBufferCurrentByte = 0;
     videoBufferPoolIndex = 0;
 
-    for( int i = 0; i < 30; i++ ) {
+    for( int i = 0; i < mPoolSize; i++ ) {
 
         audioBufferPool[i] = nullptr;
 
@@ -100,6 +101,8 @@ void Core::slotLoadCore( QString path ) {
     libraryPath = path;
 
     qCDebug( phxCore ) << "slotLoadCore(" << libraryPath << ")";
+
+    Q_ASSERT( !libretroCore.isLoaded() );
 
     libretroCore.setFileName( libraryPath );
     libretroCore.load();
@@ -250,33 +253,42 @@ void Core::slotShutdown() {
 
     saveSRAM( gameFileInfo.baseName() );
 
+    SRAMDataRaw = nullptr;
+
     // symbols.retro_audio is the first symbol set to null in the constructor, so check that one
     if( symbols.retro_audio ) {
         symbols.retro_unload_game();
         symbols.retro_deinit();
+        symbols.clear();
     }
+
 
     gameData.clear();
     libretroCore.unload();
     libraryFilename.clear();
 
+    pixelFormat = RETRO_PIXEL_FORMAT_RGB565;
+    Core::core = this;
+
+    Q_ASSERT( avInfo );
+    Q_ASSERT( systemInfo );
+
     delete avInfo;
     delete systemInfo;
 
-    for( int i = 0; i < 30; i++ ) {
+    avInfo = new retro_system_av_info;
+    systemInfo = new retro_system_info;
 
-        if( audioBufferPool[i] ) {
-            free( audioBufferPool[i] );
-        }
+    audioPoolCurrentBuffer = 0;
+    audioBufferCurrentByte = 0;
+    videoBufferPoolIndex = 0;
 
-        if( videoBufferPool[i] ) {
-            free( videoBufferPool[i] );
-        }
-
+    for( int i = 0; i < mPoolSize; i++ ) {
+        free( audioBufferPool[ i ] );
+        free( videoBufferPool[ i ] );
     }
 
-    emit signalCoreStateChanged( STATEFINISHED, CORENOERROR );
-
+    emit signalCoreStateChanged( STATEUNINITIALIZED, CORENOERROR );
     qCDebug( phxCore ) << "slotShutdown() end";
 
 }
