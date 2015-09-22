@@ -28,8 +28,8 @@ VideoItem::VideoItem( QQuickItem *parent ) :
         qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
 
         // Shut down Core and the consumers
-        if ( coreState() != Core::STATEUNINITIALIZED ) {
-           emit signalShutdown();
+        if( coreState() != Core::STATEUNINITIALIZED ) {
+            emit signalShutdown();
         }
 
         // Stop processing events in the other threads, then block the main thread until they're finished
@@ -118,8 +118,7 @@ bool VideoItem::running() const {
     return qmlRunning;
 }
 
-Core::State VideoItem::coreState() const
-{
+Core::State VideoItem::coreState() const {
     return qmlCoreState;
 }
 
@@ -198,11 +197,12 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             break;
 
         case Core::STATEPAUSED:
+            setRunning( false );
+            break;
+
         case Core::STATEFINISHED:
             setRunning( false );
-            if ( newState == Core::STATEFINISHED ) {
-               emit signalShutdown();
-            }
+            emit signalShutdown();
             break;
 
         case Core::STATEERROR:
@@ -314,8 +314,7 @@ bool VideoItem::limitFrameRate() {
     return false;
 }
 
-void VideoItem::setCoreState(Core::State state)
-{
+void VideoItem::setCoreState( Core::State state ) {
     qmlCoreState = state;
     emit coreStateChanged();
 }
@@ -330,7 +329,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
     }
 
 
-    if( (coreState() ) != Core::STATEREADY ) {
+    if( ( coreState() ) != Core::STATEREADY ) {
         if( coreState() == Core::STATEPAUSED ) {
             textureNode->setTexture( texture );
             textureNode->setRect( boundingRect() );
