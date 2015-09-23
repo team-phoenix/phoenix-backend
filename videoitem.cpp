@@ -2,6 +2,7 @@
 
 VideoItem::VideoItem( QQuickItem *parent ) :
     QQuickItem( parent ),
+    qmlRunning( false ),
     qmlInputManager( nullptr ),
     audioOutput( new AudioOutput() ), audioOutputThread( new QThread( this ) ),
     core( new Core() ), // coreTimer( new QTimer() ),
