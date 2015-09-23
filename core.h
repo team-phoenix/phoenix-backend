@@ -334,7 +334,7 @@ class Core: public QObject {
         // Game
         //
 
-        // Path to ROM/ISO, empty if (!fullPathNeeded)
+        // Path to ROM/ISO
         QFileInfo gameFileInfo;
 
         // Raw ROM/ISO data, empty if (fullPathNeeded)

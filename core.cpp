@@ -38,8 +38,7 @@ LibretroSymbols::LibretroSymbols()
 Core::Core()
     : mPoolSize( 30 ),
       pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr )
-{
+      SRAMDataRaw( nullptr ) {
 
     Core::core = this;
 
@@ -81,8 +80,10 @@ QString Core::stateToText( Core::State state ) {
 
         case STATEERROR:
             return "Error";
+
         case STATEPAUSED:
             return "Paused";
+
         default:
             break;
 
@@ -168,15 +169,17 @@ void Core::slotLoadGame( QString path ) {
 
 
     qCDebug( phxCore ) << "slotLoadGame(" << path << ")";
+    gameFileInfo.setFile( path );
 
     // Argument struct for symbols.retro_load_game()
     retro_game_info gameInfo;
 
-    QFileInfo info( path );
+    // Don't let the compiler immediately discard this
+    QByteArray gamePathByteArray = path.toLocal8Bit();
 
     // Full path needed, simply pass the game's file path to the core
     if( fullPathNeeded ) {
-        gameInfo.path = path.toUtf8().constData();
+        gameInfo.path = gamePathByteArray.constData();
         gameInfo.data = nullptr;
         gameInfo.size = 0;
         gameInfo.meta = "";
@@ -184,7 +187,7 @@ void Core::slotLoadGame( QString path ) {
 
     // Full path not needed, read the file to a buffer and pass that to the core
     else {
-        QFile game( info.canonicalFilePath() );
+        QFile game( gameFileInfo.canonicalFilePath() );
 
         if( !game.open( QIODevice::ReadOnly ) ) {
             ;// TODO: Set error state
@@ -220,8 +223,6 @@ void Core::slotLoadGame( QString path ) {
         videoBufferPool[i] = ( uchar * )calloc( 1, avInfo->geometry.max_width * avInfo->geometry.max_height * 4 );
 
     }
-
-    gameFileInfo.setFile( path );
 
     if( saveDirectory().isEmpty() ) {
         setSaveDirectory( gameFileInfo.canonicalPath() );
@@ -751,23 +752,23 @@ void Core::logCallback( enum retro_log_level level, const char *fmt, ... ) {
 
     switch( level ) {
         case RETRO_LOG_DEBUG:
-            qCDebug( phxCore ) << outbuf.data();
+            qCDebug( phxCore ) << "RETRO_LOG_DEBUG:" << outbuf.data();
             break;
 
         case RETRO_LOG_INFO:
-            qCDebug( phxCore ) << outbuf.data();
+            qCDebug( phxCore ) << "RETRO_LOG_INFO:" << outbuf.data();
             break;
 
         case RETRO_LOG_WARN:
-            qCWarning( phxCore ) << outbuf.data();
+            qCWarning( phxCore ) << "RETRO_LOG_WARN:" << outbuf.data();
             break;
 
         case RETRO_LOG_ERROR:
-            qCCritical( phxCore ) << outbuf.data();
+            qCCritical( phxCore ) << "RETRO_LOG_ERROR:" << outbuf.data();
             break;
 
         default:
-            qCWarning( phxCore ) << outbuf.data();
+            qCWarning( phxCore ) << "RETRO_LOG (unknown category!?):" << outbuf.data();
             break;
     }
 
