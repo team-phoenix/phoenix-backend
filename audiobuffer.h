@@ -60,6 +60,7 @@ class AudioBuffer : public QIODevice {
 
         void start();
         void stop();
+        void clear();
 
         qint64 readData( char *data, qint64 bytesToRead );
         qint64 writeData( const char *data, qint64 len );

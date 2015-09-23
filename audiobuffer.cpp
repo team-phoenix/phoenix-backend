@@ -23,6 +23,12 @@ void AudioBuffer::stop() {
 
 }
 
+void AudioBuffer::clear()
+{
+    bufferPosition = 0;
+    buffer.clear();
+}
+
 qint64 AudioBuffer::readData( char *data, qint64 bytesToRead ) {
 
     if( buffer.size() > bytesToRead ) {

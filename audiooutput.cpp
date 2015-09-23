@@ -206,6 +206,9 @@ void AudioOutput::slotShutdown() {
         outputDataShort = nullptr;
     }
 
+    outputCurrentByte = 0;
+    outputBuffer.clear();
+
     qCDebug( phxAudioOutput ) << "slotShutdown() end";
 
 }
