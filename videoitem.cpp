@@ -15,33 +15,6 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     setFlag( QQuickItem::ItemHasContents, true );
 
-    // Place the objects under VideoItem's control into their own threads
-    audioOutput->moveToThread( audioOutputThread );
-
-    // Ensure the objects are cleaned up when it's time to quit and destroyed once their thread is done
-    connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown );
-    connect( this, &VideoItem::signalShutdown, core, &Core::slotShutdown );
-    connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
-
-    // Catch the user exit signal and clean up
-    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
-
-        qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
-
-        // Shut down Core and the consumers
-        if( coreState() != Core::STATEUNINITIALIZED ) {
-            emit signalShutdown();
-        }
-
-        // Stop processing events in the other threads, then block the main thread until they're finished
-
-        // Stop consumer threads
-        audioOutputThread->exit();
-        audioOutputThread->wait();
-        audioOutputThread->deleteLater();
-
-    } );
-
     // Connect controller signals and slots
 
     // Run a timer to make core produce a frame at regular intervals, or at vsync
@@ -69,6 +42,37 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     connect( core, &Core::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
     connect( core, &Core::signalVideoData, this, &VideoItem::slotVideoData );
+
+    // Set up threads
+
+    // Place the objects under VideoItem's control into their own threads
+    audioOutput->moveToThread( audioOutputThread );
+
+    // Ensure the objects are cleaned up when it's time to quit and destroyed once their thread is done
+    // Also, ensure their cleanup is blocking. We DON'T want anything else happening while cleanup is being done
+    // Consumers go first. Buffer pool should not be cleared until the consumers stop consuming
+    connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown, Qt::BlockingQueuedConnection );
+    connect( this, &VideoItem::signalShutdown, core, &Core::slotShutdown/*, Qt::BlockingQueuedConnection*/ );
+    connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
+
+    // Catch the user exit signal and clean up
+    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
+
+        qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
+
+        // Shut down Core and the consumers
+        if( coreState() != Core::STATEUNINITIALIZED ) {
+            emit signalShutdown();
+        }
+
+        // Stop processing events in the other threads, then block the main thread until they're finished
+
+        // Stop consumer threads
+        audioOutputThread->exit();
+        audioOutputThread->wait();
+        audioOutputThread->deleteLater();
+
+    } );
 
     // Start threads
 
@@ -149,36 +153,20 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             if( !coreThread ) {
                 coreThread = window()->openglContext()->thread();
 
-                // Run a timer to make core produce a frame at regular intervals
-                // Disabled at the moment due to the granulatiry being 1ms (not good enough)
-
-                //            // Set up and start the frame timer
-                //            qCDebug( phxController ) << "coreTimer.start("
-                //                                     << ( double )1 / ( avInfo.timing.fps / 1000 )
-                //                                     << "ms (core) =" << ( int )( 1 / ( avInfo.timing.fps / 1000 ) )
-                //                                     << "ms (actual) )";
-
-                //            // Stop when the program stops
-                //            connect( this, &VideoItem::signalShutdown, coreTimer, &QTimer::stop );
-
-                //            // Millisecond accuracy on Unix (OS X/Linux)
-                //            // Multimedia timer accuracy on Windows (better?)
-                //            coreTimer->setTimerType( Qt::PreciseTimer );
-
-                //            // Granulatiry is in the integer range :(
-                //            coreTimer->start( ( int )( 1 / ( avInfo.timing.fps / 1000 ) ) );
-
-                //            // Have the timer run in the same thread as Core
-                //            // This will mean timeouts are blocking, preventing them from piling up if Core runs too slow
-                //            coreTimer->moveToThread( coreThread );
-                //            connect( coreThread, &QThread::finished, coreTimer, &QTimer::deleteLater );
-
                 // Place Core into the render thread
                 // Mandatory for OpenGL cores
                 // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
-
                 core->moveToThread( coreThread );
                 connect( coreThread, &QThread::finished, core, &Core::deleteLater );
+
+                // Disconnect and reconnect core-related signals now that VideoItem and Core share the same thread
+                disconnect( core, &Core::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
+                connect( core, &Core::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
+
+                disconnect( this, &VideoItem::signalLoadCore, core, &Core::slotLoadCore );
+                disconnect( this, &VideoItem::signalLoadGame, core, &Core::slotLoadGame );
+                connect( this, &VideoItem::signalLoadCore, core, &Core::slotLoadCore );
+                connect( this, &VideoItem::signalLoadGame, core, &Core::slotLoadGame );
 
                 qCDebug( phxController ) << "Begin emulation.";
 
@@ -237,21 +225,51 @@ void VideoItem::slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_forma
 
 }
 
+void VideoItem::slotPause() {
+    if( coreState() != Core::STATEPAUSED ) {
+        slotCoreStateChanged( Core::STATEPAUSED, Core::CORENOERROR );
+    }
+}
+
+void VideoItem::slotResume() {
+    if( coreState() != Core::STATEREADY ) {
+        slotCoreStateChanged( Core::STATEREADY, Core::CORENOERROR );
+    }
+}
+
+void VideoItem::slotStop() {
+    if( coreState() != Core::STATEUNINITIALIZED ) {
+        slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
+    }
+
+}
+
 void VideoItem::setCore( QString libretroCore ) {
 
-    corePath = libretroCore;//QUrl( libretroCore ).toLocalFile();
-    qDebug() << corePath << libretroCore;
+    // Do nothing if a blank string is given
+    if( libretroCore.isEmpty() ) {
+        return;
+    }
 
-    // qCDebug( phxController ) << "emit signalLoadCore(" << corePath << ")";
+    // Stop the game if it's currently running
+    if( coreState() != Core::STATEUNINITIALIZED ) {
+        qCDebug( phxController ) << "Stopping currently running game:" << gamePath;
+        slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
+    }
+
+    corePath = libretroCore;
     emit signalLoadCore( corePath );
 
 }
 
 void VideoItem::setGame( QString game ) {
 
-    gamePath = game;// QUrl( game ).toLocalFile();
+    // Do nothing if a blank string is given
+    if( game.isEmpty() ) {
+        return;
+    }
 
-    // qCDebug( phxController ) << "emit signalLoadGame(" << gamePath << ")";
+    gamePath = game;
     emit signalLoadGame( gamePath );
 
 }

@@ -76,37 +76,17 @@ class VideoItem : public QQuickItem {
 
     public slots:
 
-        void pause()
-        {
-            if ( coreState() != Core::STATEPAUSED ) {
-                slotCoreStateChanged( Core::STATEPAUSED, Core::CORENOERROR );
-            }
-        }
-
-        void resume()
-        {
-            if ( coreState() != Core::STATEREADY ) {
-                slotCoreStateChanged( Core::STATEREADY, Core::CORENOERROR );
-            }
-        }
-
-        void stop()
-        {
-            if ( coreState() != Core::STATEUNINITIALIZED ) {
-                slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
-            }
-
-        }
-
         // Controller
         void slotCoreStateChanged( Core::State newState, Core::Error error );
         void slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat );
+        void slotPause();
+        void slotResume();
+        void slotStop();
 
         // Consumer
         void slotVideoFormat( retro_pixel_format pixelFormat, int width, int height, int pitch,
                               double coreFPS, double hostFPS );
         void slotVideoData( uchar *data, unsigned width, unsigned height, int pitch );
-
         void emitFrame();
 
     private slots:
