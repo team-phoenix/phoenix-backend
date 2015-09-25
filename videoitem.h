@@ -51,7 +51,7 @@ class VideoItem : public QQuickItem {
 
         Core::State coreState() const;
 
-    signals:
+signals:
 
         // Controller
         void signalLoadCore( QString path );
@@ -62,6 +62,7 @@ class VideoItem : public QQuickItem {
         void signalFrame();
         void signalShutdown();
         void signalRunChanged( bool run );
+        void signalChangeCoreThread( QThread *thread );
 
         void signalDevice( InputDevice *device );
         void inputManagerChanged();

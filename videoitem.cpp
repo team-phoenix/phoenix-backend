@@ -18,8 +18,6 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Connect controller signals and slots
 
     // Run a timer to make core produce a frame at regular intervals, or at vsync
-    // coreTimer disabled at the moment due to the granulatiry being 1ms (not good enough)
-    // connect( &coreTimer, &QTimer::timeout, &core, &Core::slotFrame );
     connect( this, &VideoItem::signalFrame, core, &Core::slotFrame );
 
     // Do the next item in the core lifecycle when the state has changed
@@ -38,6 +36,9 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Do the next item in the core lifecycle when its state changes
     connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::slotSetAudioActive );
 
+    // Set up the slot that'll move Core back to this thread when needed
+    connect( this, &VideoItem::signalChangeCoreThread, core, &Core::slotMoveToThread );
+
     // Connect consumer signals and slots
 
     connect( core, &Core::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
@@ -45,14 +46,17 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     // Set up threads
 
+    this->thread()->setObjectName( "QML thread" );
+
     // Place the objects under VideoItem's control into their own threads
     audioOutput->moveToThread( audioOutputThread );
 
     // Ensure the objects are cleaned up when it's time to quit and destroyed once their thread is done
     // Also, ensure their cleanup is blocking. We DON'T want anything else happening while cleanup is being done
+    // Core implicitly blocks based on whether Core lives in VideoItem's thread or not
     // Consumers go first. Buffer pool should not be cleared until the consumers stop consuming
     connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown, Qt::BlockingQueuedConnection );
-    connect( this, &VideoItem::signalShutdown, core, &Core::slotShutdown/*, Qt::BlockingQueuedConnection*/ );
+    connect( this, &VideoItem::signalShutdown, core, &Core::slotShutdown );
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
 
     // Catch the user exit signal and clean up
@@ -75,7 +79,6 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     } );
 
     // Start threads
-
     audioOutputThread->start();
 
 }
@@ -147,34 +150,20 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
 
         // Time to run the game
         case Core::STATEREADY:
+            // This is the earliest we can be sure this thread actually exists...
+            window()->openglContext()->thread()->setObjectName( "Render thread" );
 
             // This is mixing control (coreThread) and consumer (render thread) members...
 
-            if( !coreThread ) {
-                coreThread = window()->openglContext()->thread();
+            // Place Core into the render thread
+            // Mandatory for OpenGL cores
+            // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
+            // Past this line, signals from VideoItem to Core no longer block
+            emit signalChangeCoreThread( window()->openglContext()->thread() );
 
-                // Place Core into the render thread
-                // Mandatory for OpenGL cores
-                // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
-                core->moveToThread( coreThread );
-                connect( coreThread, &QThread::finished, core, &Core::deleteLater );
+            qCDebug( phxController ) << "Begin emulation.";
 
-                // Disconnect and reconnect core-related signals now that VideoItem and Core share the same thread
-                disconnect( core, &Core::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
-                connect( core, &Core::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
-
-                disconnect( this, &VideoItem::signalLoadCore, core, &Core::slotLoadCore );
-                disconnect( this, &VideoItem::signalLoadGame, core, &Core::slotLoadGame );
-                connect( this, &VideoItem::signalLoadCore, core, &Core::slotLoadCore );
-                connect( this, &VideoItem::signalLoadGame, core, &Core::slotLoadGame );
-
-                qCDebug( phxController ) << "Begin emulation.";
-
-                // Let all the consumers know emulation began
-                emit signalRunChanged( true );
-
-            }
-
+            // This will also inform the consumers that emulation has started
             setRunning( true );
 
             // Get core to immediately (sorta) produce the first frame
@@ -239,6 +228,9 @@ void VideoItem::slotResume() {
 
 void VideoItem::slotStop() {
     if( coreState() != Core::STATEUNINITIALIZED ) {
+        // Move Core back to the qml thread
+        // Signals from VideoItem to Core will now block
+        emit signalChangeCoreThread( this->thread() );
         slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
     }
 
@@ -251,11 +243,17 @@ void VideoItem::setCore( QString libretroCore ) {
         return;
     }
 
+    // Move Core back to the qml thread
+    // Signals from VideoItem to Core will now block
+    emit signalChangeCoreThread( this->thread() );
+
     // Stop the game if it's currently running
     if( coreState() != Core::STATEUNINITIALIZED ) {
         qCDebug( phxController ) << "Stopping currently running game:" << gamePath;
         slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
     }
+
+    Q_ASSERT( coreState() == Core::STATEUNINITIALIZED );
 
     corePath = libretroCore;
     emit signalLoadCore( corePath );

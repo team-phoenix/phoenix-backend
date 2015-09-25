@@ -271,6 +271,9 @@ class Core: public QObject {
         // Write save games to disk and free memory
         void slotShutdown();
 
+        // Move Core's event loop to the specified thread
+        void slotMoveToThread( QThread *thread );
+
     protected:
 
         // Only staticly-linked callbacks may access this data/call these methods

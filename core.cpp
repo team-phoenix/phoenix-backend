@@ -294,6 +294,13 @@ void Core::slotShutdown() {
 
 }
 
+void Core::slotMoveToThread( QThread *thread ) {
+    qCDebug( phxCore ) << "Moving from thread" << this->thread() << "to thread" << thread;
+    disconnect( this->thread(), &QThread::finished, this, &Core::deleteLater );
+    moveToThread( thread );
+    connect( this->thread(), &QThread::finished, this, &Core::deleteLater );
+}
+
 //
 // Protected
 //
