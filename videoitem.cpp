@@ -43,6 +43,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     connect( core, &Core::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
     connect( core, &Core::signalVideoData, this, &VideoItem::slotVideoData );
+    connect( this, &VideoItem::signalSetVolume, audioOutput, &AudioOutput::slotSetVolume );
 
     // Set up threads
 

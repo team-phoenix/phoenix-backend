@@ -35,6 +35,7 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool running READ running NOTIFY signalRunChanged )
         Q_PROPERTY( Core::State coreState READ coreState NOTIFY coreStateChanged )
+
     public:
 
         VideoItem( QQuickItem *parent = 0 );
@@ -51,7 +52,7 @@ class VideoItem : public QQuickItem {
 
         Core::State coreState() const;
 
-signals:
+    signals:
 
         // Controller
         void signalLoadCore( QString path );
@@ -68,6 +69,8 @@ signals:
         void inputManagerChanged();
 
         void coreStateChanged();
+
+        void signalSetVolume( qreal level );
 
         // Consumer
         void aspectRatioChanged( double aspectRatio );
