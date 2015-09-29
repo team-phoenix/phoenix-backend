@@ -37,7 +37,8 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::slotSetAudioActive );
 
     // Set up the slot that'll move Core back to this thread when needed
-    connect( this, &VideoItem::signalChangeCoreThread, core, &Core::slotMoveToThread );
+    // You MUST be sure that core->thread() and this->thread() are not the same or a deadlock will happen
+    connect( this, &VideoItem::signalChangeCoreThread, core, &Core::slotMoveToThread, Qt::BlockingQueuedConnection );
 
     // Connect consumer signals and slots
 
@@ -160,7 +161,8 @@ void VideoItem::slotCoreStateChanged( Core::State newState, Core::Error error ) 
             // Mandatory for OpenGL cores
             // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
             // Past this line, signals from VideoItem to Core no longer block
-            emit signalChangeCoreThread( window()->openglContext()->thread() );
+            if( core->thread() == this->thread() )
+                core->moveToThread( window()->openglContext()->thread() );
 
             qCDebug( phxController ) << "Begin emulation.";
 
@@ -231,7 +233,8 @@ void VideoItem::slotStop() {
     if( coreState() != Core::STATEUNINITIALIZED ) {
         // Move Core back to the qml thread
         // Signals from VideoItem to Core will now block
-        emit signalChangeCoreThread( this->thread() );
+        if( core->thread() != this->thread() )
+            emit signalChangeCoreThread( this->thread() );
         slotCoreStateChanged( Core::STATEFINISHED, Core::CORENOERROR );
     }
 
@@ -246,7 +249,8 @@ void VideoItem::setCore( QString libretroCore ) {
 
     // Move Core back to the qml thread
     // Signals from VideoItem to Core will now block
-    emit signalChangeCoreThread( this->thread() );
+    if( core->thread() != this->thread() )
+        emit signalChangeCoreThread( this->thread() );
 
     // Stop the game if it's currently running
     if( coreState() != Core::STATEUNINITIALIZED ) {
