@@ -109,7 +109,7 @@ public:
 
 };
 
-class Core: public QObject {
+class LibretroCore: public QObject {
         Q_OBJECT
 
         Q_PROPERTY( QString saveDirectory READ saveDirectory WRITE setSaveDirectory NOTIFY saveDirectoryChanged )
@@ -120,8 +120,8 @@ class Core: public QObject {
 
     public:
 
-        Core();
-        ~Core();
+        LibretroCore();
+        ~LibretroCore();
 
         InputManager *inputManager;
 
@@ -252,7 +252,7 @@ class Core: public QObject {
     signals:
         void saveDirectoryChanged();
         void systemDirectoryChanged();
-        void signalCoreStateChanged( Core::State newState, Core::Error error );
+        void signalCoreStateChanged( LibretroCore::State newState, LibretroCore::Error error );
         void signalAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat );
         void signalAudioData( int16_t *data, int bytes );
         void signalVideoData( uchar *data, unsigned width, unsigned height, int pitch );
@@ -281,7 +281,7 @@ class Core: public QObject {
         // A hack that gives us the implicit C++ 'this' pointer while maintaining a C-style function signature
         // for the callbacks as required by libretro.h. Thanks to this, at this time we can only
         // have a single instance of Core running at any time.
-        static Core *core;
+        static LibretroCore *core;
 
         // Struct containing libretro methods
         LibretroSymbols symbols;
@@ -396,7 +396,7 @@ class Core: public QObject {
         //
 
         // Core-specific variables
-        QMap<std::string, Core::Variable> variables;
+        QMap<std::string, LibretroCore::Variable> variables;
 
 };
 

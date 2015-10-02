@@ -1,6 +1,6 @@
-#include "core.h"
+#include "libretrocore.h"
 
-QDebug operator<<( QDebug debug, const Core::Variable &var ) {
+QDebug operator<<( QDebug debug, const LibretroCore::Variable &var ) {
 
     // join a QVector of std::strings. (Really, C++ ?)
     auto &choices = var.choices();
@@ -35,12 +35,12 @@ LibretroSymbols::LibretroSymbols()
 // Public
 //
 
-Core::Core()
+LibretroCore::LibretroCore()
     : mPoolSize( 30 ),
       pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
       SRAMDataRaw( nullptr ) {
 
-    Core::core = this;
+    LibretroCore::core = this;
 
     avInfo = new retro_system_av_info;
     systemInfo = new retro_system_info;
@@ -61,11 +61,11 @@ Core::Core()
 
 }
 
-Core::~Core() {
+LibretroCore::~LibretroCore() {
 
 }
 
-QString Core::stateToText( Core::State state ) {
+QString LibretroCore::stateToText( LibretroCore::State state ) {
 
     switch( state ) {
 
@@ -97,7 +97,7 @@ QString Core::stateToText( Core::State state ) {
 // Slots
 //
 
-void Core::slotLoadCore( QString path ) {
+void LibretroCore::slotLoadCore( QString path ) {
 
     libraryPath = path;
 
@@ -165,7 +165,7 @@ void Core::slotLoadCore( QString path ) {
 
 }
 
-void Core::slotLoadGame( QString path ) {
+void LibretroCore::slotLoadGame( QString path ) {
 
 
     qCDebug( phxCore ) << "slotLoadGame(" << path << ")";
@@ -205,7 +205,7 @@ void Core::slotLoadGame( QString path ) {
 
     if( !symbols.retro_load_game( &gameInfo ) ) {
 
-        emit signalCoreStateChanged( Core::STATEERROR, Core::GAMEUNKNOWNERROR );
+        emit signalCoreStateChanged( LibretroCore::STATEERROR, LibretroCore::GAMEUNKNOWNERROR );
 
     }
 
@@ -235,7 +235,7 @@ void Core::slotLoadGame( QString path ) {
 
 }
 
-void Core::slotFrame() {
+void LibretroCore::slotFrame() {
 
 
     // Tell the core to run a frame
@@ -248,7 +248,7 @@ void Core::slotFrame() {
 
 }
 
-void Core::slotShutdown() {
+void LibretroCore::slotShutdown() {
 
     qCDebug( phxCore ) << "slotShutdown() start";
 
@@ -269,7 +269,7 @@ void Core::slotShutdown() {
     libraryFilename.clear();
 
     pixelFormat = RETRO_PIXEL_FORMAT_RGB565;
-    Core::core = this;
+    LibretroCore::core = this;
 
     Q_ASSERT( avInfo );
     Q_ASSERT( systemInfo );
@@ -294,11 +294,11 @@ void Core::slotShutdown() {
 
 }
 
-void Core::slotMoveToThread( QThread *thread ) {
+void LibretroCore::slotMoveToThread( QThread *thread ) {
     qCDebug( phxCore ) << "Moving from thread" << this->thread() << "to thread" << thread;
-    disconnect( this->thread(), &QThread::finished, this, &Core::deleteLater );
+    disconnect( this->thread(), &QThread::finished, this, &LibretroCore::deleteLater );
     moveToThread( thread );
-    connect( this->thread(), &QThread::finished, this, &Core::deleteLater );
+    connect( this->thread(), &QThread::finished, this, &LibretroCore::deleteLater );
 }
 
 //
@@ -306,22 +306,22 @@ void Core::slotMoveToThread( QThread *thread ) {
 //
 
 // Must always point to the last Core instance used
-Core *Core::core = nullptr;
+LibretroCore *LibretroCore::core = nullptr;
 
-void Core::emitStateReady() {
+void LibretroCore::emitStateReady() {
 
     emit signalAVFormat( *avInfo, pixelFormat );
-    emit signalCoreStateChanged( Core::STATEREADY, Core::CORENOERROR );
+    emit signalCoreStateChanged( LibretroCore::STATEREADY, LibretroCore::CORENOERROR );
 
 }
 
-void Core::emitAudioData( int16_t *data , int bytes ) {
+void LibretroCore::emitAudioData( int16_t *data , int bytes ) {
 
     emit signalAudioData( data, bytes );
 
 }
 
-void Core::emitVideoData( uchar *data, unsigned width, unsigned height, size_t pitch ) {
+void LibretroCore::emitVideoData( uchar *data, unsigned width, unsigned height, size_t pitch ) {
 
     emit signalVideoData( data, width, height, pitch );
 
@@ -333,19 +333,19 @@ void Core::emitVideoData( uchar *data, unsigned width, unsigned height, size_t p
 
 // Paths
 
-void Core::setSaveDirectory( const QString path ) {
+void LibretroCore::setSaveDirectory( const QString path ) {
     qmlSaveDirectory = path;
     emit saveDirectoryChanged();
 }
 
-void Core::setSystemDirectory( const QString path ) {
+void LibretroCore::setSystemDirectory( const QString path ) {
     qmlSystemDirectory = path;
     emit systemDirectoryChanged();
 }
 
 // Save states
 
-void Core::loadSRAM( const QString &baseName ) {
+void LibretroCore::loadSRAM( const QString &baseName ) {
 
     SRAMDataRaw = symbols.retro_get_memory_data( RETRO_MEMORY_SAVE_RAM );
 
@@ -365,7 +365,7 @@ void Core::loadSRAM( const QString &baseName ) {
 
 }
 
-void Core::saveSRAM( const QString &baseName ) {
+void LibretroCore::saveSRAM( const QString &baseName ) {
 
     if( SRAMDataRaw == nullptr ) {
         qCDebug( phxCore ) << "SRAM pointer is null, the game probably wasn't loaded";
@@ -450,9 +450,9 @@ void Core::saveSRAM( const QString &baseName ) {
 
 // Callbacks
 
-void Core::audioSampleCallback( int16_t left, int16_t right ) {
+void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
 
-    Core *core = Core::core;
+    LibretroCore *core = LibretroCore::core;
 
     // Sanity check
     Q_ASSERT( core->audioBufferCurrentByte < core->avInfo->timing.sample_rate * 5 );
@@ -466,9 +466,9 @@ void Core::audioSampleCallback( int16_t left, int16_t right ) {
 
 }
 
-size_t Core::audioSampleBatchCallback( const int16_t *data, size_t frames ) {
+size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frames ) {
 
-    Core *core = Core::core;
+    LibretroCore *core = LibretroCore::core;
 
     // Sanity check
     Q_ASSERT( core->audioBufferCurrentByte < core->avInfo->timing.sample_rate * 5 );
@@ -487,7 +487,7 @@ size_t Core::audioSampleBatchCallback( const int16_t *data, size_t frames ) {
 
 }
 
-bool Core::environmentCallback( unsigned cmd, void *data ) {
+bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
     switch( cmd ) {
         case RETRO_ENVIRONMENT_SET_ROTATION: // 1
@@ -528,7 +528,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
             qDebug() << "\tRETRO_ENVIRONMENT_SET_PIXEL_FORMAT (10) (handled)";
 
             retro_pixel_format *pixelformat = ( enum retro_pixel_format * )data;
-            Core::core->pixelFormat = *pixelformat;
+            LibretroCore::core->pixelFormat = *pixelformat;
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
@@ -553,12 +553,12 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: // 11
             qDebug() << "\tRETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS (11) (handled)";
-            Core::core->retropadToStringMap = *( retro_input_descriptor * )data;
+            LibretroCore::core->retropadToStringMap = *( retro_input_descriptor * )data;
             return true;
 
         case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: // 12
             qDebug() << "\tRETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK (12) (handled)";
-            Core::core->symbols.retro_keyboard_event = ( decltype( LibretroSymbols::retro_keyboard_event ) )data;
+            LibretroCore::core->symbols.retro_keyboard_event = ( decltype( LibretroSymbols::retro_keyboard_event ) )data;
             break;
 
         case RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE: // 13
@@ -567,9 +567,9 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_SET_HW_RENDER: // 14
             qDebug() << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
-            Core::core->openGLContext = *( retro_hw_render_callback * )data;
+            LibretroCore::core->openGLContext = *( retro_hw_render_callback * )data;
 
-            switch( Core::core->openGLContext.context_type ) {
+            switch( LibretroCore::core->openGLContext.context_type ) {
                 case RETRO_HW_CONTEXT_NONE:
                     qDebug() << "No hardware context was selected";
                     break;
@@ -580,7 +580,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
                 case RETRO_HW_CONTEXT_OPENGLES2:
                     qDebug() << "OpenGL ES 2 context was selected";
-                    Core::core->openGLContext.context_type = RETRO_HW_CONTEXT_OPENGLES2;
+                    LibretroCore::core->openGLContext.context_type = RETRO_HW_CONTEXT_OPENGLES2;
                     break;
 
                 case RETRO_HW_CONTEXT_OPENGLES3:
@@ -588,7 +588,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
                     break;
 
                 default:
-                    qCritical() << "RETRO_HW_CONTEXT: " << Core::core->openGLContext.context_type << " was not handled";
+                    qCritical() << "RETRO_HW_CONTEXT: " << LibretroCore::core->openGLContext.context_type << " was not handled";
                     break;
             }
 
@@ -613,7 +613,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
             auto *rv = static_cast<const struct retro_variable *>( data );
 
             for( ; rv->key != NULL; rv++ ) {
-                Core::Variable v( rv );
+                LibretroCore::Variable v( rv );
                 core->variables.insert( v.key(), v );
                 qCDebug( phxCore ) << "\t" << v;
             }
@@ -637,7 +637,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: // 21
             qDebug() << "RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
-            Core::core->symbols.retro_frame_time = ( decltype( LibretroSymbols::retro_frame_time ) )data;
+            LibretroCore::core->symbols.retro_frame_time = ( decltype( LibretroSymbols::retro_frame_time ) )data;
             break;
 
         case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: // 22
@@ -718,7 +718,7 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
 }
 
-void Core::inputPollCallback( void ) {
+void LibretroCore::inputPollCallback( void ) {
 
     core->inputManager->pollStates();
     // qDebug() << "Core::inputPollCallback";
@@ -726,7 +726,7 @@ void Core::inputPollCallback( void ) {
 
 }
 
-void Core::logCallback( enum retro_log_level level, const char *fmt, ... ) {
+void LibretroCore::logCallback( enum retro_log_level level, const char *fmt, ... ) {
 
     QVarLengthArray<char, 1024> outbuf( 1024 );
     va_list args;
@@ -781,7 +781,7 @@ void Core::logCallback( enum retro_log_level level, const char *fmt, ... ) {
 
 }
 
-int16_t Core::inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
+int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
     Q_UNUSED( index )
 
     // we don't handle index for now...
@@ -818,7 +818,7 @@ int16_t Core::inputStateCallback( unsigned port, unsigned device, unsigned index
 
 }
 
-void Core::videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
+void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
 
     Q_UNUSED( width );
 

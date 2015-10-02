@@ -5,13 +5,19 @@ TARGET = phoenix-backend
 
 QT += qml quick widgets multimedia concurrent
 
+# No need to worry about naming collision, folders are just for organization
+INCLUDEPATH += core input consumer
+
 HEADERS += \
     videoitem.h \
-    core.h \
-    libretro.h \
     logging.h \
-    audiobuffer.h \
-    audiooutput.h \
+    consumer/audiobuffer.h \
+    consumer/audiooutput.h \
+    consumer/videooutput.h \
+    core/coremodel.h \
+    core/corecontroller.h \
+    core/libretro.h \
+    core/libretrocore.h \
     input/keyboard.h \
     input/inputmanager.h \
     input/inputdevice.h \
@@ -22,10 +28,13 @@ HEADERS += \
 
 SOURCES += \
     videoitem.cpp \
-    core.cpp \
-    audiobuffer.cpp \
-    audiooutput.cpp \
     logging.cpp \
+    consumer/audiobuffer.cpp \
+    consumer/audiooutput.cpp \
+    consumer/videooutput.cpp \
+    core/coremodel.cpp \
+    core/corecontroller.cpp \
+    core/libretrocore.cpp \
     input/keyboard.cpp \
     input/inputmanager.cpp \
     input/joystick.cpp \

@@ -2,12 +2,7 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
-#include <QObject>
-#include <QThread>
-#include <QTimer>
-#include <QAudioOutput>
-#include <QDebug>
-#include <QBuffer>
+#include <QtMultimedia>
 
 #include <memory>
 #include <atomic>
