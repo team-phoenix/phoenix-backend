@@ -23,8 +23,7 @@ void AudioBuffer::stop() {
 
 }
 
-void AudioBuffer::clear()
-{
+void AudioBuffer::clear() {
     bufferPosition = 0;
     buffer.clear();
 }

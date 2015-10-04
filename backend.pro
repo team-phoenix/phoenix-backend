@@ -14,8 +14,6 @@ HEADERS += \
     consumer/audiobuffer.h \
     consumer/audiooutput.h \
     consumer/videooutput.h \
-    core/coremodel.h \
-    core/corecontroller.h \
     core/libretro.h \
     core/libretrocore.h \
     input/keyboard.h \
@@ -24,7 +22,10 @@ HEADERS += \
     input/inputdeviceevent.h \
     input/joystick.h \
     input/sdleventloop.h \
-    input/qmlinputdevice.h
+    input/qmlinputdevice.h \
+    core/gamesession.h \
+    core/gamemanager.h \
+    core/common.h
 
 SOURCES += \
     videoitem.cpp \
@@ -32,8 +33,6 @@ SOURCES += \
     consumer/audiobuffer.cpp \
     consumer/audiooutput.cpp \
     consumer/videooutput.cpp \
-    core/coremodel.cpp \
-    core/corecontroller.cpp \
     core/libretrocore.cpp \
     input/keyboard.cpp \
     input/inputmanager.cpp \
@@ -41,7 +40,9 @@ SOURCES += \
     input/sdleventloop.cpp \
     input/inputdevice.cpp \
     input/inputdeviceevent.cpp \
-    input/qmlinputdevice.cpp
+    input/qmlinputdevice.cpp \
+    core/gamemanager.cpp \
+    core/gamesession.cpp
 
 
 # Externals and system libraries

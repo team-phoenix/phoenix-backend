@@ -2,13 +2,6 @@
 #define CORE_H
 
 #include <QtCore>
-#include <QFile>
-#include <QString>
-#include <QByteArray>
-#include <QImage>
-#include <QMap>
-#include <QLibrary>
-#include <QObject>
 
 #include "libretro.h"
 #include "logging.h"
@@ -129,6 +122,7 @@ class LibretroCore: public QObject {
         // This needs to be public in order to be accessed by a static function.
         const int mPoolSize;
 
+        // TODO: Sync with GameManager's states
         enum State {
             STATEUNINITIALIZED = 0,
             STATEREADY,

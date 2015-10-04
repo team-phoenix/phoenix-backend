@@ -4,7 +4,7 @@
 #include <QtQuick>
 
 /*
- * VideoOutput is a consumer of video data as provided by CoreController.
+ * VideoOutput is a consumer of video data as provided by GameManager.
  */
 
 class VideoOutput : public QQuickItem {

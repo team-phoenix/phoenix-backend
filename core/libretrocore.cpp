@@ -343,7 +343,7 @@ void LibretroCore::setSystemDirectory( const QString path ) {
     emit systemDirectoryChanged();
 }
 
-// Save states
+// SRAM
 
 void LibretroCore::loadSRAM( const QString &baseName ) {
 
@@ -388,7 +388,7 @@ void LibretroCore::saveSRAM( const QString &baseName ) {
 
 }
 
-// SRAM
+// Save states
 
 /*bool Core::loadGameState( QString path, QString name ) {
     Q_UNUSED( path );
