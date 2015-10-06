@@ -50,18 +50,40 @@ class GameSession : public QObject {
         Q_ENUMS( State )
 
         enum Error {
-            NOERROR = 0,
+            NOERR = 0,
             UNKNOWNERROR = 1
         };
         Q_ENUMS( Error )
 
     signals:
+        // Implicit state change signals, meant to go to GameManager
+        void signalError( GameSession::Error error );
+        void signalInitFinished();
+        void signalLoadFinished();
+        void signalUnloadFinished();
+
+        // Signals for libretro cores
+        void loadLibretroCore( QString core );
+        void loadLibretroGame( QString game );
 
     public slots:
         void loadLibretro( QString core, QString game );
 
     private:
-        LibretroCore *libretroCore;
+        // Properties
+        GameSession::Error error;
+        bool muted;
+        bool pausable;
+        qreal playbackRate;
+        bool resettable;
+        bool rewindable;
+        QVariantMap source;
+        GameSession::State state;
+        VideoOutput *videoOutput;
+        qreal volume;
+
+        // Cores
+        LibretroCore libretroCore;
 
 };
 

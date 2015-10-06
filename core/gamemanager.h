@@ -100,10 +100,12 @@ class GameManager : public QObject {
 
         // Messages to GameSession
         void signalLoadLibretro( QString core, QString game );
+        void signalShutdown();
 
     public slots:
         // Messages from GameSession
-        void slotError( QString error );
+        void slotError( GameSession::Error error );
+        void slotInitFinished();
         void slotLoadFinished();
         void slotUnloadFinished();
 

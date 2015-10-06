@@ -2,8 +2,8 @@
 
 GameManager::GameManager( QObject *parent ) : QObject( parent ),
 
-    muted( false ), pausable( false ), playbackRate( 1.0 ), resettable( false ), rewindable( false ),
-    source(), state( GameSession::INIT ), volume( 1.0 ), videoOutput( nullptr ),
+    error( GameSession::NOERR ), muted( false ), pausable( false ), playbackRate( 1.0 ), resettable( false ),
+    rewindable( false ), source(), state( GameSession::INIT ), videoOutput( nullptr ), volume( 1.0 ),
 
     gameThread( new QThread() ), gameSession( new GameSession() ) {
 
@@ -14,18 +14,16 @@ GameManager::GameManager( QObject *parent ) : QObject( parent ),
     gameThread->setObjectName( "Game thread" );
     gameSession->moveToThread( gameThread );
 
-    // Catch the user exit signal and clean up
+    // Catch the program exit signal and clean up
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
 
         qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
 
-        // INIT/LOADING: Doesn't matter, data is just being read
-        // PLAYING/PAUSED/ERROR: Call stop(), should write save data normally then go STOPPED
-        // UNLOADING: Critical! Must wait for the state change to STOPPED or writing save data may be interrupted!
-        // End the game session
-        stop();
+        // Tell gameSession to shut down
+        emit signalShutdown();
 
         // Stop the game thread
+        // UI will be blocked until shutdown command is processed
         gameThread->exit();
         gameThread->wait();
         gameThread->deleteLater();
@@ -105,7 +103,8 @@ void GameManager::reset() {
     // send signal to session to reset emulation
 }
 
-void GameManager::slotError( QString error ) {
+void GameManager::slotError( GameSession::Error error ) {
+    setError( error );
     setState( GameSession::ERRORED );
 }
 
