@@ -274,6 +274,41 @@ void SDLEventLoop::stop() {
     sdlPollTimer.stop();
 }
 
+void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
+    qCDebug( phxInput ) << "Opening custom controller DB file:" << controllerDBFile;
+
+    QFile gameControllerDBFile( controllerDBFile );
+
+    if( !gameControllerDBFile.open( QIODevice::ReadOnly ) ) {
+        qCDebug( phxInput ) << "Custom controller DB file not present, using default file only";
+        return;
+    }
+
+    // We're good to go, load the custom file
+    quitSDL();
+
+    auto mappingData = gameControllerDBFile.readAll();
+
+    SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
+
+    gameControllerDBFile.close();
+
+    qCDebug( phxInput ) << "Loaded custom controller DB successfully.";
+
+    // Use the default one, too
+    QFile gameControllerEmbeddedDBFile( ":/input/gamecontrollerdb.txt" );
+    Q_ASSERT( gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly ) );
+
+    mappingData = gameControllerEmbeddedDBFile.readAll();
+
+    SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
+
+    gameControllerEmbeddedDBFile.close();
+
+    initSDL();
+
+}
+
 void SDLEventLoop::initSDL() {
 
     if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER ) < 0 ) {

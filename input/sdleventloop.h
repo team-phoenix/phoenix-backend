@@ -40,6 +40,7 @@ class SDLEventLoop : public QObject {
 
         void start();
         void stop();
+        void onControllerDBFileChanged( QString controllerDBFile );
 
     signals:
 

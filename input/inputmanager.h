@@ -22,6 +22,8 @@ class InputManager : public QObject {
 
         Q_PROPERTY( int count READ count NOTIFY countChanged )
 
+        Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
+
     public:
 
         explicit InputManager( QObject *parent = 0 );
@@ -41,7 +43,6 @@ class InputManager : public QObject {
         void setGamepadControlsFrontend( const bool control );
 
         static void registerTypes();
-
 
     public slots:
 
@@ -73,6 +74,7 @@ class InputManager : public QObject {
         void deviceAdded( InputDevice *device );
         void incomingEvent( InputDeviceEvent *event );
         void countChanged();
+        void controllerDBFileChanged( QString controllerDBFile );
 
     private:
 
@@ -83,6 +85,8 @@ class InputManager : public QObject {
         SDLEventLoop sdlEventLoop;
 
         QHash<QString, int> mDeviceNameMapping;
+
+        QString controllerDBFile;
 
         void installKeyboardFilter();
 

@@ -17,6 +17,8 @@ InputManager::InputManager( QObject *parent )
     connect( &sdlEventLoop, &SDLEventLoop::deviceConnected, this, &InputManager::insert );
     connect( &sdlEventLoop, &SDLEventLoop::deviceRemoved, this, &InputManager::removeAt );
 
+    connect( this, &InputManager::controllerDBFileChanged, &sdlEventLoop, &SDLEventLoop::onControllerDBFileChanged );
+
     // The Keyboard will be always active in port 0,
     // unless changed by the user.
 
@@ -184,8 +186,7 @@ bool InputManager::eventFilter( QObject *object, QEvent *event ) {
 
 }
 
-void InputManager::installKeyboardFilter()
-{
+void InputManager::installKeyboardFilter() {
     Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
 
     auto *window =  QApplication::topLevelWindows().at( 0 );
@@ -195,8 +196,7 @@ void InputManager::installKeyboardFilter()
     window->installEventFilter( this );
 }
 
-void InputManager::removeKeyboardFilter()
-{
+void InputManager::removeKeyboardFilter() {
     Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
     auto *window =  QApplication::topLevelWindows().at( 0 );
 
