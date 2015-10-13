@@ -285,6 +285,7 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
     }
 
     // We're good to go, load the custom file
+    stop();
     quitSDL();
 
     auto mappingData = gameControllerDBFile.readAll();
@@ -296,6 +297,10 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
     qCDebug( phxInput ) << "Loaded custom controller DB successfully.";
 
     // Use the default one, too
+
+    // Ensures the resources at loaded at startup, even during
+    // static compilation.
+    Q_INIT_RESOURCE( controllerdb );
     QFile gameControllerEmbeddedDBFile( ":/input/gamecontrollerdb.txt" );
     Q_ASSERT( gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly ) );
 
@@ -306,6 +311,7 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
     gameControllerEmbeddedDBFile.close();
 
     initSDL();
+    start();
 
 }
 
