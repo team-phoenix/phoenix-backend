@@ -18,7 +18,8 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
     // TODO: The poll timer isn't in the sdlEventLoopThread. It needs to be.
 
     QFile gameControllerDBFile( ":/input/gamecontrollerdb.txt" );
-    Q_ASSERT( gameControllerDBFile.open( QIODevice::ReadOnly ) );
+    bool status = gameControllerDBFile.open( QIODevice::ReadOnly );
+    Q_ASSERT( status );
 
     auto mappingData = gameControllerDBFile.readAll();
 
@@ -298,7 +299,8 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
 
     // Use the default one, too
     QFile gameControllerEmbeddedDBFile( ":/input/gamecontrollerdb.txt" );
-    Q_ASSERT( gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly ) );
+    bool status = gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly );
+    Q_ASSERT( status );
 
     mappingData = gameControllerEmbeddedDBFile.readAll();
 
