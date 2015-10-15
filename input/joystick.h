@@ -1,14 +1,10 @@
 #ifndef JOYSTICK_H
 #define JOYSTICK_H
 
-#include <QMap>
-#include <QPair>
-#include <QVector>
+#include "backendcommon.h"
 
 #include "input/inputdevice.h"
-#include "libretro.h"
-#include "SDL.h"
-#include "SDL_gamecontroller.h"
+
 class Joystick : public InputDevice {
 
     public:

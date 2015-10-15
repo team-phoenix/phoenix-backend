@@ -12,11 +12,11 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
       numOfDevices( 0 ),
       forceEventsHandling( true ) {
 
+    // Init controller db file
+    Q_INIT_RESOURCE( controllerdb );
+
     // TODO: The poll timer isn't in the sdlEventLoopThread. It needs to be.
 
-    // Ensures the resources at loaded at startup, even during
-    // static compilation.
-    Q_INIT_RESOURCE( controllerdb );
     QFile gameControllerDBFile( ":/input/gamecontrollerdb.txt" );
     Q_ASSERT( gameControllerDBFile.open( QIODevice::ReadOnly ) );
 
@@ -275,7 +275,7 @@ void SDLEventLoop::stop() {
 }
 
 void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
-    qCDebug( phxInput ) << "Opening custom controller DB file:" << controllerDBFile;
+    qCDebug( phxInput ) << "Opening custom controller DB file:" << qPrintable( controllerDBFile.remove( QRegularExpression( "[\"]." ) ) );
 
     QFile gameControllerDBFile( controllerDBFile );
 
@@ -297,10 +297,6 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
     qCDebug( phxInput ) << "Loaded custom controller DB successfully.";
 
     // Use the default one, too
-
-    // Ensures the resources at loaded at startup, even during
-    // static compilation.
-    Q_INIT_RESOURCE( controllerdb );
     QFile gameControllerEmbeddedDBFile( ":/input/gamecontrollerdb.txt" );
     Q_ASSERT( gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly ) );
 

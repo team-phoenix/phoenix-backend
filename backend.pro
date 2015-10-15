@@ -3,7 +3,7 @@ CONFIG += staticlib
 
 TARGET = phoenix-backend
 
-QT += qml quick widgets multimedia concurrent
+QT += qml quick widgets multimedia
 
 HEADERS += \
     videoitem.h \
@@ -19,6 +19,8 @@ HEADERS += \
     input/joystick.h \
     input/sdleventloop.h \
     input/qmlinputdevice.h
+
+PRECOMPILED_HEADER += backendcommon.h
 
 SOURCES += \
     videoitem.cpp \
@@ -51,18 +53,6 @@ win32 {
 
     DEFINES += SDL_WIN
     INCLUDEPATH += C:/SDL2/include C:/msys64/mingw64/include/SDL2 C:/msys64/mingw32/include/SDL2
-
-
-    CONFIG(debug, debug|release)  {
-        depends.path = $$OUT_PWD/debug
-        depends.files += C:/SDL2/bin/SDL2.dll
-    }
-
-    CONFIG(release, debug|release) {
-        depends.path = $$OUT_PWD/release
-        depends.files += C:/SDL2/bin/SDL2.dll
-    }
-    INSTALLS += depends
 }
 
 else {

@@ -41,14 +41,7 @@
 #ifndef AUDIOBUFFER_H
 #define AUDIOBUFFER_H
 
-#include <math.h>
-
-#include <QtCore>
-#include <QObject>
-#include <QAudioOutput>
-#include <QByteArray>
-#include <QIODevice>
-#include <QTimer>
+#include "backendcommon.h"
 
 class AudioBuffer : public QIODevice {
         Q_OBJECT

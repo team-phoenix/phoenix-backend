@@ -2,20 +2,10 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
-#include <QObject>
-#include <QThread>
-#include <QTimer>
-#include <QAudioOutput>
-#include <QDebug>
-#include <QBuffer>
-
-#include <memory>
-#include <atomic>
+#include "backendcommon.h"
 
 #include "audiobuffer.h"
 #include "logging.h"
-
-#include "samplerate.h"
 
 /* The AudioOutput class writes data to the default output device. Its internal buffers must be set by calling
  * slotAudioFormat() with the proper arguments before any data can be passed to it with slotAudioData(). In addition,

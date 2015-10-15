@@ -1,18 +1,12 @@
 #ifndef INPUTMANAGER_H
 #define INPUTMANAGER_H
 
-#include <QObject>
-#include <QList>
-#include <QEvent>
-#include <QKeyEvent>
-#include <QHash>
+#include "backendcommon.h"
 
 #include "input/sdleventloop.h"
 #include "input/inputdevice.h"
 #include "input/keyboard.h"
 #include "logging.h"
-
-#include <memory>
 
 class InputManager : public QObject {
         Q_OBJECT

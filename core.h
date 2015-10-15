@@ -1,14 +1,7 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include <QtCore>
-#include <QFile>
-#include <QString>
-#include <QByteArray>
-#include <QImage>
-#include <QMap>
-#include <QLibrary>
-#include <QObject>
+#include "backendcommon.h"
 
 #include "libretro.h"
 #include "logging.h"

@@ -1,12 +1,7 @@
 #ifndef SDLEVENTLOOP_H
 #define SDLEVENTLOOP_H
 
-#include <QObject>
-#include <QTimer>
-#include <QThread>
-#include <QMutex>
-#include <QHash>
-#include <SDL.h>
+#include "backendcommon.h"
 
 #include "joystick.h"
 
