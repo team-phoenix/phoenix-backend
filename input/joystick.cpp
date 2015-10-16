@@ -39,7 +39,8 @@ Joystick::Joystick( const int joystickIndex, QObject *parent )
     } );
 
     if( !loadSDLMapping( nullptr ) ) {
-        Q_ASSERT( loadSDLMapping( sdlDevice() ) );
+        auto loaded = loadSDLMapping( sdlDevice() );
+        Q_ASSERT( loaded );
     }
 
 }

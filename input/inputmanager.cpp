@@ -191,7 +191,7 @@ void InputManager::installKeyboardFilter() {
 
     auto *window =  QApplication::topLevelWindows().at( 0 );
 
-    Q_ASSERT( window );
+    Q_CHECK_PTR( window );
 
     window->installEventFilter( this );
 }
@@ -200,7 +200,7 @@ void InputManager::removeKeyboardFilter() {
     Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
     auto *window =  QApplication::topLevelWindows().at( 0 );
 
-    Q_ASSERT( window );
+    Q_CHECK_PTR( window );
     window->removeEventFilter( this );
 }
 

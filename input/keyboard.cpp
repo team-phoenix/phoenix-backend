@@ -46,6 +46,7 @@ void Keyboard::loadDefaultMapping() {
 
 void Keyboard::insert( const int &event, int16_t pressed ) {
 
+    qDebug() << editMode();
     if( editMode() ) {
         emit editModeEvent( event, pressed, InputDeviceEvent::EditEventType::ButtonEvent );
         return;
@@ -85,7 +86,8 @@ bool Keyboard::setMappings( const QVariant key, const QVariant newMapping, const
         auto oldValue = oldSequence[ 0 ];
 
         Q_ASSERT( oldValue > 0 );
-        Q_ASSERT( mDeviceMapping.remove( oldValue ) > 0 );
+        auto removed = mDeviceMapping.remove( oldValue );
+        Q_ASSERT( removed > 0 );
 
         mDeviceMapping.insert( intMapping, newValue );
         mappingRef().insert( key.toString(), QKeySequence( intMapping ).toString( QKeySequence::NativeText ) );

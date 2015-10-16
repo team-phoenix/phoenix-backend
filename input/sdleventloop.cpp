@@ -244,7 +244,7 @@ void SDLEventLoop::pollEvents() {
 
                     auto *joystick = sdlDeviceList.at( index );
 
-                    Q_ASSERT( joystick != nullptr );
+                    Q_CHECK_PTR( joystick );
 
                     int state = sdlEvent.cbutton.state;
 
