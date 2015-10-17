@@ -1,75 +1,111 @@
-TEMPLATE = lib
-CONFIG += staticlib
+##
+## Extra targets
+##
 
-TARGET = phoenix-backend
+    QMAKE_EXTRA_TARGETS += portable
 
-QT += qml quick widgets multimedia
+##
+## Qt settings
+##
 
-HEADERS += \
-    videoitem.h \
-    core.h \
-    libretro.h \
-    logging.h \
-    audiobuffer.h \
-    audiooutput.h \
-    input/keyboard.h \
-    input/inputmanager.h \
-    input/inputdevice.h \
-    input/inputdeviceevent.h \
-    input/joystick.h \
-    input/sdleventloop.h \
-    input/qmlinputdevice.h
+    # Undefine this (for some reason it's on by default on Windows)
+    CONFIG -= debug_and_release debug_and_release_target
+    CONFIG += staticlib static
 
-PRECOMPILED_HEADER += backendcommon.h
+    TEMPLATE = lib
 
-SOURCES += \
-    videoitem.cpp \
-    core.cpp \
-    audiobuffer.cpp \
-    audiooutput.cpp \
-    logging.cpp \
-    input/keyboard.cpp \
-    input/inputmanager.cpp \
-    input/joystick.cpp \
-    input/sdleventloop.cpp \
-    input/inputdevice.cpp \
-    input/inputdeviceevent.cpp \
-    input/qmlinputdevice.cpp
+    QT += qml quick widgets sql multimedia
 
+    TARGET = phoenix-backend
 
-# Externals and system libraries
-INCLUDEPATH += ../externals/quazip/quazip
-LIBS += -L../externals/quazip/quazip -lquazip
-LIBS += -lsamplerate
+##
+## Compiler settings
+##
 
-macx { QMAKE_MAC_SDK = macosx10.11 }
+    CONFIG += c++11
 
-win32 {
-    CONFIG -= windows
-    QMAKE_LFLAGS += $$QMAKE_LFLAGS_WINDOWS
+    OBJECTS_DIR = obj
+    MOC_DIR     = moc
+    RCC_DIR     = rcc
+    UI_DIR      = gui
 
-    LIBS += -LC:/SDL2/lib
-    LIBS += -lmingw32 -lSDL2main -lSDL2 -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid
+    # FIXME: Remove once newer Qt versions make this unnecessary
+    macx: QMAKE_MAC_SDK = macosx10.11
 
-    DEFINES += SDL_WIN
-    INCLUDEPATH += C:/SDL2/include C:/msys64/mingw64/include/SDL2 C:/msys64/mingw32/include/SDL2
-}
+    # Include libraries
+    win32: INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
+    macx:  INCLUDEPATH += /usr/local/include /usr/local/include/SDL2               # Homebrew
+    macx:  INCLUDEPATH += /usr/local/include /opt/local/include/SDL2               # MacPorts
+    unix:  INCLUDEPATH += /usr/include /usr/include/SDL2                           # Linux
 
-else {
+    # Include externals
+    DEFINES += QUAZIP_STATIC
+    INCLUDEPATH += ../externals/quazip/quazip
+
+    # Include our stuff
+    INCLUDEPATH += input
+
+    HEADERS += \
+        videoitem.h \
+        core.h \
+        libretro.h \
+        logging.h \
+        audiobuffer.h \
+        audiooutput.h \
+        input/keyboard.h \
+        input/inputmanager.h \
+        input/inputdevice.h \
+        input/inputdeviceevent.h \
+        input/joystick.h \
+        input/sdleventloop.h \
+        input/qmlinputdevice.h
+
+    PRECOMPILED_HEADER += backendcommon.h
+
+    SOURCES += \
+        videoitem.cpp \
+        core.cpp \
+        audiobuffer.cpp \
+        audiooutput.cpp \
+        logging.cpp \
+        input/keyboard.cpp \
+        input/inputmanager.cpp \
+        input/joystick.cpp \
+        input/sdleventloop.cpp \
+        input/inputdevice.cpp \
+        input/inputdeviceevent.cpp \
+        input/qmlinputdevice.cpp
+
+    RESOURCES += input/controllerdb.qrc
+
+##
+## Linker settings
+##
+
+    ##
+    ## Library paths
+    ##
+
+    # Use mingw64 prefix for static builds (uses mingw64/qt5-static prefix by default)
+    QMAKE_LFLAGS += -Wl,-Bstatic
+    LIBS += C:/msys64/mingw64/lib
+
+    # Externals
+    LIBS += -L../externals/quazip/quazip
+
+    # SDL2
+    macx: LIBS += -L/usr/local/lib -L/opt/local/lib # Homebrew, MacPorts
+
+    ##
+    ## Libraries
+    ##
+
+    # Externals
+    LIBS += -lquazip
+
+    # SDL 2
+    win32: LIBS += -lmingw32 -lSDL2main
     LIBS += -lSDL2
-    INCLUDEPATH += /usr/local/include /usr/local/include/SDL2 # Homebrew (OS X)
-    INCLUDEPATH += /opt/local/include /opt/local/include/SDL2 # MacPorts (OS X)
-    INCLUDEPATH += /usr/include /usr/include/SDL2 # Linux
-    QMAKE_CXXFLAGS +=
-    QMAKE_LFLAGS += -L/usr/local/lib -L/opt/local/lib
-}
 
-
-RESOURCES += input/controllerdb.qrc
-
-CONFIG += c++11
-
-# Additional import path used to resolve QML modules in Qt Creator's code model
-QML_IMPORT_PATH =
-
-QMAKE_EXTRA_TARGETS += portable
+    # Other libraries we use
+    LIBS += -lsamplerate -lz
