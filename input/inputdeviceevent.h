@@ -1,9 +1,7 @@
 #ifndef INPUTDEVICEEVENT
 #define INPUTDEVICEEVENT
 
-#include <QObject>
-#include <QString>
-#include <QDebug>
+#include "backendcommon.h"
 
 #include "libretro.h"
 

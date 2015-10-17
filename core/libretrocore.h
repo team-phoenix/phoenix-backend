@@ -1,7 +1,7 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include <QtCore>
+#include "backendcommon.h"
 
 #include "libretro.h"
 #include "logging.h"

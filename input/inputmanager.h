@@ -1,18 +1,12 @@
 #ifndef INPUTMANAGER_H
 #define INPUTMANAGER_H
 
-#include <QObject>
-#include <QList>
-#include <QEvent>
-#include <QKeyEvent>
-#include <QHash>
+#include "backendcommon.h"
 
 #include "input/sdleventloop.h"
 #include "input/inputdevice.h"
 #include "input/keyboard.h"
 #include "logging.h"
-
-#include <memory>
 
 class InputManager : public QObject {
         Q_OBJECT
@@ -21,6 +15,8 @@ class InputManager : public QObject {
                     WRITE setGamepadControlsFrontend NOTIFY gamepadControlsFrontendChanged )
 
         Q_PROPERTY( int count READ count NOTIFY countChanged )
+
+        Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
 
     public:
 
@@ -41,7 +37,6 @@ class InputManager : public QObject {
         void setGamepadControlsFrontend( const bool control );
 
         static void registerTypes();
-
 
     public slots:
 
@@ -73,6 +68,7 @@ class InputManager : public QObject {
         void deviceAdded( InputDevice *device );
         void incomingEvent( InputDeviceEvent *event );
         void countChanged();
+        void controllerDBFileChanged( QString controllerDBFile );
 
     private:
 
@@ -83,6 +79,8 @@ class InputManager : public QObject {
         SDLEventLoop sdlEventLoop;
 
         QHash<QString, int> mDeviceNameMapping;
+
+        QString controllerDBFile;
 
         void installKeyboardFilter();
 

@@ -12,13 +12,14 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
       numOfDevices( 0 ),
       forceEventsHandling( true ) {
 
+    // Init controller db file
+    Q_INIT_RESOURCE( controllerdb );
+
     // TODO: The poll timer isn't in the sdlEventLoopThread. It needs to be.
 
-    // Ensures the resources at loaded at startup, even during
-    // static compilation.
-    Q_INIT_RESOURCE( controllerdb );
     QFile gameControllerDBFile( ":/input/gamecontrollerdb.txt" );
-    Q_ASSERT( gameControllerDBFile.open( QIODevice::ReadOnly ) );
+    bool status = gameControllerDBFile.open( QIODevice::ReadOnly );
+    Q_ASSERT( status );
 
     auto mappingData = gameControllerDBFile.readAll();
 
@@ -243,7 +244,7 @@ void SDLEventLoop::pollEvents() {
 
                     auto *joystick = sdlDeviceList.at( index );
 
-                    Q_ASSERT( joystick != nullptr );
+                    Q_CHECK_PTR( joystick );
 
                     int state = sdlEvent.cbutton.state;
 
@@ -272,6 +273,44 @@ void SDLEventLoop::start() {
 
 void SDLEventLoop::stop() {
     sdlPollTimer.stop();
+}
+
+void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
+    qCDebug( phxInput ) << "Opening custom controller DB file:" << qPrintable( controllerDBFile.remove( QRegularExpression( "[\"]." ) ) );
+
+    QFile gameControllerDBFile( controllerDBFile );
+
+    if( !gameControllerDBFile.open( QIODevice::ReadOnly ) ) {
+        qCDebug( phxInput ) << "Custom controller DB file not present, using default file only";
+        return;
+    }
+
+    // We're good to go, load the custom file
+    stop();
+    quitSDL();
+
+    auto mappingData = gameControllerDBFile.readAll();
+
+    SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
+
+    gameControllerDBFile.close();
+
+    qCDebug( phxInput ) << "Loaded custom controller DB successfully.";
+
+    // Use the default one, too
+    QFile gameControllerEmbeddedDBFile( ":/input/gamecontrollerdb.txt" );
+    bool status = gameControllerEmbeddedDBFile.open( QIODevice::ReadOnly );
+    Q_ASSERT( status );
+
+    mappingData = gameControllerEmbeddedDBFile.readAll();
+
+    SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
+
+    gameControllerEmbeddedDBFile.close();
+
+    initSDL();
+    start();
+
 }
 
 void SDLEventLoop::initSDL() {

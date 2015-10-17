@@ -1,24 +1,7 @@
 #ifndef VIDEOITEM_H
 #define VIDEOITEM_H
 
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QSGSimpleRectNode>
-#include <QOpenGLContext>
-#include <QOpenGLFramebufferObject>
-#include <QImage>
-#include <QQueue>
-#include <QElapsedTimer>
-#include <QString>
-#include <QFile>
-#include <QFileInfo>
-#include <QLibrary>
-#include <QSGSimpleTextureNode>
-#include <QApplication>
-#include <QGuiApplication>
-#include <QScreen>
-
-#include <memory>
+#include "backendcommon.h"
 
 #include "libretro.h"
 #include "libretrocore.h"

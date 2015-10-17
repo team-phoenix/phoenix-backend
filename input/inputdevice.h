@@ -1,16 +1,7 @@
 #ifndef INPUTDEVICE
 #define INPUTDEVICE
 
-#include <QObject>
-#include <QMutex>
-#include <QHash>
-#include <QDebug>
-#include <QMap>
-#include <QQmlEngine>
-#include <QVariantMap>
-#include <QSettings>
-#include <QFile>
-#include <memory>
+#include "backendcommon.h"
 
 #include "libretro.h"
 #include "logging.h"
