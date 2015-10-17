@@ -1,7 +1,7 @@
 #ifndef GAMEMANAGER_H
 #define GAMEMANAGER_H
 
-#include <QtCore>
+#include "backendcommon.h"
 
 #include "gamesession.h"
 #include "logging.h"

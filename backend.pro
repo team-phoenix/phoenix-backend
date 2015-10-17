@@ -62,7 +62,7 @@
         input/qmlinputdevice.h \
         core/gamesession.h \
         core/gamemanager.h \
-        core/common.h
+    core/corecommon.h
 
     PRECOMPILED_HEADER += backendcommon.h
 

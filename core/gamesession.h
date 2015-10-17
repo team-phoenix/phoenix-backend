@@ -1,7 +1,7 @@
 #ifndef GAMESESSION_H
 #define GAMESESSION_H
 
-#include <QtCore>
+#include "backendcommon.h"
 
 #include "libretro.h"
 #include "libretrocore.h"

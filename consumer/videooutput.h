@@ -1,7 +1,7 @@
 #ifndef COREVIEW_H
 #define COREVIEW_H
 
-#include <QtQuick>
+#include "backendcommon.h"
 
 /*
  * VideoOutput is a consumer of video data as provided by GameManager.

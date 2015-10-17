@@ -18,8 +18,6 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-#include "libretro.h"
-
 #endif
 
 #endif // BACKENDCOMMON_H
