@@ -101,7 +101,7 @@ void Core::slotLoadCore( QString path ) {
 
     libraryPath = path;
 
-    qCDebug( phxCore ) << "slotLoadCore(" << libraryPath << ")";
+    qCDebug( phxCore ) << Q_FUNC_INFO << ": " << path;
 
     Q_ASSERT( !libretroCore.isLoaded() );
 
@@ -167,8 +167,7 @@ void Core::slotLoadCore( QString path ) {
 
 void Core::slotLoadGame( QString path ) {
 
-
-    qCDebug( phxCore ) << "slotLoadGame(" << path << ")";
+    qCDebug( phxCore ) << Q_FUNC_INFO << ": " << path;
     gameFileInfo.setFile( path );
 
     // Argument struct for symbols.retro_load_game()
@@ -250,7 +249,7 @@ void Core::slotFrame() {
 
 void Core::slotShutdown() {
 
-    qCDebug( phxCore ) << "slotShutdown() start";
+    qCDebug( phxCore ) << Q_FUNC_INFO << "start";
 
     saveSRAM( gameFileInfo.baseName() );
 
@@ -290,7 +289,7 @@ void Core::slotShutdown() {
     }
 
     emit signalCoreStateChanged( STATEUNINITIALIZED, CORENOERROR );
-    qCDebug( phxCore ) << "slotShutdown() end";
+    qCDebug( phxCore ) << Q_FUNC_INFO << "end";
 
 }
 
@@ -355,27 +354,28 @@ void Core::loadSRAM( const QString &baseName ) {
         QByteArray data = file.readAll();
         memcpy( SRAMDataRaw, data.data(), data.size() );
 
-        qCDebug( phxCore ) << "Loading SRAM from: " << file.fileName();
+        qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(true)";
         file.close();
     }
 
     else {
-        qCDebug( phxCore ) << "loading SRAM from " << file.fileName() << " has failed.";
+        qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(false)";
     }
 
 }
 
 void Core::saveSRAM( const QString &baseName ) {
 
-    if( SRAMDataRaw == nullptr ) {
-        qCDebug( phxCore ) << "SRAM pointer is null, the game probably wasn't loaded";
+    auto localFile = saveDirectory() + "/" + baseName + ".srm";
+    if ( SRAMDataRaw == nullptr ) {
+        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << localFile << "(nullptr)";
         return;
     }
 
-    QFile file( saveDirectory() + "/" + baseName + ".srm" );
+    QFile file( localFile );
 
     if( file.open( QIODevice::WriteOnly ) ) {
-        qCDebug( phxCore ) << "Saving SRAM to: " << file.fileName();
+        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << file.fileName();
         char *data = static_cast<char *>( SRAMDataRaw );
         size_t size = symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
         file.write( data, size );
@@ -383,7 +383,7 @@ void Core::saveSRAM( const QString &baseName ) {
     }
 
     else {
-        qDebug() << "saving SRAM has failed at " << file.fileName();
+        qDebug() << Q_FUNC_INFO << ": " << file.fileName() << "(Failed)";
     }
 
 }
