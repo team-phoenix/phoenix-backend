@@ -218,7 +218,7 @@ void Joystick::saveMappings() {
                          + QString::number( mSDLAxisVector.value( i ) ) + QStringLiteral( "," );
     }
 
-#if defined( Q_OS_WIN32 )
+#if defined( Q_OS_WIN )
     const QString platform = QStringLiteral( "Windows" );
 #elif defined( Q_OS_MACX )
     const QString platform = QStringLiteral( "Mac OS X" );
