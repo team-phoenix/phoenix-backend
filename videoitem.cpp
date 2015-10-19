@@ -243,7 +243,8 @@ void VideoItem::slotStop() {
 void VideoItem::setCore( QString libretroCore ) {
 
     // Do nothing if a blank string is given
-    if( libretroCore.isEmpty() ) {
+
+    if ( libretroCore.isEmpty() ) {
         return;
     }
 

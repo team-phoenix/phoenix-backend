@@ -36,9 +36,11 @@ LibretroSymbols::LibretroSymbols()
 //
 
 Core::Core()
-    : mPoolSize( 30 ),
+    : inputManager( nullptr ),
+      mPoolSize( 30 ),
       pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr ) {
+      SRAMDataRaw( nullptr )
+{
 
     Core::core = this;
 
@@ -720,7 +722,9 @@ bool Core::environmentCallback( unsigned cmd, void *data ) {
 
 void Core::inputPollCallback( void ) {
 
-    core->inputManager->pollStates();
+    if ( core->inputManager ) {
+        core->inputManager->pollStates();
+    }
     // qDebug() << "Core::inputPollCallback";
     return;
 
@@ -787,7 +791,7 @@ int16_t Core::inputStateCallback( unsigned port, unsigned device, unsigned index
     // we don't handle index for now...
 
 
-    if( ( int ) port >= core->inputManager->size() ) {
+    if( !core->inputManager || static_cast<int>( port ) >= core->inputManager->size() ) {
         return 0;
     }
 
