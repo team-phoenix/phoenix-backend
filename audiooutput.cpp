@@ -138,24 +138,24 @@ void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
     //                              << "outputCurrentByte =" << outputCurrentByte
     //                              << " outputFreeBytes =" << outputFreeBytes
     //                              << "inputBytes =" << inputBytes;
-        qCDebug( phxAudioOutput ) << "\tOutput buffer is" << outputAudioFormat.durationForBytes( outputTotalBytes ) / 1000
-                                  << "ms, target =" << outputTargetMs
-                                  << "ms (" << ( double )100.0 * ( ( double )outputTargetMs / (
-                                              ( double )( outputAudioFormat.durationForBytes(
-                                                      outputTotalBytes ) ) / 1000.0 ) )
-                                  << "%)";
-        qCDebug( phxAudioOutput ) << "\tOutput: needed" << outputVectorTargetToCurrent << "bytes, wrote"
-                                  << outputBytesWritten << "bytes";
-        qCDebug( phxAudioOutput ) << "\toutputTargetByte =" << outputTargetByte
-                                  << "outputVectorTargetToCurrent =" << outputVectorTargetToCurrent;
-        qCDebug( phxAudioOutput ) << "\toutputAudioInterface->bufferSize() =" << outputAudioInterface->bufferSize()
-                                  << "outputAudioInterface->bytesFree() =" << outputAudioInterface->bytesFree()
-                                  << "outputBuffer.bytesToWrite() =" << outputBuffer.bytesToWrite();
-        qCDebug( phxAudioOutput ) << "\toutputBuffer.bytesAvailable() =" << outputBuffer.bytesAvailable()
-                                  << "outputBuffer.size() =" << outputBuffer.size()
-                                  << "outputBuffer.pos() =" << outputBuffer.pos();
-        qCDebug( phxAudioOutput ) << "\tState:" << outputAudioInterface->state()
-                                  << " error: " << outputAudioInterface->error();
+    qCDebug( phxAudioOutput ) << "\tOutput buffer is" << outputAudioFormat.durationForBytes( outputTotalBytes ) / 1000
+                              << "ms, target =" << outputTargetMs
+                              << "ms (" << ( double )100.0 * ( ( double )outputTargetMs / (
+                                          ( double )( outputAudioFormat.durationForBytes(
+                                                  outputTotalBytes ) ) / 1000.0 ) )
+                              << "%)";
+    qCDebug( phxAudioOutput ) << "\tOutput: needed" << outputVectorTargetToCurrent << "bytes, wrote"
+                              << outputBytesWritten << "bytes";
+    qCDebug( phxAudioOutput ) << "\toutputTargetByte =" << outputTargetByte
+                              << "outputVectorTargetToCurrent =" << outputVectorTargetToCurrent;
+    qCDebug( phxAudioOutput ) << "\toutputAudioInterface->bufferSize() =" << outputAudioInterface->bufferSize()
+                              << "outputAudioInterface->bytesFree() =" << outputAudioInterface->bytesFree()
+                              << "outputBuffer.bytesToWrite() =" << outputBuffer.bytesToWrite();
+    qCDebug( phxAudioOutput ) << "\toutputBuffer.bytesAvailable() =" << outputBuffer.bytesAvailable()
+                              << "outputBuffer.size() =" << outputBuffer.size()
+                              << "outputBuffer.pos() =" << outputBuffer.pos();
+    qCDebug( phxAudioOutput ) << "\tState:" << outputAudioInterface->state()
+                              << " error: " << outputAudioInterface->error();
 
 #endif
 
@@ -283,8 +283,18 @@ void AudioOutput::resetAudio() {
 }
 
 void AudioOutput::allocateMemory() {
+
+    // Some cores may give as much as 4 video frames' worth of audio data in a single video frame period, so we need to one-up them
+    int bufferSizeInVideoFrames = 30;
+
     auto outputBufferSizeSamples = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
-    qCDebug( phxAudioOutput ) << "Allocated" << outputBufferSizeSamples * 2 * 2 / 1024 << "kb for resampling.";
+    qCDebug( phxAudioOutput ) << "Allocating" <<
+                              ( float ) (
+                                  sizeof( float ) * ( int )( ( double )sampleRate / coreFPS ) * bufferSizeInVideoFrames
+                                  + sizeof( float ) * outputBufferSizeSamples * bufferSizeInVideoFrames
+                                  + sizeof( short ) * outputBufferSizeSamples * bufferSizeInVideoFrames
+                              )
+                              / 1024.0 / 1024.0 << "MB for resampling...";
 
     if( inputDataFloat ) {
         delete [] inputDataFloat;
@@ -302,8 +312,8 @@ void AudioOutput::allocateMemory() {
     }
 
     // Make the input buffer a bit bigger as the amount of data coming in may be a bit more than a frame's worth
-    inputDataFloat = new float[( int )( ( double )sampleRate / coreFPS ) * 3];
-    outputDataFloat = new float[outputBufferSizeSamples * 2];
-    outputDataShort = new short[outputBufferSizeSamples * 2];
+    inputDataFloat = new float[( int )( ( double )sampleRate / coreFPS ) * bufferSizeInVideoFrames];
+    outputDataFloat = new float[outputBufferSizeSamples * bufferSizeInVideoFrames];
+    outputDataShort = new short[outputBufferSizeSamples * bufferSizeInVideoFrames];
 }
 
