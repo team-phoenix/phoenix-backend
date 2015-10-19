@@ -62,6 +62,7 @@ void AudioOutput::slotAudioFormat( int sampleRate, double coreFPS, double hostFP
              outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
 
     resetAudio();
+    allocateMemory();
 
 }
 
@@ -226,6 +227,7 @@ void AudioOutput::slotAudioOutputStateChanged( QAudio::State s ) {
             outputAudioInterface->start( &outputBuffer );
         } else {
             resetAudio();
+            allocateMemory();
         }
     }
 
@@ -274,9 +276,9 @@ void AudioOutput::resetAudio() {
     if( !coreIsRunning ) {
         outputAudioInterface->suspend();
     }
+}
 
-    // Reallocate space for scratch space conversion buffers
-
+void AudioOutput::allocateMemory() {
     auto outputBufferSizeSamples = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
     qCDebug( phxAudioOutput ) << "Allocated" << outputBufferSizeSamples * 2 * 2 / 1024 << "kb for resampling.";
 
@@ -299,5 +301,5 @@ void AudioOutput::resetAudio() {
     inputDataFloat = new float[( int )( ( double )sampleRate / coreFPS ) * 3];
     outputDataFloat = new float[outputBufferSizeSamples * 2];
     outputDataShort = new short[outputBufferSizeSamples * 2];
-
 }
+

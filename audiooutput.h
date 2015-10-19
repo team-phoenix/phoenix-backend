@@ -48,6 +48,9 @@ class AudioOutput : public QObject {
         // Completely init/re-init audio output
         void resetAudio();
 
+        // Allocate memory for conversion
+        void allocateMemory();
+
         // Opaque pointer for libsamplerate
         SRC_STATE *resamplerState;
 
