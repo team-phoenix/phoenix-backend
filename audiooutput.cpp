@@ -6,7 +6,7 @@ const auto samplesPerFrame = 2;
 
 AudioOutput::AudioOutput()
     : resamplerState( nullptr ),
-      inputDataFloat( nullptr ), inputDataChar( nullptr ),
+      inputDataFloat( nullptr ),
       outputDataFloat( nullptr ), outputDataShort( nullptr ),
       coreIsRunning( false ),
       outputAudioInterface( nullptr ),

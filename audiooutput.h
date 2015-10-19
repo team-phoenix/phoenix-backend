@@ -62,7 +62,6 @@ class AudioOutput : public QObject {
 
         // Internal buffers used for resampling
         float *inputDataFloat;
-        char *inputDataChar;
         float *outputDataFloat;
         short *outputDataShort;
 
