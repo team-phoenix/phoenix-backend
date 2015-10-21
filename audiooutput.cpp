@@ -70,7 +70,7 @@ void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
 
     // Handle the situation where there is an error opening the audio device
     if( outputAudioInterface->error() == QAudio::OpenError ) {
-        qWarning( phxAudioOutput ) << "QAudio::OpenError, attempting reset...";
+        // qWarning( phxAudioOutput ) << "QAudio::OpenError, attempting reset...";
         resetAudio();
     }
 
@@ -225,7 +225,7 @@ void AudioOutput::slotShutdown() {
 void AudioOutput::slotAudioOutputStateChanged( QAudio::State s ) {
 
     if( s == QAudio::IdleState && outputAudioInterface->error() == QAudio::UnderrunError ) {
-        qWarning( phxAudioOutput ) << "audioOut underrun";
+        // qWarning( phxAudioOutput ) << "audioOut underrun";
 
         if( outputAudioInterface ) {
             outputAudioInterface->start( &outputBuffer );
@@ -274,8 +274,8 @@ void AudioOutput::resetAudio() {
 
     connect( outputAudioInterface, &QAudioOutput::stateChanged, this, &AudioOutput::slotAudioOutputStateChanged );
     outputAudioInterface->start( &outputBuffer );
-    QAudio::State state = outputAudioInterface->state();
-    qCDebug( phxAudioOutput ) << state;
+    // QAudio::State state = outputAudioInterface->state();
+    // qCDebug( phxAudioOutput ) << state;
 
     if( !coreIsRunning ) {
         outputAudioInterface->suspend();
