@@ -38,7 +38,8 @@ LibretroSymbols::LibretroSymbols()
 LibretroCore::LibretroCore()
     : mPoolSize( 30 ),
       pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr ) {
+      SRAMDataRaw( nullptr )
+{
 
     LibretroCore::core = this;
 
@@ -101,7 +102,7 @@ void LibretroCore::slotLoadCore( QString path ) {
 
     libraryPath = path;
 
-    qCDebug( phxCore ) << "slotLoadCore(" << libraryPath << ")";
+    qCDebug( phxCore ) << Q_FUNC_INFO << ": " << path;
 
     Q_ASSERT( !libretroCore.isLoaded() );
 
@@ -167,8 +168,7 @@ void LibretroCore::slotLoadCore( QString path ) {
 
 void LibretroCore::slotLoadGame( QString path ) {
 
-
-    qCDebug( phxCore ) << "slotLoadGame(" << path << ")";
+    qCDebug( phxCore ) << Q_FUNC_INFO << ": " << path;
     gameFileInfo.setFile( path );
 
     // Argument struct for symbols.retro_load_game()
@@ -250,7 +250,7 @@ void LibretroCore::slotFrame() {
 
 void LibretroCore::slotShutdown() {
 
-    qCDebug( phxCore ) << "slotShutdown() start";
+    qCDebug( phxCore ) << Q_FUNC_INFO << "start";
 
     saveSRAM( gameFileInfo.baseName() );
 
@@ -290,7 +290,7 @@ void LibretroCore::slotShutdown() {
     }
 
     emit signalCoreStateChanged( STATEUNINITIALIZED, CORENOERROR );
-    qCDebug( phxCore ) << "slotShutdown() end";
+    qCDebug( phxCore ) << Q_FUNC_INFO << "end";
 
 }
 
@@ -355,27 +355,28 @@ void LibretroCore::loadSRAM( const QString &baseName ) {
         QByteArray data = file.readAll();
         memcpy( SRAMDataRaw, data.data(), data.size() );
 
-        qCDebug( phxCore ) << "Loading SRAM from: " << file.fileName();
+        qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(true)";
         file.close();
     }
 
     else {
-        qCDebug( phxCore ) << "loading SRAM from " << file.fileName() << " has failed.";
+        qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(false)";
     }
 
 }
 
 void LibretroCore::saveSRAM( const QString &baseName ) {
 
-    if( SRAMDataRaw == nullptr ) {
-        qCDebug( phxCore ) << "SRAM pointer is null, the game probably wasn't loaded";
+    auto localFile = saveDirectory() + "/" + baseName + ".srm";
+    if ( SRAMDataRaw == nullptr ) {
+        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << localFile << "(nullptr)";
         return;
     }
 
-    QFile file( saveDirectory() + "/" + baseName + ".srm" );
+    QFile file( localFile );
 
     if( file.open( QIODevice::WriteOnly ) ) {
-        qCDebug( phxCore ) << "Saving SRAM to: " << file.fileName();
+        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << file.fileName();
         char *data = static_cast<char *>( SRAMDataRaw );
         size_t size = symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
         file.write( data, size );
@@ -383,7 +384,7 @@ void LibretroCore::saveSRAM( const QString &baseName ) {
     }
 
     else {
-        qDebug() << "saving SRAM has failed at " << file.fileName();
+        qDebug() << Q_FUNC_INFO << ": " << file.fileName() << "(Failed)";
     }
 
 }
@@ -720,7 +721,9 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
 void LibretroCore::inputPollCallback( void ) {
 
-    core->inputManager->pollStates();
+    if ( core->inputManager ) {
+        core->inputManager->pollStates();
+    }
     // qDebug() << "Core::inputPollCallback";
     return;
 
@@ -787,7 +790,7 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
     // we don't handle index for now...
 
 
-    if( ( int ) port >= core->inputManager->size() ) {
+    if( !core->inputManager || static_cast<int>( port ) >= core->inputManager->size() ) {
         return 0;
     }
 
