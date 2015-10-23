@@ -14,7 +14,7 @@
 
     TEMPLATE = lib
 
-    QT += qml quick widgets sql multimedia
+    QT += qml quick sql multimedia
 
     TARGET = phoenix-backend
 

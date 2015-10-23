@@ -3,9 +3,10 @@
 
 #include "backendcommon.h"
 
-#include "input/sdleventloop.h"
-#include "input/inputdevice.h"
-#include "input/keyboard.h"
+#include "qmlinputdevice.h"
+#include "sdleventloop.h"
+#include "inputdevice.h"
+#include "keyboard.h"
 #include "logging.h"
 
 class InputManager : public QObject {

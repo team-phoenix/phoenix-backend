@@ -6,7 +6,6 @@
 #include <QtCore>
 #include <QtQml>
 #include <QtQuick>
-#include <QtWidgets>
 #include <QtMultimedia>
 
 #include <memory>

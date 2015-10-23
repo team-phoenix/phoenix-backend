@@ -127,7 +127,7 @@ class QMLInputDevice : public InputDevice {
         void setLeftTrigger( const bool &state );
         void setRightTrigger( const bool &state );
 
-        void saveMappings()  {
+        void saveMappings() override {
 
         }
         bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType type ) override {

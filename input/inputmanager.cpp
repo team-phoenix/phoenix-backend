@@ -1,12 +1,5 @@
 #include "inputmanager.h"
 
-#include "qmlinputdevice.h"
-#include <qqml.h>
-
-#include <QApplication>
-#include <QWindow>
-#include <QQmlEngine>
-
 InputManager::InputManager( QObject *parent )
     : QObject( parent ),
       keyboard( new Keyboard() ),
@@ -187,9 +180,9 @@ bool InputManager::eventFilter( QObject *object, QEvent *event ) {
 }
 
 void InputManager::installKeyboardFilter() {
-    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
+    Q_ASSERT( QGuiApplication::topLevelWindows().size() > 0 );
 
-    auto *window =  QApplication::topLevelWindows().at( 0 );
+    auto *window =  QGuiApplication::topLevelWindows().at( 0 );
 
     Q_CHECK_PTR( window );
 
@@ -197,8 +190,8 @@ void InputManager::installKeyboardFilter() {
 }
 
 void InputManager::removeKeyboardFilter() {
-    Q_ASSERT( QApplication::topLevelWindows().size() > 0 );
-    auto *window =  QApplication::topLevelWindows().at( 0 );
+    Q_ASSERT( QGuiApplication::topLevelWindows().size() > 0 );
+    auto *window =  QGuiApplication::topLevelWindows().at( 0 );
 
     Q_CHECK_PTR( window );
     window->removeEventFilter( this );
