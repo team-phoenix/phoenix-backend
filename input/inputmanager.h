@@ -3,6 +3,7 @@
 
 #include "backendcommon.h"
 
+#include "qmlinputdevice.h"
 #include "sdleventloop.h"
 #include "inputdevice.h"
 #include "keyboard.h"

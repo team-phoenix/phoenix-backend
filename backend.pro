@@ -14,7 +14,7 @@
 
     TEMPLATE = lib
 
-    QT += qml quick widgets sql multimedia
+    QT += qml quick sql multimedia
 
     TARGET = phoenix-backend
 
@@ -62,7 +62,7 @@
         input/qmlinputdevice.h \
         core/gamesession.h \
         core/gamemanager.h \
-    core/corecommon.h
+        core/corecommon.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
@@ -82,8 +82,6 @@
         input/qmlinputdevice.cpp \
         core/gamemanager.cpp \
         core/gamesession.cpp
-
-
 
     RESOURCES += input/controllerdb.qrc
 
