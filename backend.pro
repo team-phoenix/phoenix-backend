@@ -54,17 +54,17 @@
         core/core.h \
         core/corecontrol.h \
         core/libretro.h \
+        core/libretrocoreold.h \
+        core/libretrocore.h \
+        core/libretrovariable.h \
+        core/libretrosymbols.h \
         input/keyboard.h \
         input/inputmanager.h \
         input/inputdevice.h \
         input/inputdeviceevent.h \
         input/joystick.h \
         input/sdleventloop.h \
-        input/qmlinputdevice.h \
-    core/libretrocoreold.h \
-    core/libretrocore.h \
-    core/libretrovariable.h \
-    core/libretrosymbols.h
+        input/qmlinputdevice.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
@@ -76,17 +76,17 @@
         consumer/videooutput.cpp \
         core/core.cpp \
         core/corecontrol.cpp \
+        core/libretrocoreold.cpp \
+        core/libretrocore.cpp \
+        core/libretrovariable.cpp \
+        core/libretrosymbols.cpp \
         input/keyboard.cpp \
         input/inputmanager.cpp \
         input/joystick.cpp \
         input/sdleventloop.cpp \
         input/inputdevice.cpp \
         input/inputdeviceevent.cpp \
-        input/qmlinputdevice.cpp \
-    core/libretrocoreold.cpp \
-    core/libretrocore.cpp \
-    core/libretrovariable.cpp \
-    core/libretrosymbols.cpp
+        input/qmlinputdevice.cpp
 
     RESOURCES += input/controllerdb.qrc
 

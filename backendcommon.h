@@ -8,8 +8,9 @@
 #include <QtQuick>
 #include <QtMultimedia>
 
-#include <memory>
 #include <atomic>
+#include <memory>
+#include <string>
 
 #include <math.h>
 
