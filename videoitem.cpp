@@ -5,8 +5,8 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     qmlRunning( false ),
     qmlInputManager( nullptr ),
     audioOutput( new AudioOutput() ), audioOutputThread( new QThread( this ) ),
-    core( new LibretroCore() ), // coreTimer( new QTimer() ),
-    coreThread( nullptr ), qmlCoreState( LibretroCore::STATEUNINITIALIZED ),
+    core( new LibretroCoreOld() ), // coreTimer( new QTimer() ),
+    coreThread( nullptr ), qmlCoreState( LibretroCoreOld::STATEUNINITIALIZED ),
     avInfo(), pixelFormat(),
     corePath( "" ), gamePath( "" ),
     width( 0 ), height( 0 ), pitch( 0 ), coreFPS( 0.0 ), hostFPS( 0.0 ), aspectRatio( 1.0 ),
@@ -18,18 +18,18 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Connect controller signals and slots
 
     // Run a timer to make core produce a frame at regular intervals, or at vsync
-    connect( this, &VideoItem::signalFrame, core, &LibretroCore::slotFrame );
+    connect( this, &VideoItem::signalFrame, core, &LibretroCoreOld::slotFrame );
 
     // Do the next item in the core lifecycle when the state has changed
-    connect( core, &LibretroCore::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
+    connect( core, &LibretroCoreOld::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
 
     // Load a core and a game
-    connect( this, &VideoItem::signalLoadCore, core, &LibretroCore::slotLoadCore );
-    connect( this, &VideoItem::signalLoadGame, core, &LibretroCore::slotLoadGame );
+    connect( this, &VideoItem::signalLoadCore, core, &LibretroCoreOld::slotLoadCore );
+    connect( this, &VideoItem::signalLoadGame, core, &LibretroCoreOld::slotLoadGame );
 
     // Get the audio and video timing/format from core once a core and game are loaded,
     // send the data out to each consumer for their own initialization
-    connect( core, &LibretroCore::signalAVFormat, this, &VideoItem::slotCoreAVFormat );
+    connect( core, &LibretroCoreOld::signalAVFormat, this, &VideoItem::slotCoreAVFormat );
     connect( this, &VideoItem::signalAudioFormat, audioOutput, &AudioOutput::slotAudioFormat );
     connect( this, &VideoItem::signalVideoFormat, this, &VideoItem::slotVideoFormat ); // Belongs in both categories
 
@@ -38,12 +38,12 @@ VideoItem::VideoItem( QQuickItem *parent ) :
 
     // Set up the slot that'll move Core back to this thread when needed
     // You MUST be sure that core->thread() and this->thread() are not the same or a deadlock will happen
-    connect( this, &VideoItem::signalChangeCoreThread, core, &LibretroCore::slotMoveToThread, Qt::BlockingQueuedConnection );
+    connect( this, &VideoItem::signalChangeCoreThread, core, &LibretroCoreOld::slotMoveToThread, Qt::BlockingQueuedConnection );
 
     // Connect consumer signals and slots
 
-    connect( core, &LibretroCore::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
-    connect( core, &LibretroCore::signalVideoData, this, &VideoItem::slotVideoData );
+    connect( core, &LibretroCoreOld::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
+    connect( core, &LibretroCoreOld::signalVideoData, this, &VideoItem::slotVideoData );
     connect( this, &VideoItem::signalSetVolume, audioOutput, &AudioOutput::slotSetVolume );
 
     // Set up threads
@@ -56,7 +56,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Core implicitly blocks based on whether Core lives in VideoItem's thread or not
     // Consumers go first. Buffer pool should not be cleared until the consumers stop consuming
     connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown, Qt::BlockingQueuedConnection );
-    connect( this, &VideoItem::signalShutdown, core, &LibretroCore::slotShutdown );
+    connect( this, &VideoItem::signalShutdown, core, &LibretroCoreOld::slotShutdown );
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
 
     // Catch the user exit signal and clean up
@@ -65,7 +65,7 @@ VideoItem::VideoItem( QQuickItem *parent ) :
         qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
 
         // Shut down Core and the consumers
-        if( coreState() != LibretroCore::STATEUNINITIALIZED ) {
+        if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
             emit signalShutdown();
         }
 
@@ -112,21 +112,21 @@ void VideoItem::setInputManager( InputManager *manager ) {
 
 void VideoItem::registerTypes() {
     qmlRegisterType<VideoItem>( "vg.phoenix.backend", 1, 0, "VideoItem" );
-    qmlRegisterType<LibretroCore>( "vg.phoenix.backend", 1, 0, "Core" );
+    qmlRegisterType<LibretroCoreOld>( "vg.phoenix.backend", 1, 0, "Core" );
 
     // Don't let the Qt police find out we're declaring these structs as metatypes
     // without proper constructors/destructors declared/written
     qRegisterMetaType<retro_system_av_info>();
     qRegisterMetaType<retro_pixel_format>();
-    qRegisterMetaType<LibretroCore::State>();
-    qRegisterMetaType<LibretroCore::Error>();
+    qRegisterMetaType<LibretroCoreOld::State>();
+    qRegisterMetaType<LibretroCoreOld::Error>();
 }
 
 bool VideoItem::running() const {
     return qmlRunning;
 }
 
-LibretroCore::State VideoItem::coreState() const {
+LibretroCoreOld::State VideoItem::coreState() const {
     return qmlCoreState;
 }
 
@@ -137,19 +137,19 @@ void VideoItem::setRunning( const bool running ) {
     }
 }
 
-void VideoItem::slotCoreStateChanged( LibretroCore::State newState, LibretroCore::Error error ) {
+void VideoItem::slotCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error ) {
 
-    qCDebug( phxController ) << "slotStateChanged(" << LibretroCore::stateToText( newState ) << "," << error << ")";
+    qCDebug( phxController ) << "slotStateChanged(" << LibretroCoreOld::stateToText( newState ) << "," << error << ")";
 
     setCoreState( newState );
 
     switch( newState ) {
 
-        case LibretroCore::STATEUNINITIALIZED:
+        case LibretroCoreOld::STATEUNINITIALIZED:
             break;
 
         // Time to run the game
-        case LibretroCore::STATEREADY:
+        case LibretroCoreOld::STATEREADY:
             // This is the earliest we can be sure this thread actually exists...
             window()->openglContext()->thread()->setObjectName( "Render thread" );
 
@@ -175,16 +175,16 @@ void VideoItem::slotCoreStateChanged( LibretroCore::State newState, LibretroCore
 
             break;
 
-        case LibretroCore::STATEPAUSED:
+        case LibretroCoreOld::STATEPAUSED:
             setRunning( false );
             break;
 
-        case LibretroCore::STATEFINISHED:
+        case LibretroCoreOld::STATEFINISHED:
             setRunning( false );
             emit signalShutdown();
             break;
 
-        case LibretroCore::STATEERROR:
+        case LibretroCoreOld::STATEERROR:
             switch( error ) {
                 default:
                     break;
@@ -216,24 +216,24 @@ void VideoItem::slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_forma
 }
 
 void VideoItem::slotPause() {
-    if( coreState() != LibretroCore::STATEPAUSED ) {
-        slotCoreStateChanged( LibretroCore::STATEPAUSED, LibretroCore::CORENOERROR );
+    if( coreState() != LibretroCoreOld::STATEPAUSED ) {
+        slotCoreStateChanged( LibretroCoreOld::STATEPAUSED, LibretroCoreOld::CORENOERROR );
     }
 }
 
 void VideoItem::slotResume() {
-    if( coreState() != LibretroCore::STATEREADY ) {
-        slotCoreStateChanged( LibretroCore::STATEREADY, LibretroCore::CORENOERROR );
+    if( coreState() != LibretroCoreOld::STATEREADY ) {
+        slotCoreStateChanged( LibretroCoreOld::STATEREADY, LibretroCoreOld::CORENOERROR );
     }
 }
 
 void VideoItem::slotStop() {
-    if( coreState() != LibretroCore::STATEUNINITIALIZED ) {
+    if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
         // Move Core back to the qml thread
         // Signals from VideoItem to Core will now block
         if( core->thread() != this->thread() )
             emit signalChangeCoreThread( this->thread() );
-        slotCoreStateChanged( LibretroCore::STATEFINISHED, LibretroCore::CORENOERROR );
+        slotCoreStateChanged( LibretroCoreOld::STATEFINISHED, LibretroCoreOld::CORENOERROR );
     }
 
 }
@@ -252,12 +252,12 @@ void VideoItem::setCore( QString libretroCore ) {
         emit signalChangeCoreThread( this->thread() );
 
     // Stop the game if it's currently running
-    if( coreState() != LibretroCore::STATEUNINITIALIZED ) {
+    if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
         qCDebug( phxController ) << "Stopping currently running game:" << gamePath;
-        slotCoreStateChanged( LibretroCore::STATEFINISHED, LibretroCore::CORENOERROR );
+        slotCoreStateChanged( LibretroCoreOld::STATEFINISHED, LibretroCoreOld::CORENOERROR );
     }
 
-    Q_ASSERT( coreState() == LibretroCore::STATEUNINITIALIZED );
+    Q_ASSERT( coreState() == LibretroCoreOld::STATEUNINITIALIZED );
 
     corePath = libretroCore;
     emit signalLoadCore( corePath );
@@ -335,7 +335,7 @@ bool VideoItem::limitFrameRate() {
     return false;
 }
 
-void VideoItem::setCoreState( LibretroCore::State state ) {
+void VideoItem::setCoreState( LibretroCoreOld::State state ) {
     qmlCoreState = state;
     emit coreStateChanged();
 }
@@ -350,8 +350,8 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
     }
 
 
-    if( ( coreState() ) != LibretroCore::STATEREADY ) {
-        if( coreState() == LibretroCore::STATEPAUSED ) {
+    if( ( coreState() ) != LibretroCoreOld::STATEREADY ) {
+        if( coreState() == LibretroCoreOld::STATEPAUSED ) {
             textureNode->setTexture( texture );
             textureNode->setRect( boundingRect() );
             textureNode->setFiltering( QSGTexture::Linear );
@@ -393,7 +393,7 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
 
     // One half of the vsync loop
     // Now that the texture is sent out to be drawn, tell core to make a new frame
-    if( coreState() == LibretroCore::STATEREADY ) {
+    if( coreState() == LibretroCoreOld::STATEREADY ) {
         emit signalFrame();
     }
 
