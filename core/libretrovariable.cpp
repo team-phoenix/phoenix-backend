@@ -48,11 +48,11 @@ LibretroVariable::LibretroVariable( const retro_variable *var ) {
 
 LibretroVariable::~LibretroVariable() {}
 
-const std::__cxx11::string &LibretroVariable::key() const {
+const std::string &LibretroVariable::key() const {
     return m_key;
 }
 
-const std::__cxx11::string &LibretroVariable::value( const std::__cxx11::string &default_ ) const {
+const std::string &LibretroVariable::value( const std::string &default_ ) const {
     if( m_value.empty() ) {
         return default_;
     }
@@ -60,16 +60,16 @@ const std::__cxx11::string &LibretroVariable::value( const std::__cxx11::string 
     return m_value;
 }
 
-const std::__cxx11::string &LibretroVariable::value() const {
+const std::string &LibretroVariable::value() const {
     static std::string default_( "" );
     return value( default_ );
 }
 
-const std::__cxx11::string &LibretroVariable::description() const {
+const std::string &LibretroVariable::description() const {
     return m_description;
 }
 
-const QVector<std::__cxx11::string> &LibretroVariable::choices() const {
+const QVector<std::string> &LibretroVariable::choices() const {
     return m_choices;
 }
 
