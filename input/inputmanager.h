@@ -3,13 +3,14 @@
 
 #include "backendcommon.h"
 
+#include "producer.h"
 #include "qmlinputdevice.h"
 #include "sdleventloop.h"
 #include "inputdevice.h"
 #include "keyboard.h"
 #include "logging.h"
 
-class InputManager : public QObject {
+class InputManager : public QObject, public Producer {
         Q_OBJECT
 
         Q_PROPERTY( bool gamepadControlsFrontend READ gamepadControlsFrontend
@@ -29,8 +30,6 @@ class InputManager : public QObject {
 
         int count() const;
         int size() const;
-
-        void pollStates();
 
         bool gamepadControlsFrontend() const;
 
@@ -62,7 +61,10 @@ class InputManager : public QObject {
 
         bool eventFilter( QObject *object, QEvent *event );
 
+        void pollStates();
+
     signals:
+        PRODUCER_SIGNALS
 
         void gamepadControlsFrontendChanged();
         void device( InputDevice *device );
@@ -72,7 +74,6 @@ class InputManager : public QObject {
         void controllerDBFileChanged( QString controllerDBFile );
 
     private:
-
         QMutex mutex;
 
         QList<InputDevice *> deviceList;

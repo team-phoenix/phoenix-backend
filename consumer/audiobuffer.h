@@ -47,7 +47,6 @@ class AudioBuffer : public QIODevice {
         Q_OBJECT
 
     public:
-
         AudioBuffer( QObject *parent = 0 );
         ~AudioBuffer();
 
@@ -60,7 +59,6 @@ class AudioBuffer : public QIODevice {
         qint64 bytesAvailable() const;
 
     private:
-
         qint64 bufferPosition;
         QByteArray buffer;
 

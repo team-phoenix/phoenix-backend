@@ -43,11 +43,10 @@
     INCLUDEPATH += ../externals/quazip/quazip
 
     # Include our stuff
-    INCLUDEPATH += core input consumer
+    INCLUDEPATH += core input consumer util
 
     HEADERS += \
         videoitem.h \
-        logging.h \
         consumer/audiobuffer.h \
         consumer/audiooutput.h \
         consumer/videooutput.h \
@@ -64,18 +63,22 @@
         input/inputdeviceevent.h \
         input/joystick.h \
         input/sdleventloop.h \
-        input/qmlinputdevice.h
+        input/qmlinputdevice.h \
+        util/logging.h \
+        consumer.h \
+        producer.h \
+    util/looper.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
     SOURCES += \
         videoitem.cpp \
-        logging.cpp \
         consumer/audiobuffer.cpp \
         consumer/audiooutput.cpp \
         consumer/videooutput.cpp \
         core/core.cpp \
         core/corecontrol.cpp \
+        core/corecontrol.proxy.cpp \
         core/libretrocoreold.cpp \
         core/libretrocore.cpp \
         core/libretrovariable.cpp \
@@ -86,7 +89,11 @@
         input/sdleventloop.cpp \
         input/inputdevice.cpp \
         input/inputdeviceevent.cpp \
-        input/qmlinputdevice.cpp
+        input/qmlinputdevice.cpp \
+        util/logging.cpp \
+        consumer.cpp \
+        producer.cpp \
+    util/looper.cpp
 
     RESOURCES += input/controllerdb.qrc
 

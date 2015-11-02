@@ -25,26 +25,26 @@
  */
 
 class LibretroCore : public Core {
+
     public:
         explicit LibretroCore( Core *parent = 0 );
+        ~LibretroCore();
 
     signals:
 
     public slots:
-        void setSource( QMap<QString, QString> source );
-
         // State changers
-        void load();
-        void play();
-        void pause();
-        void stop();
+        void load() override;
+        void stop() override;
+
+        void consumerFormat( ProducerFormat format ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) override;
 
     protected:
         // Only staticly-linked callbacks may access this data/call these methods
 
         // A hack that gives us the implicit C++ 'this' pointer while maintaining a C-style function signature
-        // for the callbacks as required by libretro.h. Thanks to this, at this time we can only
-        // have a single instance of Core running at any time.
+        // for the callbacks as required by libretro.h. We can only have a single instance of Core running at any time.
         static LibretroCore *core;
 
         // Struct containing libretro methods
@@ -55,10 +55,10 @@ class LibretroCore : public Core {
         retro_hw_render_callback openGLContext;
 
         // Used by audio callback
-        void emitAudioData( void *data, int bytes );
+        void emitAudioData( void *data, size_t bytes );
 
         // Used by video callback
-        void emitVideoData( void *data, int bytes );
+        void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
 
     private:
         // Files and paths
@@ -81,7 +81,7 @@ class LibretroCore : public Core {
         const char *systemPathCString;
         const char *savePathCString;
 
-        // Raw ROM/ISO data, empty if (fullPathNeeded)
+        // Raw ROM/ISO data, empty if (systemInfo->need_fullpath)
         QByteArray gameData;
 
         // SRAM
@@ -92,28 +92,34 @@ class LibretroCore : public Core {
 
         // Core-specific constants
 
-        // Audio and video rates/dimensions/types
-        retro_system_av_info *avInfo;
-        retro_pixel_format pixelFormat;
-
-        // Information about the core
+        // Information about the core (we store, Libretro core fills out with symbols.retro_get_system_info())
         retro_system_info *systemInfo;
 
         // Information about the controllers and buttons used by the core
         // FIXME: Where's the max number of controllers defined?
-        QMap< QString, QString > inputDescriptors;
+        // Key format: "port,device,index,id" (all 4 unsigned integers are represented as strings)
+        //     ex. "0,0,0,0"
+        // Value is a human-readable description
+        QMap<QString, QString> inputDescriptors;
 
-        // Buffer pools (producer)
+        // Producer data
 
-        int16_t *audioBufferPool[POOL_SIZE];
+        // Some cores don't actually give you the true video size until the first frame comes through
+        // Use this to ensure the format is only sent once
+        bool firstFrame;
+
+        // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
+        int16_t *audioBufferPool[ POOL_SIZE ];
         int audioPoolCurrentBuffer;
-        uchar *videoBufferPool[POOL_SIZE];
-        int videoPoolCurrentBuffer;
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
         // Each frame, exactly ( sampleRate * 4 ) bytes should be copied to
         // audioBufferPool[ audioBufferPoolIndex ][ audioBufferCurrentByte ] in total
+        // FIXME: In practice, that's not always the case? Some cores only hit that *on average*
         int audioBufferCurrentByte;
+
+        uint8_t *videoBufferPool[ POOL_SIZE ];
+        int videoPoolCurrentBuffer;
 
         // Callbacks
 
@@ -128,10 +134,10 @@ class LibretroCore : public Core {
         // Misc
 
         // Core-specific variables
-        QMap< std::string, LibretroVariable > variables;
+        QMap<std::string, LibretroVariable> variables;
 
         // Helper that generates key for looking up the inputDescriptors
-        QString inputDescriptorKey( unsigned port, unsigned device, unsigned index, unsigned id );
+        QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
 
 };
 

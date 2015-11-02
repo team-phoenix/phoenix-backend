@@ -5,29 +5,31 @@
 
 #include "logging.h"
 
-// Consumers
-#include "audiooutput.h"
-#include "videooutput.h"
+#include "producer.h"
+#include "consumer.h"
 
 /*
  * Superclass for all core plugins used by Phoenix. Defines a state machine similar to how a real game console operates
  * and presents an interface to manipulate this state machine. Games are generally loaded by calling setSource() then load().
  *
  * Minimal error checking is done in this class and in subclasses. It's expected that state changers such as pause() are
- * only called if Core is pausable.
+ * only called if Core is pausable. If not, the behavior is undefined and will probably cause crashes.
  *
- * Constructors of subclasses must call stateChanged( State::STOPPED ) once the constructor is finished.
+ * Constructors of subclasses must set state to STOPPED and call allPropertiesChanged() once finished.
  *
  * Core is a producer of both audio and video data. At regular intervals, Core will send out signals containing pointers
  * to buffers. These pointers will internally be part of a circular buffer that will remain valid for the lifetime of Core.
  * To safely copy their contents, obtain a lock using either audioMutex or videoMutex.
+ *
+ * Core is also a consumer of input data.
  */
 
-class Core : public QObject {
+class Core : public QObject, public Producer, public Consumer {
         Q_OBJECT
 
     public:
         explicit Core( QObject *parent = 0 );
+        virtual ~Core();
 
         // States
         enum State {
@@ -49,72 +51,86 @@ class Core : public QObject {
             // Game is shutting down. It could be doing stuff like saving game data back to disk or freeing memory
             UNLOADING
         };
+        Q_ENUM( State )
         Q_ENUMS( State )
 
-        // Only hold onto these mutexes long enough to make a copy
-        QMutex audioMutex;
-        QMutex videoMutex;
-
     signals:
+        // See producer.h
+        PRODUCER_SIGNALS
+
         // Notifiers
         void pausableChanged( bool pausable );
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void sourceChanged( QMap<QString, QString> source );
+        void sourceChanged( QStringMap source );
         void stateChanged( State state );
         void volumeChanged( qreal volume );
 
-        // Consumer data. Pointers will be valid for the lifetime of Core. A circular buffer pool is recommended to
-        // accomplish this.
-        void audioData( void *data, long bytes );
-        void videoData( void *data, long bytes );
-
     public slots:
+        // Information about the type of data to expect
+        virtual void consumerFormat( ProducerFormat format ) = 0;
+
+        // Must obtain a mutex to access the data. Only hold onto the mutex long enough to make a copy
+        // Type can be one of the following: "audio", "video"
+        virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) = 0;
+
         // Setters
-        void setPausable( bool pausable );
-        void setPlaybackSpeed( qreal playbackSpeed );
-        void setResettable( bool resettable );
-        void setRewindable( bool rewindable );
-        void setSource( QMap<QString, QString> source );
-        void setVolume( qreal volume );
+        virtual void setPlaybackSpeed( qreal playbackSpeed );
+        virtual void setVolume( qreal volume );
+        virtual void setSource( QStringMap source );
 
         // State changers
-        void load();
-        void play();
-        void pause();
-        void reset();
-        void stop();
+        virtual void load();
+        virtual void play();
+        virtual void pause();
+        virtual void reset();
+        virtual void stop();
 
-        void setState( State state );
 
     protected:
+        // Property notifier helper
+        void allPropertiesChanged();
 
         // Properties
 
         // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
         // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
+        // Read-only
         bool pausable;
 
-        // Playback speed. 1.0 is considered "normal" speed. If rewindable, it can be any real number. Otherwise, it must
+        // Multiplier of the system's native framerate, if any. If rewindable, it can be any real number. Otherwise, it must
         // be positive and nonzero
+        // Read-write
         qreal playbackSpeed;
 
         // Is this Core instance resettable? If true, this usually means you can "soft reset" instead of fully resetting
         // the state machine by cycling through the deinit then init states
+        // Read-only
         bool resettable;
 
         // Is this Core instance rewindable? If true, playbackSpeed may go to and below 0 to make the game move backwards
+        // Read-only
         bool rewindable;
 
         // Subclass-defined info specific to this session (ex. Libretro: core, game, system and save paths)
-        QMap<QString, QString> source;
+        // Read-write
+        QStringMap source;
 
         // Current state
+        // Read-only
         State state;
 
         // Range: [0.0, 1.0]
+        // Read-write
         qreal volume;
+
+        // Setters
+        virtual void setPausable( bool pausable );
+        virtual void setResettable( bool resettable );
+        virtual void setRewindable( bool rewindable );
+        virtual void setState( State state );
+        
 };
 
 #endif // CORE_H

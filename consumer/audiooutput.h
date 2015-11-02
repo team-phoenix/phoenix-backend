@@ -1,10 +1,10 @@
-
-#ifndef AUDIO_H
-#define AUDIO_H
+#ifndef AUDIOOUTPUT_H
+#define AUDIOOUTPUT_H
 
 #include "backendcommon.h"
 
 #include "audiobuffer.h"
+#include "consumer.h"
 #include "logging.h"
 
 /* The AudioOutput class writes data to the default output device. Its internal buffers must be set by calling
@@ -14,10 +14,16 @@
  * inclusive) with slotSetVolume().
  */
 
-class AudioOutput : public QObject {
+class AudioOutput : public QObject, public Consumer {
         Q_OBJECT
 
+    public:
+        explicit AudioOutput( QObject *parent = 0 );
+        ~AudioOutput();
+
     public slots:
+        void consumerFormat( ProducerFormat format ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) override;
 
         // Tell Audio what sample rate to expect from Core
         void slotAudioFormat( int sampleRate, double coreFPS, double hostFPS );
@@ -27,7 +33,7 @@ class AudioOutput : public QObject {
 
         // Respond to the core running or not by keeping audio output active or not
         // AKA Pause if core is paused
-        void slotSetAudioActive( bool coreIsRunning );
+        void setAudioActive( bool coreIsRunning );
 
         // Set volume level [0.0...1.0]
         void slotSetVolume( qreal level );
@@ -35,16 +41,9 @@ class AudioOutput : public QObject {
         void slotShutdown();
 
     private slots:
-
         void slotAudioOutputStateChanged( QAudio::State state );
 
-    public:
-
-        AudioOutput();
-        ~AudioOutput();
-
     private:
-
         // Completely init/re-init audio output
         void resetAudio();
 
@@ -98,7 +97,6 @@ class AudioOutput : public QObject {
         //
         // ---
         //
-
 
 };
 

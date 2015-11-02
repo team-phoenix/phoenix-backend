@@ -4,15 +4,15 @@
 const auto samplesPerFrame = 2;
 // const auto framesPerSample = 0.5;
 
-AudioOutput::AudioOutput()
-    : resamplerState( nullptr ),
-      inputDataFloat( nullptr ),
-      outputDataFloat( nullptr ), outputDataShort( nullptr ),
-      coreIsRunning( false ),
-      outputAudioInterface( nullptr ),
-      outputCurrentByte( 0 ),
-      outputBuffer( this ),
-      outputLengthMs( 64 ), outputTargetMs( 32 ), maxDeviation( 0.005 ) {
+AudioOutput::AudioOutput( QObject *parent ): QObject( parent ),
+    resamplerState( nullptr ),
+    inputDataFloat( nullptr ),
+    outputDataFloat( nullptr ), outputDataShort( nullptr ),
+    coreIsRunning( false ),
+    outputAudioInterface( nullptr ),
+    outputCurrentByte( 0 ),
+    outputBuffer( this ),
+    outputLengthMs( 64 ), outputTargetMs( 32 ), maxDeviation( 0.005 ) {
 
     outputBuffer.start();
 
@@ -25,6 +25,29 @@ AudioOutput::~AudioOutput() {
 //
 // Public slots
 //
+
+void AudioOutput::consumerFormat( ProducerFormat format ) {
+    this->format = format;
+    slotAudioFormat( format.audioFormat.sampleRate(), format.videoFramerate, format.videoFramerate * ( 1.0 / format.audioRatio ) );
+}
+
+void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) {
+    Q_UNUSED( type )
+    Q_UNUSED( data )
+    Q_UNUSED( bytes )
+
+    if( type == QStringLiteral( "audio" ) ) {
+        QMutexLocker locker( mutex );
+
+        if( !coreIsRunning ) {
+            setAudioActive( true );
+        }
+
+        // TODO: Pack volume updates into data, make data a struct for audio
+        slotAudioData( ( int16_t * )data, bytes );
+    }
+
+}
 
 void AudioOutput::slotAudioFormat( int sampleRate, double coreFPS, double hostFPS ) {
 
@@ -131,7 +154,8 @@ void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
 
     //    qCDebug( phxAudioOutput ) << "Output is" << ( ( ( double )( ( outputTotalBytes - outputFreeBytes ) ) /
     //                              outputTotalBytes ) * 100 )
-    //                              << "% full" << "(target:" << ( ( double )outputTargetMs / outputLengthMs ) * 100 << "%)";
+    //                              << "% full" << "(target:"
+    //                              << ( ( double )outputTargetMs / outputLengthMs ) * 100 << "%)";
     //    qCDebug( phxAudioOutput ) << "DRCRatio =" << DRCRatio
     //                              << "outputAudioInterface->bufferSize()" << outputAudioInterface->bufferSize();
     //    qCDebug( phxAudioOutput ) << "\toutputTotalBytes =" << outputTotalBytes
@@ -161,7 +185,7 @@ void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
 
 }
 
-void AudioOutput::slotSetAudioActive( bool coreIsRunning ) {
+void AudioOutput::setAudioActive( bool coreIsRunning ) {
 
     this->coreIsRunning = coreIsRunning;
 
@@ -289,7 +313,7 @@ void AudioOutput::allocateMemory() {
 
     auto outputBufferSizeSamples = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
     qCDebug( phxAudioOutput ) << "Allocating" <<
-                              ( float ) (
+                              ( float )(
                                   sizeof( float ) * ( int )( ( double )sampleRate / coreFPS ) * bufferSizeInVideoFrames
                                   + sizeof( float ) * outputBufferSizeSamples * bufferSizeInVideoFrames
                                   + sizeof( short ) * outputBufferSizeSamples * bufferSizeInVideoFrames

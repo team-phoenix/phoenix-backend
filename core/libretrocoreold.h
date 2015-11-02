@@ -1,5 +1,5 @@
-#ifndef CORE_H
-#define CORE_H
+#ifndef LIBRETROCORE_H
+#define LIBRETROCORE_H
 
 #include "backendcommon.h"
 

@@ -16,7 +16,7 @@ QDebug operator<<( QDebug debug, const LibretroVariable &var ) {
 
     auto QStr = QString::fromStdString; // shorter alias
 
-    debug << qPrintable( QString( "Core::Variable(%1=%2, description=\"%3\", choices=[%4])" ).
+    debug << qPrintable( QString( "LibretroVariable(%1=%2, description=\"%3\", choices=[%4])" ).
                          arg( QStr( var.key() ) ).arg( QStr( var.value( "<not set>" ) ) ).
                          arg( QStr( var.description() ) ).arg( QStr( joinedchoices ) ) );
     return debug;

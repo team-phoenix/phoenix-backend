@@ -11,6 +11,7 @@
 class LibretroSymbols {
     public:
         LibretroSymbols();
+        ~LibretroSymbols();
 
         // Libretro core functions
         unsigned( *retro_api_version )( void );

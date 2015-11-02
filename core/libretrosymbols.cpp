@@ -1,7 +1,10 @@
 #include "libretrosymbols.h"
 
-LibretroSymbols::LibretroSymbols()
-{
+LibretroSymbols::LibretroSymbols() {
+    clear();
+}
 
+LibretroSymbols::~LibretroSymbols() {
+    clear();
 }
 

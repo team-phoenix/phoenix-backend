@@ -20,7 +20,6 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( LibretroCoreOld::State coreState READ coreState NOTIFY coreStateChanged )
 
     public:
-
         VideoItem( QQuickItem *parent = 0 );
         ~VideoItem();
 
@@ -36,7 +35,6 @@ class VideoItem : public QQuickItem {
         LibretroCoreOld::State coreState() const;
 
     signals:
-
         // Controller
         void signalLoadCore( QString path );
         void signalLoadGame( QString path );
@@ -62,7 +60,6 @@ class VideoItem : public QQuickItem {
         void setRunning( const bool running );
 
     public slots:
-
         // Controller
         void slotCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error );
         void slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat );
@@ -77,12 +74,10 @@ class VideoItem : public QQuickItem {
         void emitFrame();
 
     private slots:
-
         // For future consumer use?
         void handleWindowChanged( QQuickWindow *window );
 
     private:
-
         // QML Varibles
         bool qmlRunning;
 

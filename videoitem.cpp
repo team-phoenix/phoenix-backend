@@ -12,45 +12,45 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     width( 0 ), height( 0 ), pitch( 0 ), coreFPS( 0.0 ), hostFPS( 0.0 ), aspectRatio( 1.0 ),
     texture( nullptr ),
     frameTimer() {
-
+    
     setFlag( QQuickItem::ItemHasContents, true );
-
+    
     // Connect controller signals and slots
-
+    
     // Run a timer to make core produce a frame at regular intervals, or at vsync
     connect( this, &VideoItem::signalFrame, core, &LibretroCoreOld::slotFrame );
-
+    
     // Do the next item in the core lifecycle when the state has changed
     connect( core, &LibretroCoreOld::signalCoreStateChanged, this, &VideoItem::slotCoreStateChanged );
-
+    
     // Load a core and a game
     connect( this, &VideoItem::signalLoadCore, core, &LibretroCoreOld::slotLoadCore );
     connect( this, &VideoItem::signalLoadGame, core, &LibretroCoreOld::slotLoadGame );
-
+    
     // Get the audio and video timing/format from core once a core and game are loaded,
     // send the data out to each consumer for their own initialization
     connect( core, &LibretroCoreOld::signalAVFormat, this, &VideoItem::slotCoreAVFormat );
     connect( this, &VideoItem::signalAudioFormat, audioOutput, &AudioOutput::slotAudioFormat );
     connect( this, &VideoItem::signalVideoFormat, this, &VideoItem::slotVideoFormat ); // Belongs in both categories
-
+    
     // Do the next item in the core lifecycle when its state changes
-    connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::slotSetAudioActive );
-
+    connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::setAudioActive );
+    
     // Set up the slot that'll move Core back to this thread when needed
     // You MUST be sure that core->thread() and this->thread() are not the same or a deadlock will happen
     connect( this, &VideoItem::signalChangeCoreThread, core, &LibretroCoreOld::slotMoveToThread, Qt::BlockingQueuedConnection );
-
+    
     // Connect consumer signals and slots
-
+    
     connect( core, &LibretroCoreOld::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
     connect( core, &LibretroCoreOld::signalVideoData, this, &VideoItem::slotVideoData );
     connect( this, &VideoItem::signalSetVolume, audioOutput, &AudioOutput::slotSetVolume );
-
+    
     // Set up threads
-
+    
     // Place the objects under VideoItem's control into their own threads
     audioOutput->moveToThread( audioOutputThread );
-
+    
     // Ensure the objects are cleaned up when it's time to quit and destroyed once their thread is done
     // Also, ensure their cleanup is blocking. We DON'T want anything else happening while cleanup is being done
     // Core implicitly blocks based on whether Core lives in VideoItem's thread or not
@@ -58,29 +58,29 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown, Qt::BlockingQueuedConnection );
     connect( this, &VideoItem::signalShutdown, core, &LibretroCoreOld::slotShutdown );
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
-
+    
     // Catch the user exit signal and clean up
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
-
+    
         qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
-
+        
         // Shut down Core and the consumers
         if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
             emit signalShutdown();
         }
-
+        
         // Stop processing events in the other threads, then block the main thread until they're finished
-
+        
         // Stop consumer threads
         audioOutputThread->exit();
         audioOutputThread->wait();
         audioOutputThread->deleteLater();
-
+        
     } );
-
+    
     // Start threads
     audioOutputThread->start();
-
+    
 }
 
 VideoItem::~VideoItem() {
@@ -98,22 +98,22 @@ InputManager *VideoItem::inputManager() const {
 void VideoItem::setInputManager( InputManager *manager ) {
 
     if( manager != qmlInputManager ) {
-
+    
         qmlInputManager = manager;
         core->inputManager = qmlInputManager;
-
+        
         connect( this, &VideoItem::signalRunChanged, qmlInputManager, &InputManager::setRun, Qt::DirectConnection );
-
+        
         emit inputManagerChanged();
-
+        
     }
-
+    
 }
 
 void VideoItem::registerTypes() {
     qmlRegisterType<VideoItem>( "vg.phoenix.backend", 1, 0, "VideoItem" );
     qmlRegisterType<LibretroCoreOld>( "vg.phoenix.backend", 1, 0, "Core" );
-
+    
     // Don't let the Qt police find out we're declaring these structs as metatypes
     // without proper constructors/destructors declared/written
     qRegisterMetaType<retro_system_av_info>();
@@ -140,79 +140,80 @@ void VideoItem::setRunning( const bool running ) {
 void VideoItem::slotCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error ) {
 
     qCDebug( phxController ) << "slotStateChanged(" << LibretroCoreOld::stateToText( newState ) << "," << error << ")";
-
+    
     setCoreState( newState );
-
+    
     switch( newState ) {
-
+    
         case LibretroCoreOld::STATEUNINITIALIZED:
             break;
-
+            
         // Time to run the game
         case LibretroCoreOld::STATEREADY:
             // This is the earliest we can be sure this thread actually exists...
             window()->openglContext()->thread()->setObjectName( "Render thread" );
-
+            
             // This is mixing control (coreThread) and consumer (render thread) members...
-
+            
             // Place Core into the render thread
             // Mandatory for OpenGL cores
             // Also prevents massive overhead/performance loss caused by QML effects (like FastBlur)
             // Past this line, signals from VideoItem to Core no longer block
-            if( core->thread() == this->thread() )
+            if( core->thread() == this->thread() ) {
                 core->moveToThread( window()->openglContext()->thread() );
+            }
 
             qCDebug( phxController ) << "Begin emulation.";
-
+            
             // This will also inform the consumers that emulation has started
             setRunning( true );
-
+            
             // Get core to immediately (sorta) produce the first frame
             emit signalFrame();
-
+            
             // Force an update to keep the render thread from pausing
             update();
-
+            
             break;
-
+            
         case LibretroCoreOld::STATEPAUSED:
             setRunning( false );
             break;
-
+            
         case LibretroCoreOld::STATEFINISHED:
             setRunning( false );
             emit signalShutdown();
             break;
-
+            
         case LibretroCoreOld::STATEERROR:
             switch( error ) {
                 default:
                     break;
             }
-
+            
             break;
-
+            
         default:
             break;
     }
-
+    
 }
 
 void VideoItem::slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat ) {
 
     this->avInfo = avInfo;
     this->pixelFormat = pixelFormat;
-
+    
     // TODO: Set this properly, either with testing and averages (RA style) or via EDID (proposed)
     double monitorRefreshRate = 60.0;
-
+    
     emit signalAudioFormat( avInfo.timing.sample_rate, avInfo.timing.fps, monitorRefreshRate );
     emit signalVideoFormat( pixelFormat,
                             avInfo.geometry.max_width,
                             avInfo.geometry.max_height,
                             avInfo.geometry.max_width * ( pixelFormat == RETRO_PIXEL_FORMAT_XRGB8888 ? 4 : 2 ),
                             avInfo.timing.fps, monitorRefreshRate );
-
+                            
 }
 
 void VideoItem::slotPause() {
@@ -231,37 +232,40 @@ void VideoItem::slotStop() {
     if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
         // Move Core back to the qml thread
         // Signals from VideoItem to Core will now block
-        if( core->thread() != this->thread() )
+        if( core->thread() != this->thread() ) {
             emit signalChangeCoreThread( this->thread() );
+        }
+
         slotCoreStateChanged( LibretroCoreOld::STATEFINISHED, LibretroCoreOld::CORENOERROR );
     }
-
+    
 }
 
 void VideoItem::setCore( QString libretroCore ) {
 
     // Do nothing if a blank string is given
-
-    if ( libretroCore.isEmpty() ) {
+    
+    if( libretroCore.isEmpty() ) {
         return;
     }
-
+    
     // Move Core back to the qml thread
     // Signals from VideoItem to Core will now block
-    if( core->thread() != this->thread() )
+    if( core->thread() != this->thread() ) {
         emit signalChangeCoreThread( this->thread() );
+    }
 
     // Stop the game if it's currently running
     if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
         qCDebug( phxController ) << "Stopping currently running game:" << gamePath;
         slotCoreStateChanged( LibretroCoreOld::STATEFINISHED, LibretroCoreOld::CORENOERROR );
     }
-
+    
     Q_ASSERT( coreState() == LibretroCoreOld::STATEUNINITIALIZED );
-
+    
     corePath = libretroCore;
     emit signalLoadCore( corePath );
-
+    
 }
 
 void VideoItem::setGame( QString game ) {
@@ -270,10 +274,10 @@ void VideoItem::setGame( QString game ) {
     if( game.isEmpty() ) {
         return;
     }
-
+    
     gamePath = game;
     emit signalLoadGame( gamePath );
-
+    
 }
 
 //
@@ -282,10 +286,10 @@ void VideoItem::setGame( QString game ) {
 
 void VideoItem::slotVideoFormat( retro_pixel_format pixelFormat, int width, int height, int pitch,
                                  double coreFPS, double hostFPS ) {
-
+                                 
     qCDebug( phxVideo() ) << "pixelformat =" << pixelFormat << "width =" << width << "height =" << height
                           << "pitch =" << pitch << "coreFPS =" << coreFPS << "hostFPS =" << hostFPS;
-
+                          
     this->pixelFormat = pixelFormat;
     this->width = width;
     this->height = height;
@@ -293,9 +297,9 @@ void VideoItem::slotVideoFormat( retro_pixel_format pixelFormat, int width, int 
     this->coreFPS = coreFPS;
     this->hostFPS = hostFPS;
     this->aspectRatio = ( double )width / height;
-
+    
     emit aspectRatioChanged( aspectRatio );
-
+    
 }
 
 void VideoItem::slotVideoData( uchar *data, unsigned width, unsigned height, int pitch ) {
@@ -304,18 +308,18 @@ void VideoItem::slotVideoData( uchar *data, unsigned width, unsigned height, int
         texture->deleteLater();
         texture = nullptr;
     }
-
+    
     QImage::Format frame_format = retroToQImageFormat( pixelFormat );
     QImage image = QImage( data, width, height, pitch, frame_format );
-
+    
     texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
-
+    
     texture->moveToThread( window()->openglContext()->thread() );
-
+    
     // One half of the vsync render loop
     // Invoke a window redraw now that the texture has changed
     update();
-
+    
 }
 
 void VideoItem::emitFrame() {
@@ -327,8 +331,8 @@ void VideoItem::handleWindowChanged( QQuickWindow *window ) {
     if( !window ) {
         return;
     }
-
-
+    
+    
 }
 
 bool VideoItem::limitFrameRate() {
@@ -342,14 +346,14 @@ void VideoItem::setCoreState( LibretroCoreOld::State state ) {
 
 QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
-
+    
     QSGSimpleTextureNode *textureNode = static_cast<QSGSimpleTextureNode *>( node );
-
+    
     if( !textureNode ) {
         textureNode = new QSGSimpleTextureNode;
     }
-
-
+    
+    
     if( ( coreState() ) != LibretroCoreOld::STATEREADY ) {
         if( coreState() == LibretroCoreOld::STATEPAUSED ) {
             textureNode->setTexture( texture );
@@ -359,62 +363,62 @@ QSGNode *VideoItem::updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintDa
                     QSGSimpleTextureNode::MirrorHorizontally );
             return textureNode;
         }
-
+        
         return QQuickItem::updatePaintNode( textureNode, paintData );
     }
-
+    
     // First frame, no video data yet. Tell core to render a frame
     // then display it next time.
     if( !texture ) {
         //emit signalFrame();
         return QQuickItem::updatePaintNode( textureNode, paintData );
     }
-
-    static qint64 timeStamp = -1;
-
-    if( timeStamp != -1 ) {
-
-        qreal calculatedFrameRate = ( 1 / ( timeStamp / 1000000.0 ) ) * 1000.0;
-        int difference = calculatedFrameRate > coreFPS ?
-                         calculatedFrameRate - coreFPS :
-                         coreFPS - calculatedFrameRate;
-        Q_UNUSED( difference );
-
-    }
-
-    timeStamp = frameTimer.nsecsElapsed();
-    frameTimer.start();
-
+    
+    //    static qint64 timeStamp = -1;
+    
+    //    if( timeStamp != -1 ) {
+    
+    //        qreal calculatedFrameRate = ( 1 / ( timeStamp / 1000000.0 ) ) * 1000.0;
+    //        int difference = calculatedFrameRate > coreFPS ?
+    //                         calculatedFrameRate - coreFPS :
+    //                         coreFPS - calculatedFrameRate;
+    //        Q_UNUSED( difference );
+    
+    //    }
+    
+    //    timeStamp = frameTimer.nsecsElapsed();
+    //    frameTimer.start();
+    
     textureNode->setTexture( texture );
     textureNode->setRect( boundingRect() );
     textureNode->setFiltering( QSGTexture::Linear );
     textureNode->setTextureCoordinatesTransform( QSGSimpleTextureNode::MirrorVertically |
             QSGSimpleTextureNode::MirrorHorizontally );
-
+            
     // One half of the vsync loop
     // Now that the texture is sent out to be drawn, tell core to make a new frame
     if( coreState() == LibretroCoreOld::STATEREADY ) {
         emit signalFrame();
     }
-
+    
     return textureNode;
-
+    
 }
 
 QImage::Format VideoItem::retroToQImageFormat( retro_pixel_format fmt ) {
 
     static QImage::Format format_table[3] = {
-
+    
         QImage::Format_RGB16,   // RETRO_PIXEL_FORMAT_0RGB1555
         QImage::Format_RGB32,   // RETRO_PIXEL_FORMAT_XRGB8888
         QImage::Format_RGB16    // RETRO_PIXEL_FORMAT_RGB565
-
+        
     };
-
+    
     if( fmt >= 0 && fmt < ( sizeof( format_table ) / sizeof( QImage::Format ) ) ) {
         return format_table[fmt];
     }
-
+    
     return QImage::Format_Invalid;
-
+    
 }

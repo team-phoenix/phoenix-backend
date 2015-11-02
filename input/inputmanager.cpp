@@ -55,6 +55,7 @@ InputDevice *InputManager::at( int index ) {
 
 void InputManager::pollStates() {
     sdlEventLoop.pollEvents();
+    emit producerData( QStringLiteral( "input" ), &producerMutex, nullptr, 0 );
 }
 
 bool InputManager::gamepadControlsFrontend() const {
