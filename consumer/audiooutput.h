@@ -22,8 +22,8 @@ class AudioOutput : public QObject, public Consumer {
         ~AudioOutput();
 
     public slots:
-        void consumerFormat( ProducerFormat format ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) override;
+        void consumerFormat( ProducerFormat consumerFmt ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) override;
 
         // Tell Audio what sample rate to expect from Core
         void slotAudioFormat( int sampleRate, double coreFPS, double hostFPS );
@@ -55,8 +55,8 @@ class AudioOutput : public QObject, public Consumer {
 
         // Audio and video timing provided by Core via the controller
         int sampleRate;
-        double coreFPS;
         double hostFPS;
+        double coreFPS;
         double sampleRateRatio;
 
         // Internal buffers used for resampling

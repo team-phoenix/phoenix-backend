@@ -24,14 +24,11 @@ class VideoOutput : public QQuickItem, public Consumer {
     signals:
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
+        void windowUpdate();
 
     public slots:
-        // Information about the type of data to expect
-        void consumerFormat( ProducerFormat format ) override;
-
-        // Must obtain a mutex to access the data. Only hold onto the mutex long enough to make a copy
-        // Type can be one of the following: "audio", "video"
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) override;
+        void consumerFormat( ProducerFormat consumerFmt ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
 
     private:
         // The texture that will hold video frames from core. The texture itself lives in GPU RAM
@@ -45,6 +42,9 @@ class VideoOutput : public QQuickItem, public Consumer {
         qreal aspectRatio;
         bool linearFiltering;
 
+        // Helper for printing aspect ratios as fractions
+        // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
+        int greatestCommonDivisor( int m, int n );
 };
 
 #endif // VIDEOOUTPUT_H

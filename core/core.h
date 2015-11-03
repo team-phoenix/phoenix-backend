@@ -52,7 +52,6 @@ class Core : public QObject, public Producer, public Consumer {
             UNLOADING
         };
         Q_ENUM( State )
-        Q_ENUMS( State )
 
     signals:
         // See producer.h
@@ -64,16 +63,12 @@ class Core : public QObject, public Producer, public Consumer {
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
         void sourceChanged( QStringMap source );
-        void stateChanged( State state );
+        void stateChanged( Core::State state );
         void volumeChanged( qreal volume );
 
     public slots:
-        // Information about the type of data to expect
-        virtual void consumerFormat( ProducerFormat format ) = 0;
-
-        // Must obtain a mutex to access the data. Only hold onto the mutex long enough to make a copy
-        // Type can be one of the following: "audio", "video"
-        virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) = 0;
+        // See consumer.h
+        CONSUMER_SLOTS_ABSTRACT
 
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
@@ -129,7 +124,7 @@ class Core : public QObject, public Producer, public Consumer {
         virtual void setPausable( bool pausable );
         virtual void setResettable( bool resettable );
         virtual void setRewindable( bool rewindable );
-        virtual void setState( State state );
+        virtual void setState( Core::State state );
         
 };
 

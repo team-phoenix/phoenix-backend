@@ -69,7 +69,5 @@ void Looper::beginLoop( double interval ) {
 }
 
 void Looper::endLoop() {
-    qDebug() << "phoenix.looper: endLoop() start";
     running = false;
-    qDebug() << "phoenix.looper: endLoop() end";
 }

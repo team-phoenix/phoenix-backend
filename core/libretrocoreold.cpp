@@ -784,22 +784,22 @@ void LibretroCoreOld::logCallback( enum retro_log_level level, const char *fmt, 
 
 }
 
-int16_t LibretroCoreOld::inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    Q_UNUSED( index )
+int16_t LibretroCoreOld::inputStateCallback( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID ) {
+    Q_UNUSED( analogIndex )
 
     // we don't handle index for now...
 
-
-    if( !core->inputManager || static_cast<int>( port ) >= core->inputManager->size() ) {
+    // Return nothing if there's no InputManager or no controllers connected to the given port
+    if( !core->inputManager || static_cast<int>( controllerPort ) >= core->inputManager->size() ) {
         return 0;
     }
 
+    // Grab the input device
+    auto *inputDevice = core->inputManager->at( controllerPort );
 
-    auto *inputDevice = core->inputManager->at( port );
+    auto event = static_cast<InputDeviceEvent::Event>( buttonID );
 
-    auto event = static_cast<InputDeviceEvent::Event>( id );
-
-    if( port == 0 ) {
+    if( controllerPort == 0 ) {
         auto keyState = core->inputManager->keyboard->value( event, 0 );
 
         if( !inputDevice ) {
@@ -813,7 +813,7 @@ int16_t LibretroCoreOld::inputStateCallback( unsigned port, unsigned device, uns
     // make sure the InputDevice was configured
     // to map to the requested RETRO_DEVICE.
 
-    if( !inputDevice || inputDevice->type() != static_cast<InputDevice::LibretroType>( device ) ) {
+    if( !inputDevice || inputDevice->type() != static_cast<InputDevice::LibretroType>( retroDeviceType ) ) {
         return 0;
     }
 

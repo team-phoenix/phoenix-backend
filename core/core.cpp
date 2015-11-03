@@ -23,7 +23,6 @@ void Core::setPlaybackSpeed( qreal playbackSpeed ) {
 }
 
 void Core::setSource( QStringMap source ) {
-    qCDebug( phxCore ) << "Source changed to" << source;
     this->source = source;
     emit sourceChanged( source );
 }

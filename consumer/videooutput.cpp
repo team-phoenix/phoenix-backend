@@ -16,16 +16,32 @@ VideoOutput::~VideoOutput() {
 }
 
 void VideoOutput::consumerFormat( ProducerFormat format ) {
-    this->format = format;
 
-    this->aspectRatio = ( double )format.videoSize.width() / format.videoSize.height();
-    emit aspectRatioChanged( aspectRatio );
+    int oldGCD = greatestCommonDivisor( consumerFmt.videoSize.width(), consumerFmt.videoSize.height() );
+    int newGCD = greatestCommonDivisor( format.videoSize.width(), format.videoSize.height() );
+    int oldAspectRatioX = consumerFmt.videoSize.width() / oldGCD;
+    int oldAspectRatioY = consumerFmt.videoSize.height() / oldGCD;
+    int newAspectRatioX = format.videoSize.width() / newGCD;
+    int newAspectRatioY = format.videoSize.height() / newGCD;
+
+    consumerFmt = format;
+
+    qreal newRatio = ( double )format.videoSize.width() / format.videoSize.height();
+
+    if( aspectRatio != newRatio ) {
+        aspectRatio = newRatio;
+        emit aspectRatioChanged( aspectRatio );
+        qCDebug( phxVideo ).nospace() << "Aspect ratio changed to " << newAspectRatioX << ":" << newAspectRatioY
+                                      << " (was " << oldAspectRatioX << ":" << oldAspectRatioY << ")" ;
+    }
 
     update();
+
 }
 
-void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) {
+void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
     Q_UNUSED( bytes )
+    Q_UNUSED( timestamp )
 
     if( type == QStringLiteral( "video" ) ) {
         QMutexLocker lock( mutex );
@@ -37,8 +53,8 @@ void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t 
         }
 
         // Create new image (data is convered to an integer array, stored in heap until end of this block)
-        QImage image = QImage( ( const uchar * )data, format.videoSize.width(), format.videoSize.height(),
-                               format.videoBytesPerLine, format.videoPixelFormat );
+        QImage image = QImage( ( const uchar * )data, consumerFmt.videoSize.width(), consumerFmt.videoSize.height(),
+                               consumerFmt.videoBytesPerLine, consumerFmt.videoPixelFormat );
 
         // Create a texture (data is uploaded to GPU)
         texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
@@ -78,5 +94,32 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *node, QQuickItem::UpdatePaintNod
     textureNode->setTextureCoordinatesTransform( QSGSimpleTextureNode::MirrorVertically |
             QSGSimpleTextureNode::MirrorHorizontally );
 
+    emit windowUpdate();
+
     return textureNode;
 }
+
+int VideoOutput::greatestCommonDivisor( int m, int n ) {
+    int r;
+
+    /* Check For Proper Input */
+    if( ( m == 0 ) || ( n == 0 ) ) {
+        return 0;
+    } else if( ( m < 0 ) || ( n < 0 ) ) {
+        return -1;
+    }
+
+    do {
+        r = m % n;
+
+        if( r == 0 ) {
+            break;
+        }
+
+        m = n;
+        n = r;
+    } while( true );
+
+    return n;
+}
+

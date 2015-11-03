@@ -9,6 +9,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     coreFile(), gameFile(),
     contentPath(), systemPath(), savePath(),
     coreFileInfo(), gameFileInfo(), systemPathInfo(), savePathInfo(),
+    corePathByteArray(), gameFileByteArray(), gamePathByteArray(), systemPathByteArray(), savePathByteArray(),
     corePathCString( nullptr ), gameFileCString( nullptr ), gamePathCString( nullptr ), systemPathCString( nullptr ), savePathCString( nullptr ),
     gameData(),
     saveDataBuf( nullptr ),
@@ -52,11 +53,24 @@ void LibretroCore::load() {
     savePath.setPath( savePathInfo.absolutePath() );
 
     // Convert to C-style ASCII strings (needed by the API)
-    corePathCString = coreFileInfo.absolutePath().toLocal8Bit().constData();
-    gameFileCString = gameFileInfo.absoluteFilePath().toLocal8Bit().constData();
-    gamePathCString = gameFileInfo.absolutePath().toLocal8Bit().constData();
-    systemPathCString = systemPathInfo.absolutePath().toLocal8Bit().constData();
-    savePathCString = savePathInfo.absolutePath().toLocal8Bit().constData();
+    corePathByteArray = coreFileInfo.absolutePath().toLocal8Bit();
+    gameFileByteArray = gameFileInfo.absoluteFilePath().toLocal8Bit();
+    gamePathByteArray = gameFileInfo.absolutePath().toLocal8Bit();
+    systemPathByteArray = systemPathInfo.absolutePath().toLocal8Bit();
+    savePathByteArray = savePathInfo.absolutePath().toLocal8Bit();
+    corePathCString = corePathByteArray.constData();
+    gameFileCString = gameFileByteArray.constData();
+    gamePathCString = gamePathByteArray.constData();
+    systemPathCString = systemPathByteArray.constData();
+    savePathCString = savePathByteArray.constData();
+
+    qDebug() << "";
+    qCDebug( phxCore ) << "Now loading:";
+    qCDebug( phxCore ) << "Core        :" << source[ "core" ];
+    qCDebug( phxCore ) << "Game        :" << source[ "game" ];
+    qCDebug( phxCore ) << "System path :" << source["systemPath"];
+    qCDebug( phxCore ) << "Save path   :" << source["savePath"];
+    qDebug() << "";
 
     // Load core
     {
@@ -115,6 +129,7 @@ void LibretroCore::load() {
 
         // Full path needed, simply pass the game's file path to the core
         if( systemInfo->need_fullpath ) {
+            qCDebug( phxCore ) << "Passing file path to core...";
             gameInfo.path = gameFileCString;
             gameInfo.data = nullptr;
             gameInfo.size = 0;
@@ -123,6 +138,7 @@ void LibretroCore::load() {
 
         // Full path not needed, read the file to a buffer and pass that to the core
         else {
+            qCDebug( phxCore ) << "Copying game contents to memory...";
             gameFile.open( QIODevice::ReadOnly );
 
             // read into memory
@@ -140,25 +156,46 @@ void LibretroCore::load() {
     // Load save data
     loadSaveData();
 
-    // Get audio timing, allocate buffer pool
+    // Get audio/video timing and send to consumers, allocate buffer pool
     {
 
         // Get the max video width and height from the core
         retro_system_av_info *avInfo = new retro_system_av_info();
         symbols.retro_get_system_av_info( avInfo );
 
+        // Audio
 
-        // Set audio stuff now. It's needed even on the first frame and there's no guarantee that the video callback
-        // will happen before the audio callback
+        producerFmt.audioFormat.setSampleSize( 16 );
+        producerFmt.audioFormat.setSampleRate( avInfo->timing.sample_rate );
+        producerFmt.audioFormat.setChannelCount( 2 );
+        producerFmt.audioFormat.setSampleType( QAudioFormat::SignedInt );
+        producerFmt.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
+        producerFmt.audioFormat.setCodec( "audio/pcm" );
 
-        format.audioFormat.setSampleSize( 16 );
-        format.audioFormat.setSampleRate( avInfo->timing.sample_rate );
-        format.audioFormat.setChannelCount( 2 );
-        format.audioFormat.setSampleType( QAudioFormat::SignedInt );
-        format.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
-        format.audioFormat.setCodec( "audio/pcm" );
+        // inputFormat may or may not be set at this point, either way is fine
+        // By default the framerate is 60
+        producerFmt.audioRatio = inputFormat.videoFramerate / avInfo->timing.fps;
 
-        format.audioRatio = avInfo->timing.fps / 60.0;
+        // Video
+
+        producerFmt.videoBytesPerLine = avInfo->geometry.base_width *
+                                        QImage().toPixelFormat( producerFmt.videoPixelFormat ).bitsPerPixel() / 8;
+        producerFmt.videoFramerate = avInfo->timing.fps;
+
+        // Pixel format is QImage::Format_RGB16 by default as defined in the struct ProducerFormat constructor
+        // If it changes, it changes during the environment callback (#10) which is called during retro_load_game()
+        // (before this block) and again during retro_get_system_av_info()
+
+        producerFmt.videoSize.setWidth( avInfo->geometry.base_width );
+        producerFmt.videoSize.setHeight( avInfo->geometry.base_height );
+
+        qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
+        qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
+
+        emit producerFormat( producerFmt );
+
+        firstFrame = false;
+        producerFmt.firstFrame = false;
 
         // Allocate buffers to fit this max size
         // Assume 16-bit stereo audio, 32-bit video
@@ -184,19 +221,35 @@ void LibretroCore::stop() {
 }
 
 void LibretroCore::consumerFormat( ProducerFormat format ) {
-    this->format = format;
+    inputFormat = format;
+
+    // Update all consumers if the audio ratio changes
+    if( producerFmt.audioRatio != inputFormat.videoFramerate / producerFmt.videoFramerate ) {
+        // hostFPS / coreFPS
+        producerFmt.audioRatio = inputFormat.videoFramerate / producerFmt.videoFramerate;
+        // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << producerFmt.firstFrame << ")";
+        emit producerFormat( producerFmt );
+    }
 }
 
-void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) {
+void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) {
     Q_UNUSED( data )
     Q_UNUSED( bytes )
 
     if( type == QStringLiteral( "input" ) ) {
+
+        // Discard data that's too far from the past to matter anymore
+        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 100 ) {
+            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+            return;
+        }
+
         QMutexLocker locker( mutex );
 
         if( state == PLAYING ) {
             symbols.retro_run();
         }
+
     }
 }
 
@@ -205,46 +258,49 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes );
+    emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
 
-    // Some cores like bsnes do not tell you how wide the video really is until it sends the first frame
-    // So, instead of sending it on load, we send it now
-    if( firstFrame ) {
+    // Cores can change the size of the video they output (within the bounds they set on load) at any time
+    if( producerFmt.videoSize != QSize( width, height ) ) {
 
-        // Get the AV timing/dimensions/format from the core
-        retro_system_av_info *avInfo = new retro_system_av_info();
-        symbols.retro_get_system_av_info( avInfo );
+        qCDebug( phxCore ) << "Video resized!";
+        qCDebug( phxCore ) << "Old video size:" << producerFmt.videoSize;
+        qCDebug( phxCore ) << "New video size:" << QSize( width, height );
 
-        // Video stuff
-
-        format.videoBytesPerLine = pitch;
-        format.videoFramerate = avInfo->timing.fps;
-
-        // Pixel format is QImage::Format_RGB16 by default as defined in the struct ProducerFormat constructor
-        // If it changes, it changes during the environment callback (#10)
-
-        format.videoSize.setWidth( width );
-        format.videoSize.setHeight( height );
-
-        qCDebug( phxCore ) << "Minimum/nominal video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
-        qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
-        qCDebug( phxCore ) << "Current video size:" << format.videoSize;
-        qCDebug( phxCore ) << "Bytes per line:" << format.videoBytesPerLine;
+        producerFmt.videoBytesPerLine = pitch;
+        producerFmt.videoSize.setWidth( width );
+        producerFmt.videoSize.setHeight( height );
 
         firstFrame = false;
+        producerFmt.firstFrame = firstFrame;
 
-        emit producerFormat( format );
+        emit producerFormat( producerFmt );
 
     }
 
-    emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes );
+    emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 
 }
 
 // Private
+
+void LibretroCore::setState( Core::State state ) {
+    // Let the consumers know if we're paused or not
+    if( ( state == PLAYING ) && ( !producerFmt.active ) ) {
+        producerFmt.active = true;
+        emit producerFormat( producerFmt );
+    }
+
+    if( ( state == PAUSED ) && ( producerFmt.active ) ) {
+        producerFmt.active = false;
+        emit producerFormat( producerFmt );
+    }
+
+    Core::setState( state );
+}
 
 void LibretroCore::LibretroCore::loadSaveData() {
     saveDataBuf = symbols.retro_get_memory_data( RETRO_MEMORY_SAVE_RAM );
@@ -293,7 +349,7 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     QMutexLocker locker( &core->producerMutex );
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->format.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
@@ -310,7 +366,7 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     QMutexLocker locker( &core->producerMutex );
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->format.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Need to do a bit of pointer arithmetic to get the right offset (the buffer is counted in increments of 2 bytes)
@@ -327,7 +383,9 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
 }
 
 bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
+
     switch( cmd ) {
+
         case RETRO_ENVIRONMENT_SET_ROTATION: // 1
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_ROTATION (1)";
             break;
@@ -369,18 +427,18 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    core->format.videoPixelFormat = QImage::Format_RGB16;
-                    qCDebug( phxCore ) << "\t\tPixel format: 0RGB1555 aka" << core->format.videoPixelFormat;
+                    core->producerFmt.videoPixelFormat = QImage::Format_RGB16;
+                    qCDebug( phxCore ) << "\t\tPixel format: 0RGB1555 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    core->format.videoPixelFormat = QImage::Format_RGB16;
-                    qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka" << core->format.videoPixelFormat;
+                    core->producerFmt.videoPixelFormat = QImage::Format_RGB16;
+                    qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    core->format.videoPixelFormat = QImage::Format_RGB32;
-                    qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka" << core->format.videoPixelFormat;
+                    core->producerFmt.videoPixelFormat = QImage::Format_RGB32;
+                    qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
 
                 default:
@@ -413,7 +471,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_SET_HW_RENDER: // 14
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
-            core->format.videoMode = HARDWARERENDER;
+            core->producerFmt.videoMode = HARDWARERENDER;
 
             core->openGLContext = *( retro_hw_render_callback * )data;
 
@@ -566,10 +624,12 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
         default:
             qCDebug( phxCore ) << "Error: Environment command " << cmd << " is not defined in the frontend's libretro.h!.";
             return false;
+
     }
 
     // Command was not handled
     return false;
+
 }
 
 void LibretroCore::inputPollCallback( void ) {

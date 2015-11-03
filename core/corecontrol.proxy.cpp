@@ -22,8 +22,12 @@ void CoreControl::reset() {
     emit resetProxy();
 }
 
-// None of these methods should be called directly from QML
-// Use the respective properties instead
+// Private, cannot be called from QML. Use the respective properties instead
+
+void CoreControl::setPausableProxy( bool pausable ) {
+    this->pausable = pausable;
+    emit pausableChanged( pausable );
+}
 
 void CoreControl::setPlaybackSpeed( qreal playbackSpeed ) {
     emit playbackSpeedChangedProxy( playbackSpeed );
@@ -44,7 +48,8 @@ void CoreControl::setSource( QVariantMap sourceQVariantMap ) {
 
     // Determine Core type, instantiate appropiate type
     if( sourceQStringMap[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
-        loadLibretro();
+        initLibretro();
+        qCDebug( phxController ) << "Core fully initalized and connected";
     } else {
         qCCritical( phxController ).nospace() << QStringLiteral( "Unknown type " )
                                               << sourceQStringMap[ "type" ] << QStringLiteral( " passed to load()!" );
@@ -55,6 +60,7 @@ void CoreControl::setSource( QVariantMap sourceQVariantMap ) {
 }
 
 void CoreControl::setVolume( qreal volume ) {
+    this->volume = volume;
     emit volumeChangedProxy( volume );
 }
 
@@ -63,9 +69,19 @@ void CoreControl::setPlaybackSpeedProxy( qreal playbackSpeed ) {
     emit playbackSpeedChanged( playbackSpeed );
 }
 
+void CoreControl::setResettableProxy( bool resettable ) {
+    this->resettable = resettable;
+    emit resettableChanged( resettable );
+}
+
+void CoreControl::setRewindableProxy( bool rewindable ) {
+    this->rewindable = rewindable;
+    emit rewindableChanged( rewindable );
+}
+
 void CoreControl::setSourceProxy( QStringMap sourceQStringMap ) {
 
-    qCDebug( phxController ) << "Core source change to" << sourceQStringMap << "acknowedged";
+    // qCDebug( phxController ) << "Core source change to" << sourceQStringMap << "acknowedged";
 
     // Convert to a QVariantMap
     QVariantMap sourceQVariantMap;
@@ -76,6 +92,12 @@ void CoreControl::setSourceProxy( QStringMap sourceQStringMap ) {
 
     this->source = sourceQStringMap;
     emit sourceChanged( sourceQVariantMap );
+}
+
+void CoreControl::setStateProxy( Core::State state ) {
+    // qCDebug( phxController ) << Q_FUNC_INFO << "State change to" << state << "acknowledged";
+    this->state = state;
+    emit stateChanged( state );
 }
 
 void CoreControl::setVolumeProxy( qreal volume ) {
@@ -91,28 +113,13 @@ void CoreControl::connectCoreProxy() {
     connect( this, &CoreControl::volumeChangedProxy, core, &Core::setVolume );
 
     // Step 3 (Core change notifier to our proxy)
+    connect( core, &Core::pausableChanged, this, &CoreControl::setPausableProxy );
     connect( core, &Core::playbackSpeedChanged, this, &CoreControl::setPlaybackSpeedProxy );
+    connect( core, &Core::resettableChanged, this, &CoreControl::setResettableProxy );
+    connect( core, &Core::rewindableChanged, this, &CoreControl::setRewindableProxy );
     connect( core, &Core::sourceChanged, this, &CoreControl::setSourceProxy );
     connect( core, &Core::volumeChanged, this, &CoreControl::setVolumeProxy );
-
-    // Handle the other ones changing
-    // These are lambdas instead of slots so as to prevent them from being changed from QML
-    connect( core, &Core::pausableChanged, [ = ]( bool pausable ) {
-        this->pausable = pausable;
-        emit pausableChanged( pausable );
-    } );
-    connect( core, &Core::resettableChanged, [ = ]( bool resettable ) {
-        this->resettable = resettable;
-        emit resettableChanged( resettable );
-    } );
-    connect( core, &Core::rewindableChanged, [ = ]( bool rewindable ) {
-        this->rewindable = rewindable;
-        emit rewindableChanged( rewindable );
-    } );
-    connect( core, &Core::stateChanged, [ = ]( Core::State state ) {
-        this->state = state;
-        emit stateChanged( state );
-    } );
+    connect( core, &Core::stateChanged, this, &CoreControl::setStateProxy );
 
     // Connect the methods, too
     connect( this, &CoreControl::loadProxy, core, &Core::load );
@@ -122,8 +129,6 @@ void CoreControl::connectCoreProxy() {
     connect( this, &CoreControl::resetProxy, core, &Core::reset );
 
 }
-
-// Good luck calling these from QML (don't try anyway)
 
 void CoreControl::notifyAllProperties() {
     emit pausableChanged( pausable );

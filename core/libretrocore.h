@@ -13,7 +13,7 @@
 #define POOL_SIZE 30
 
 /*
- * C++ wrapper around a Libretro core. Currently, only one LibretroCore instance may exist at any time due to the
+ * C++ wrapper around a Libretro core. Currently, only one LibretroCore instance may safely exist at any time due to the
  * lack of a context pointer for callbacks to use.
  *
  * The following keys are mandatory for source from setSource():
@@ -22,6 +22,13 @@
  * "game": Absolute path to a game the Libretro core accepts
  * "systemPath": Absolute path to the system directory (contents of which depend on the core)
  * "savePath": Absolute path to the save directory
+ *
+ * LibretroCore expects some kind of input producer (such as InputManager) to produce input which LibretroCore will then
+ * consume. This input production also drives the production of frames (retro_run()), so time it such that it's as close
+ * as possible to the console's native framerate!
+ *
+ * This also means that you can send updates from the input producer whenever you want, at any stage. retro_run() will
+ * not be called unless you're in the PLAYING state.
  */
 
 class LibretroCore : public Core {
@@ -37,11 +44,11 @@ class LibretroCore : public Core {
         void load() override;
         void stop() override;
 
-        void consumerFormat( ProducerFormat format ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) override;
+        void consumerFormat( ProducerFormat consumerFmt ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
 
     protected:
-        // Only staticly-linked callbacks may access this data/call these methods
+        // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
 
         // A hack that gives us the implicit C++ 'this' pointer while maintaining a C-style function signature
         // for the callbacks as required by libretro.h. We can only have a single instance of Core running at any time.
@@ -61,6 +68,8 @@ class LibretroCore : public Core {
         void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
 
     private:
+        void setState( Core::State state ) override;
+
         // Files and paths
 
         QLibrary coreFile;
@@ -75,6 +84,11 @@ class LibretroCore : public Core {
         QFileInfo gameFileInfo;
         QFileInfo systemPathInfo;
         QFileInfo savePathInfo;
+        QByteArray corePathByteArray;
+        QByteArray gameFileByteArray;
+        QByteArray gamePathByteArray;
+        QByteArray systemPathByteArray;
+        QByteArray savePathByteArray;
         const char *corePathCString;
         const char *gameFileCString;
         const char *gamePathCString;
@@ -120,6 +134,10 @@ class LibretroCore : public Core {
 
         uint8_t *videoBufferPool[ POOL_SIZE ];
         int videoPoolCurrentBuffer;
+
+        // Consumer data
+
+        ProducerFormat inputFormat;
 
         // Callbacks
 

@@ -15,13 +15,10 @@ class InputManager : public QObject, public Producer {
 
         Q_PROPERTY( bool gamepadControlsFrontend READ gamepadControlsFrontend
                     WRITE setGamepadControlsFrontend NOTIFY gamepadControlsFrontendChanged )
-
         Q_PROPERTY( int count READ count NOTIFY countChanged )
-
         Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
 
     public:
-
         explicit InputManager( QObject *parent = 0 );
         ~InputManager();
 
@@ -39,7 +36,6 @@ class InputManager : public QObject, public Producer {
         static void registerTypes();
 
     public slots:
-
         // Insert or append an inputDevice to the deviceList.
         void insert( InputDevice *device );
 
@@ -56,12 +52,14 @@ class InputManager : public QObject, public Producer {
         void emitConnectedDevices();
 
         InputDevice *at( int index );
-
         InputDevice *get( const QString name );
 
         bool eventFilter( QObject *object, QEvent *event );
 
         void pollStates();
+
+        // Polls per second
+        void setPollRate( qreal rate );
 
     signals:
         PRODUCER_SIGNALS
@@ -88,6 +86,7 @@ class InputManager : public QObject, public Producer {
 
         void removeKeyboardFilter();
 
+        qreal pollRate;
 };
 
 

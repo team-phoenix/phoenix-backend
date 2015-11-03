@@ -1,7 +1,7 @@
 #include "consumer.h"
 
 Consumer::Consumer():
-    format() {
+    consumerFmt() {
 }
 
 Consumer::~Consumer() {

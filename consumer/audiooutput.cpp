@@ -6,6 +6,7 @@ const auto samplesPerFrame = 2;
 
 AudioOutput::AudioOutput( QObject *parent ): QObject( parent ),
     resamplerState( nullptr ),
+    sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
     inputDataFloat( nullptr ),
     outputDataFloat( nullptr ), outputDataShort( nullptr ),
     coreIsRunning( false ),
@@ -27,16 +28,35 @@ AudioOutput::~AudioOutput() {
 //
 
 void AudioOutput::consumerFormat( ProducerFormat format ) {
-    this->format = format;
-    slotAudioFormat( format.audioFormat.sampleRate(), format.videoFramerate, format.videoFramerate * ( 1.0 / format.audioRatio ) );
+
+    // Pause audio output if we're no longer active, resume if we are again
+    if( coreIsRunning != format.active ) {
+        coreIsRunning = format.active;
+        setAudioActive( coreIsRunning );
+    }
+
+    if( hostFPS != format.videoFramerate * format.audioRatio ) {
+        qCDebug( phxAudioOutput ).nospace() << "hostFPS is now " << format.videoFramerate *format.audioRatio
+                                            << "fps (was " << hostFPS << "fps)";
+        hostFPS = format.videoFramerate * format.audioRatio;
+    }
+
+    if( format.firstFrame ) {
+        slotAudioFormat( format.audioFormat.sampleRate(), format.videoFramerate, format.videoFramerate * format.audioRatio );
+    }
+
+    this->consumerFmt = format;
+
 }
 
-void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes ) {
-    Q_UNUSED( type )
-    Q_UNUSED( data )
-    Q_UNUSED( bytes )
+void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
 
     if( type == QStringLiteral( "audio" ) ) {
+        // Discard data that's too far from the past to matter anymore
+        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 500 ) {
+            return;
+        }
+
         QMutexLocker locker( mutex );
 
         if( !coreIsRunning ) {

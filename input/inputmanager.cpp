@@ -55,7 +55,14 @@ InputDevice *InputManager::at( int index ) {
 
 void InputManager::pollStates() {
     sdlEventLoop.pollEvents();
-    emit producerData( QStringLiteral( "input" ), &producerMutex, nullptr, 0 );
+    emit producerData( QStringLiteral( "input" ), &producerMutex, nullptr, 0, QDateTime::currentMSecsSinceEpoch() );
+}
+
+void InputManager::setPollRate( qreal rate ) {
+    qCDebug( phxInput ).nospace() << "Poll rate set to " << rate << "fps";
+    pollRate = rate;
+    producerFmt.videoFramerate = pollRate;
+    emit producerFormat( producerFmt );
 }
 
 bool InputManager::gamepadControlsFrontend() const {

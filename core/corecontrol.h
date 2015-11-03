@@ -29,13 +29,20 @@
  *
  * From the perspective of QML, the interface exposed is similar to that of a game console. See Core for more details.
  *
+ * WARNING: Do not call load() until you have passed refernces to instances of the consumers and producers as needed
+ * for your particular Core subtype. See the property list for what's necessary
+ *
  */
 
 class CoreControl : public QObject {
         Q_OBJECT
 
-        // Properties
+        // Producers and consumers that live in QML (and the QML thread)
+
+        // Needed by: "libretro"
         Q_PROPERTY( VideoOutput *videoOutput MEMBER videoOutput )
+
+        // Needed by: "libretro"
         Q_PROPERTY( InputManager *inputManager MEMBER inputManager )
 
         // Core property proxy
@@ -60,7 +67,9 @@ class CoreControl : public QObject {
         Q_INVOKABLE void reset();
 
     signals:
-        void beginLooper( double interval );
+        void startLooper( double interval );
+        void stopLooper();
+        void setFramerate( qreal FPS );
 
         // Core property proxy (Step 4: to anywhere)
         // These acknowledge that Core's state has been changed
@@ -85,19 +94,10 @@ class CoreControl : public QObject {
         void stopProxy();
         void resetProxy();
 
-
     public slots:
-        // Core property proxy (Step 1: from anywhere)
-        // These change Core's state ...once it gets around to it
-        void setPlaybackSpeed( qreal playbackSpeed );
-        void setSource( QVariantMap sourceQVariantMap );
-        void setVolume( qreal volume );
-
-        // Core property proxy (Step 3: from Core)
-        // These tell us that Core has acknowledged our request and changed state
-        void setPlaybackSpeedProxy( qreal playbackSpeed );
-        void setSourceProxy( QStringMap sourceQStringMap );
-        void setVolumeProxy( qreal volume );
+        // Used to grab native framerate from LibretroCore
+        // CoreControl is NOT a consumer, this slot being here is kind of a hack
+        void consumerFormat( ProducerFormat consumerFmt );
 
     private:
         bool vsyncEnabled;
@@ -110,14 +110,35 @@ class CoreControl : public QObject {
         InputManager *inputManager;
 
         // Producer/consumer (Core)
+
         Core *core;
         QThread *coreThread;
-        void loadLibretro();
+
+        void initLibretro();
+        qreal libretroCoreFPS;
 
         // Consumers
         AudioOutput *audioOutput;
         QThread *audioOutputThread;
         VideoOutput *videoOutput;
+
+        // Core property proxy (Step 1: from anywhere)
+        // These change Core's state ...once it gets around to it
+        void setPlaybackSpeed( qreal playbackSpeed );
+        void setSource( QVariantMap sourceQVariantMap );
+        void setVolume( qreal volume );
+
+        // Core property proxy (Step 3: from Core)
+        // These tell us that Core has acknowledged our request and changed state
+        void setPausableProxy( bool pausable );
+        void setPlaybackSpeedProxy( qreal playbackSpeed );
+        void setResettableProxy( bool resettable );
+        void setRewindableProxy( bool rewindable );
+        void setSourceProxy( QStringMap sourceQStringMap );
+        void setStateProxy( Core::State state );
+        void setVolumeProxy( qreal volume );
+
+        // Bonus setters!
 
         // Core property proxy
         void notifyAllProperties();
