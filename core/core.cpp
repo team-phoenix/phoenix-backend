@@ -8,7 +8,6 @@ Core::Core( QObject *parent ) : QObject( parent ),
     source(),
     state( Core::INIT ),
     volume( 1.0 ) {
-    qCDebug( phxCore ) << Q_FUNC_INFO;
 }
 
 Core::~Core() {

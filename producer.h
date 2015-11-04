@@ -57,7 +57,7 @@ struct ProducerFormat {
     bool active;
 
     // Is this the start of a new session? Check this to know when to do some first-time initalization
-    bool firstFrame;
+    bool init;
 
     // Audio
 

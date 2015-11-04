@@ -22,7 +22,7 @@
  * CoreControl is a QML type that manages the execution of an emulation session via an instance of Core.
  *
  * Internally, CoreControl is a QML proxy for the Core. It manages Core's lifecycle and connects it to consumers,
- * keeping them in a separate thread separate from the UI (except VideoOutput).
+ * keeping them in a thread separate from the UI (except VideoOutput).
  * Writes via the set___() slot cause a ___changedProxy() signal to be emitted, which is then handled by a setter slot
  * in Core. Core emits a ___changed() signal of its own which we have connected to a set___Proxy() slot, which finally
  * assigns the proxied value and emits a ___changed() signal to notify anyone concerned.

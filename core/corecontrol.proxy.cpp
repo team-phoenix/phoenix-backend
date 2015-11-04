@@ -35,8 +35,6 @@ void CoreControl::setPlaybackSpeed( qreal playbackSpeed ) {
 
 void CoreControl::setSource( QVariantMap sourceQVariantMap ) {
 
-    qCDebug( phxController ) << sourceQVariantMap;
-
     // Convert to a QStringMap
     QStringMap sourceQStringMap;
 
@@ -44,12 +42,10 @@ void CoreControl::setSource( QVariantMap sourceQVariantMap ) {
         sourceQStringMap[ iter.key() ] = iter.value().toString();
     }
 
-    qCDebug( phxController ) << sourceQStringMap;
-
     // Determine Core type, instantiate appropiate type
     if( sourceQStringMap[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
         initLibretro();
-        qCDebug( phxController ) << "Core fully initalized and connected";
+        qCDebug( phxController ) << "LibretroCore fully initalized and connected";
     } else {
         qCCritical( phxController ).nospace() << QStringLiteral( "Unknown type " )
                                               << sourceQStringMap[ "type" ] << QStringLiteral( " passed to load()!" );

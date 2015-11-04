@@ -118,9 +118,9 @@ class LibretroCore : public Core {
 
         // Producer data
 
-        // Some cores don't actually give you the true video size until the first frame comes through
-        // Use this to ensure the format is only sent once
-        bool firstFrame;
+        // Passed along to producerFmt
+        // Is the producerFmt we're sending along for the initial state?
+        bool init;
 
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
         int16_t *audioBufferPool[ POOL_SIZE ];
@@ -137,7 +137,7 @@ class LibretroCore : public Core {
 
         // Consumer data
 
-        ProducerFormat inputFormat;
+        ProducerFormat consumerFmt;
 
         // Callbacks
 

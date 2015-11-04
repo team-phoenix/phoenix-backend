@@ -3,7 +3,7 @@
 ProducerFormat::ProducerFormat():
     producerType(),
     active( true ),
-    firstFrame( true ),
+    init( true ),
     audioFormat(),
     audioRatio( 1.0 ),
     videoBytesPerLine( 0 ),

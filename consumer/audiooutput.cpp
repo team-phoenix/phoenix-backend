@@ -41,7 +41,7 @@ void AudioOutput::consumerFormat( ProducerFormat format ) {
         hostFPS = format.videoFramerate * format.audioRatio;
     }
 
-    if( format.firstFrame ) {
+    if( format.init ) {
         slotAudioFormat( format.audioFormat.sampleRate(), format.videoFramerate, format.videoFramerate * format.audioRatio );
     }
 
