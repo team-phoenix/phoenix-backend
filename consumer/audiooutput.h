@@ -3,8 +3,11 @@
 
 #include "backendcommon.h"
 
-#include "audiobuffer.h"
 #include "consumer.h"
+#include "controllable.h"
+
+#include "audiobuffer.h"
+
 #include "logging.h"
 
 /* The AudioOutput class writes data to the default output device. Its internal buffers must be set by calling
@@ -14,7 +17,7 @@
  * inclusive) with slotSetVolume().
  */
 
-class AudioOutput : public QObject, public Consumer {
+class AudioOutput : public QObject, public Consumer, public Controllable {
         Q_OBJECT
 
     public:
@@ -24,26 +27,23 @@ class AudioOutput : public QObject, public Consumer {
     public slots:
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) override;
+        void setState( Control::State currentState ) override;
+        void setFramerate( qreal framerate ) override;
 
-        // Tell Audio what sample rate to expect from Core
-        void slotAudioFormat( int sampleRate, double coreFPS, double hostFPS );
+    private slots:
+        void slotAudioOutputStateChanged( QAudio::State currentState );
 
-        // Output incoming video frame of audio data to the audio output
-        void slotAudioData( int16_t *inputData, int inputBytes );
-
+    private:
         // Respond to the core running or not by keeping audio output active or not
         // AKA Pause if core is paused
         void setAudioActive( bool coreIsRunning );
 
-        // Set volume level [0.0...1.0]
-        void slotSetVolume( qreal level );
+        // Output incoming video frame of audio data to the audio output
+        void audioData( int16_t *inputData, int inputBytes );
 
-        void slotShutdown();
+        // Free memory, clean up
+        void shutdown();
 
-    private slots:
-        void slotAudioOutputStateChanged( QAudio::State state );
-
-    private:
         // Completely init/re-init audio output
         void resetAudio();
 
@@ -55,7 +55,7 @@ class AudioOutput : public QObject, public Consumer {
 
         // Audio and video timing provided by Core via the controller
         int sampleRate;
-        double hostFPS;
+        double framerate;
         double coreFPS;
         double sampleRateRatio;
 

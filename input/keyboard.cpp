@@ -46,7 +46,7 @@ void Keyboard::loadDefaultMapping() {
 
 void Keyboard::insert( const int &event, int16_t pressed ) {
 
-    qDebug() << editMode();
+    // qDebug() << editMode();
     if( editMode() ) {
         emit editModeEvent( event, pressed, InputDeviceEvent::EditEventType::ButtonEvent );
         return;

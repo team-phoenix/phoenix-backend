@@ -6,7 +6,7 @@ const auto samplesPerFrame = 2;
 
 AudioOutput::AudioOutput( QObject *parent ): QObject( parent ),
     resamplerState( nullptr ),
-    sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
+    sampleRate( 0 ), framerate( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
     inputDataFloat( nullptr ),
     outputDataFloat( nullptr ), outputDataShort( nullptr ),
     coreIsRunning( false ),
@@ -20,7 +20,9 @@ AudioOutput::AudioOutput( QObject *parent ): QObject( parent ),
 }
 
 AudioOutput::~AudioOutput() {
-
+    if( outputAudioInterface != nullptr || outputDataFloat != nullptr || outputDataShort != nullptr ) {
+        shutdown();
+    }
 }
 
 //
@@ -28,30 +30,13 @@ AudioOutput::~AudioOutput() {
 //
 
 void AudioOutput::consumerFormat( ProducerFormat format ) {
-
-    // Pause audio output if we're no longer active, resume if we are again
-    if( coreIsRunning != format.active ) {
-        coreIsRunning = format.active;
-        setAudioActive( coreIsRunning );
-    }
-
-    if( hostFPS != format.videoFramerate * format.audioRatio ) {
-        qCDebug( phxAudioOutput ).nospace() << "hostFPS is now " << format.videoFramerate *format.audioRatio
-                                            << "fps (was " << hostFPS << "fps)";
-        hostFPS = format.videoFramerate * format.audioRatio;
-    }
-
-    if( format.init ) {
-        slotAudioFormat( format.audioFormat.sampleRate(), format.videoFramerate, format.videoFramerate * format.audioRatio );
-    }
-
     this->consumerFmt = format;
-
 }
 
 void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
 
     if( type == QStringLiteral( "audio" ) ) {
+
         // Discard data that's too far from the past to matter anymore
         if( QDateTime::currentMSecsSinceEpoch() - timestamp > 500 ) {
             return;
@@ -59,23 +44,49 @@ void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t 
 
         QMutexLocker locker( mutex );
 
-        if( !coreIsRunning ) {
-            setAudioActive( true );
+        audioData( ( int16_t * )data, bytes );
+
+    } else if( type == QStringLiteral( "audiovolume" ) ) {
+
+        QMutexLocker locker( mutex );
+
+        if( outputAudioInterface ) {
+            outputAudioInterface->setVolume( *( qreal * )data );
         }
 
-        // TODO: Pack volume updates into data, make data a struct for audio
-        slotAudioData( ( int16_t * )data, bytes );
     }
 
 }
 
-void AudioOutput::slotAudioFormat( int sampleRate, double coreFPS, double hostFPS ) {
+void AudioOutput::setState( Control::State state ) {
+    // We only care about the transition to PLAYING, PAUSED or UNLOADING
+    if( this->currentState != Control::PLAYING && state == Control::PLAYING ) {
+        setAudioActive( true );
+    }
 
-    qCDebug( phxAudioOutput, "slotAudioFormat( %i Hz, %f fps (core), %f fps (host) )", sampleRate, coreFPS, hostFPS );
+    if( this->currentState != Control::PAUSED && state == Control::PAUSED ) {
+        setAudioActive( false );
+    }
 
-    this->sampleRate = sampleRate;
-    this->coreFPS = coreFPS;
-    this->hostFPS = hostFPS;
+    if( this->currentState != Control::UNLOADING && state == Control::UNLOADING ) {
+        setAudioActive( false );
+        shutdown();
+    }
+
+    this->currentState = state;
+
+}
+
+void AudioOutput::setFramerate( qreal framerate ) {
+
+    // Loading is not considered "complete" for AudioOutput until it gets the host framerate
+    Q_ASSERT( currentState == Control::LOADING );
+
+    this->sampleRate = consumerFmt.audioFormat.sampleRate();
+    this->coreFPS = consumerFmt.videoFramerate;
+    this->framerate = framerate;
+
+    qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, framerate );
 
     inputAudioFormat.setSampleSize( 16 );
     inputAudioFormat.setSampleRate( sampleRate );
@@ -106,10 +117,32 @@ void AudioOutput::slotAudioFormat( int sampleRate, double coreFPS, double hostFP
 
     resetAudio();
     allocateMemory();
+}
+
+// Private slots
+
+void AudioOutput::slotAudioOutputStateChanged( QAudio::State s ) {
+
+    if( s == QAudio::IdleState && outputAudioInterface->error() == QAudio::UnderrunError ) {
+        // qWarning( phxAudioOutput ) << "audioOut underrun";
+
+        if( outputAudioInterface ) {
+            outputAudioInterface->start( &outputBuffer );
+        } else {
+            resetAudio();
+            allocateMemory();
+        }
+    }
+
+    if( s != QAudio::IdleState && s != QAudio::ActiveState ) {
+        qCDebug( phxAudioOutput ) << "State changed:" << s;
+    }
 
 }
 
-void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
+// Private
+
+void AudioOutput::audioData( int16_t *inputDataShort, int inputBytes ) {
 
     // Handle the situation where there is an error opening the audio device
     if( outputAudioInterface->error() == QAudio::OpenError ) {
@@ -136,7 +169,7 @@ void AudioOutput::slotAudioData( int16_t *inputDataShort, int inputBytes ) {
 
     // Calculate the final DRC ratio
     double DRCRatio = 1.0 + maxDeviation * bufferTargetCorrectionRatio;
-    double adjustedSampleRateRatio = sampleRateRatio * DRCRatio * ( hostFPS / coreFPS );
+    double adjustedSampleRateRatio = sampleRateRatio * DRCRatio * ( framerate / coreFPS );
 
     // libsamplerate works in floats, must convert to floats for processing
     src_short_to_float_array( ( short * )inputDataShort, inputDataFloat, inputSamples );
@@ -227,15 +260,7 @@ void AudioOutput::setAudioActive( bool coreIsRunning ) {
 
 }
 
-void AudioOutput::slotSetVolume( qreal level ) {
-
-    if( outputAudioInterface ) {
-        outputAudioInterface->setVolume( level );
-    }
-
-}
-
-void AudioOutput::slotShutdown() {
+void AudioOutput::shutdown() {
 
     qCDebug( phxAudioOutput ) << "slotShutdown() start";
 
@@ -261,33 +286,6 @@ void AudioOutput::slotShutdown() {
     qCDebug( phxAudioOutput ) << "slotShutdown() end";
 
 }
-
-//
-// Private slots
-//
-
-void AudioOutput::slotAudioOutputStateChanged( QAudio::State s ) {
-
-    if( s == QAudio::IdleState && outputAudioInterface->error() == QAudio::UnderrunError ) {
-        // qWarning( phxAudioOutput ) << "audioOut underrun";
-
-        if( outputAudioInterface ) {
-            outputAudioInterface->start( &outputBuffer );
-        } else {
-            resetAudio();
-            allocateMemory();
-        }
-    }
-
-    if( s != QAudio::IdleState && s != QAudio::ActiveState ) {
-        qCDebug( phxAudioOutput ) << "State changed:" << s;
-    }
-
-}
-
-//
-// Private
-//
 
 void AudioOutput::resetAudio() {
 

@@ -30,11 +30,11 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Get the audio and video timing/format from core once a core and game are loaded,
     // send the data out to each consumer for their own initialization
     connect( core, &LibretroCoreOld::signalAVFormat, this, &VideoItem::slotCoreAVFormat );
-    connect( this, &VideoItem::signalAudioFormat, audioOutput, &AudioOutput::slotAudioFormat );
+    // connect( this, &VideoItem::signalAudioFormat, audioOutput, &AudioOutput::slotAudioFormat );
     connect( this, &VideoItem::signalVideoFormat, this, &VideoItem::slotVideoFormat ); // Belongs in both categories
     
     // Do the next item in the core lifecycle when its state changes
-    connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::setAudioActive );
+    // connect( this, &VideoItem::signalRunChanged, audioOutput, &AudioOutput::setAudioActive );
     
     // Set up the slot that'll move Core back to this thread when needed
     // You MUST be sure that core->thread() and this->thread() are not the same or a deadlock will happen
@@ -42,9 +42,9 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     
     // Connect consumer signals and slots
     
-    connect( core, &LibretroCoreOld::signalAudioData, audioOutput, &AudioOutput::slotAudioData );
+    // connect( core, &LibretroCoreOld::signalAudioData, audioOutput, &AudioOutput::audioData );
     connect( core, &LibretroCoreOld::signalVideoData, this, &VideoItem::slotVideoData );
-    connect( this, &VideoItem::signalSetVolume, audioOutput, &AudioOutput::slotSetVolume );
+    // connect( this, &VideoItem::signalSetVolume, audioOutput, &AudioOutput::slotSetVolume );
     
     // Set up threads
     
@@ -55,14 +55,14 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     // Also, ensure their cleanup is blocking. We DON'T want anything else happening while cleanup is being done
     // Core implicitly blocks based on whether Core lives in VideoItem's thread or not
     // Consumers go first. Buffer pool should not be cleared until the consumers stop consuming
-    connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::slotShutdown, Qt::BlockingQueuedConnection );
+    // connect( this, &VideoItem::signalShutdown, audioOutput, &AudioOutput::shutdown, Qt::BlockingQueuedConnection );
     connect( this, &VideoItem::signalShutdown, core, &LibretroCoreOld::slotShutdown );
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
     
     // Catch the user exit signal and clean up
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
     
-        qCDebug( phxController ) << "===========QCoreApplication::aboutToQuit()===========";
+        qCDebug( phxControl ) << "===========QCoreApplication::aboutToQuit()===========";
         
         // Shut down Core and the consumers
         if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
@@ -102,7 +102,7 @@ void VideoItem::setInputManager( InputManager *manager ) {
         qmlInputManager = manager;
         core->inputManager = qmlInputManager;
         
-        connect( this, &VideoItem::signalRunChanged, qmlInputManager, &InputManager::setRun, Qt::DirectConnection );
+        //connect( this, &VideoItem::signalRunChanged, qmlInputManager, &InputManager::setRun, Qt::DirectConnection );
         
         emit inputManagerChanged();
         
@@ -139,7 +139,7 @@ void VideoItem::setRunning( const bool running ) {
 
 void VideoItem::slotCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error ) {
 
-    qCDebug( phxController ) << "slotStateChanged(" << LibretroCoreOld::stateToText( newState ) << "," << error << ")";
+    qCDebug( phxControl ) << "slotStateChanged(" << LibretroCoreOld::stateToText( newState ) << "," << error << ")";
     
     setCoreState( newState );
     
@@ -163,7 +163,7 @@ void VideoItem::slotCoreStateChanged( LibretroCoreOld::State newState, LibretroC
                 core->moveToThread( window()->openglContext()->thread() );
             }
 
-            qCDebug( phxController ) << "Begin emulation.";
+            qCDebug( phxControl ) << "Begin emulation.";
             
             // This will also inform the consumers that emulation has started
             setRunning( true );
@@ -257,7 +257,7 @@ void VideoItem::setCore( QString libretroCore ) {
 
     // Stop the game if it's currently running
     if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
-        qCDebug( phxController ) << "Stopping currently running game:" << gamePath;
+        qCDebug( phxControl ) << "Stopping currently running game:" << gamePath;
         slotCoreStateChanged( LibretroCoreOld::STATEFINISHED, LibretroCoreOld::CORENOERROR );
     }
     

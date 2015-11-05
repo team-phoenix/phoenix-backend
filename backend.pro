@@ -67,7 +67,10 @@
         util/logging.h \
         consumer.h \
         producer.h \
-    util/looper.h
+    util/looper.h \
+    controllable.h \
+    control.h \
+    util/controlhelper.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
@@ -93,7 +96,9 @@
         util/logging.cpp \
         consumer.cpp \
         producer.cpp \
-    util/looper.cpp
+    util/looper.cpp \
+    controllable.cpp \
+    control.cpp
 
     RESOURCES += input/controllerdb.qrc
 

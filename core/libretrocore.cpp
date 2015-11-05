@@ -15,7 +15,6 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     saveDataBuf( nullptr ),
     systemInfo( new retro_system_info() ),
     inputDescriptors(),
-    init( true ),
     audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
     videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
     consumerFmt(), inputStates{ 0 },
@@ -25,7 +24,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // All Libretro cores are pausable, just stop calling retro_run()
     pausable = true;
 
-    LibretroCore::state = STOPPED;
+    currentState = Control::STOPPED;
     allPropertiesChanged();
 }
 
@@ -36,7 +35,7 @@ LibretroCore::~LibretroCore() {
 // Slots
 
 void LibretroCore::load() {
-    Core::setState( LOADING );
+    Core::setState( Control::LOADING );
 
     // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
     coreFileInfo.setFile( source[ "core" ] );
@@ -198,9 +197,7 @@ void LibretroCore::load() {
         qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
         emit producerFormat( producerFmt );
-
-        init = false;
-        producerFmt.init = false;
+        emit libretroCoreNativeFramerate( avInfo->timing.fps );
 
         // Allocate buffers to fit this max size
         // Assume 16-bit stereo audio, 32-bit video
@@ -214,19 +211,15 @@ void LibretroCore::load() {
 
     }
 
-    Core::setState( PAUSED );
+    Core::setState( Control::PAUSED );
 }
 
 void LibretroCore::stop() {
-    Core::setState( UNLOADING );
+    Core::setState( Control::UNLOADING );
 
     // Write SRAM, free memory
 
-    // Tell the consumers to stop
-    producerFmt.active = false;
-    emit producerFormat( producerFmt );
-
-    Core::setState( STOPPED );
+    Core::setState( Control::STOPPED );
 }
 
 void LibretroCore::consumerFormat( ProducerFormat format ) {
@@ -263,7 +256,7 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
         }
 
         // Run the emulator for a frame if we're supposed to
-        if( state == PLAYING ) {
+        if( currentState == Control::PLAYING ) {
             symbols.retro_run();
         }
 
@@ -300,21 +293,6 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
 }
 
 // Private
-
-void LibretroCore::setState( Core::State state ) {
-    // Let the consumers know if we're paused or not
-    if( ( state == PLAYING ) && ( !producerFmt.active ) ) {
-        producerFmt.active = true;
-        emit producerFormat( producerFmt );
-    }
-
-    if( ( state == PAUSED ) && ( producerFmt.active ) ) {
-        producerFmt.active = false;
-        emit producerFormat( producerFmt );
-    }
-
-    Core::setState( state );
-}
 
 void LibretroCore::LibretroCore::loadSaveData() {
     saveDataBuf = symbols.retro_get_memory_data( RETRO_MEMORY_SAVE_RAM );
@@ -353,7 +331,7 @@ void LibretroCore::LibretroCore::storeSaveData() {
     }
 
     else {
-        qDebug() << Q_FUNC_INFO << ": " << file.fileName() << "(Failed)";
+        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << file.fileName() << "(Failed)";
     }
 }
 
@@ -724,7 +702,7 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
     int16_t value = ( ( core->inputStates[ port ] >> id ) & 0x01 );
 
     if( port == 0 ) {
-        qCDebug( phxCore ) << "Valid input request" << port << device << index << id << "Value:" << value << "Raw:" << core->inputStates[ port ];
+        //qCDebug( phxCore ) << "Valid input request" << port << device << index << id << "Value:" << value << "Raw:" << core->inputStates[ port ];
     }
 
     return value;

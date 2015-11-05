@@ -32,20 +32,22 @@
  */
 
 class LibretroCore : public Core {
+    Q_OBJECT
 
     public:
         explicit LibretroCore( Core *parent = 0 );
         ~LibretroCore();
 
     signals:
+        void libretroCoreNativeFramerate( qreal framerate );
 
     public slots:
+        void consumerFormat( ProducerFormat consumerFmt ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
+
         // State changers
         void load() override;
         void stop() override;
-
-        void consumerFormat( ProducerFormat consumerFmt ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
 
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
@@ -68,8 +70,6 @@ class LibretroCore : public Core {
         void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
 
     private:
-        void setState( Core::State state ) override;
-
         // Files and paths
 
         QLibrary coreFile;
@@ -117,10 +117,6 @@ class LibretroCore : public Core {
         QMap<QString, QString> inputDescriptors;
 
         // Producer data
-
-        // Passed along to producerFmt
-        // Is the producerFmt we're sending along for the initial state?
-        bool init;
 
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
         int16_t *audioBufferPool[ POOL_SIZE ];

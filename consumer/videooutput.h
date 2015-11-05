@@ -3,6 +3,7 @@
 
 #include "backendcommon.h"
 
+#include "controllable.h"
 #include "consumer.h"
 #include "logging.h"
 
@@ -11,7 +12,7 @@
  * in the QML thread.
  */
 
-class VideoOutput : public QQuickItem, public Consumer {
+class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         Q_OBJECT
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
@@ -29,6 +30,9 @@ class VideoOutput : public QQuickItem, public Consumer {
     public slots:
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
+        CONTROLLABLE_SLOT_SETSTATE_DEFAULT
+        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
+
 
     private:
         // The texture that will hold video frames from core. The texture itself lives in GPU RAM

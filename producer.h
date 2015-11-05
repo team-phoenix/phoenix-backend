@@ -33,6 +33,12 @@
     void producerData( QString type, QMutex *producerMutex, void *data, size_t bytes, qint64 timestamp ); \
     void producerFormat( ProducerFormat format ); \
 
+#define CONNECT_PRODUCER_CONSUMER( producer, consumer ) \
+connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),\
+         dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );\
+connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ),\
+         dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
+
 // Type of video output (for use by video consumers)
 enum VideoRendererType {
 
@@ -54,10 +60,10 @@ struct ProducerFormat {
     QString producerType;
 
     // Is the session currently active?
-    bool active;
+    //bool active;
 
     // Is this the start of a new session? Check this to know when to do some first-time initalization
-    bool init;
+    //bool init;
 
     // Audio
 

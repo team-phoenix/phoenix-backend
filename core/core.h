@@ -5,6 +5,7 @@
 
 #include "logging.h"
 
+#include "controllable.h"
 #include "producer.h"
 #include "consumer.h"
 
@@ -24,37 +25,14 @@
  * Core is also a consumer of input data.
  */
 
-class Core : public QObject, public Producer, public Consumer {
+class Core : public QObject, public Producer, public Consumer, public Controllable {
         Q_OBJECT
 
     public:
         explicit Core( QObject *parent = 0 );
         virtual ~Core();
 
-        // States
-        enum State {
-            // Still in the constructor, probably allocating memory or something
-            INIT = 0,
-
-            // Nothing's loaded. Give Core a game to play with setSource() then do load()
-            STOPPED,
-
-            // Game is currently loading
-            LOADING,
-
-            // Game fully loaded, not running. Call play() to resume game or stop() to stop playing
-            PAUSED,
-
-            // Game fully loaded, running. Call pause() to pause game or stop() to stop playing
-            PLAYING,
-
-            // Game is shutting down. It could be doing stuff like saving game data back to disk or freeing memory
-            UNLOADING
-        };
-        Q_ENUM( State )
-
     signals:
-        // See producer.h
         PRODUCER_SIGNALS
 
         // Notifiers
@@ -63,12 +41,13 @@ class Core : public QObject, public Producer, public Consumer {
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
         void sourceChanged( QStringMap source );
-        void stateChanged( Core::State state );
+        void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
 
     public slots:
-        // See consumer.h
         CONSUMER_SLOTS_ABSTRACT
+        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
+        virtual void setState( Control::State state );
 
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
@@ -112,10 +91,6 @@ class Core : public QObject, public Producer, public Consumer {
         // Read-write
         QStringMap source;
 
-        // Current state
-        // Read-only
-        State state;
-
         // Range: [0.0, 1.0]
         // Read-write
         qreal volume;
@@ -124,7 +99,6 @@ class Core : public QObject, public Producer, public Consumer {
         virtual void setPausable( bool pausable );
         virtual void setResettable( bool resettable );
         virtual void setRewindable( bool rewindable );
-        virtual void setState( Core::State state );
         
 };
 

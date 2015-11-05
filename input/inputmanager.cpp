@@ -55,28 +55,23 @@ InputDevice *InputManager::at( int index ) {
 }
 
 void InputManager::pollStates() {
-    QMutexLocker locker( &producerMutex );
+    if( currentState == Control::PLAYING ) {
+        QMutexLocker locker( &producerMutex );
 
-    // Clear input states
-    memset( inputStates, 0, sizeof( inputStates ) );
+        // Clear input states
+        memset( inputStates, 0, sizeof( inputStates ) );
 
-    // Fetch input states
-    sdlEventLoop.pollEvents();
+        // Fetch input states
+        sdlEventLoop.pollEvents();
 
-    for( int i = 0; i < 16; i++ ) {
-        for( int j = 0; j < 16; j++ ) {
-            inputStates[ i ] |= getInputState( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
+        for( int i = 0; i < 16; i++ ) {
+            for( int j = 0; j < 16; j++ ) {
+                inputStates[ i ] |= getInputState( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
+            }
         }
+
+        emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
     }
-
-    emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
-}
-
-void InputManager::setPollRate( qreal rate ) {
-    qCDebug( phxInput ).nospace() << "Poll rate set to " << rate << "fps";
-    pollRate = rate;
-    producerFmt.videoFramerate = pollRate;
-    emit producerFormat( producerFmt );
 }
 
 bool InputManager::gamepadControlsFrontend() const {
@@ -94,6 +89,38 @@ void InputManager::registerTypes() {
     qmlRegisterType<QMLInputDevice>( "vg.phoenix.backend", 1, 0, "QMLInputDevice" );
 
     qRegisterMetaType<InputDevice *>( "InputDevice *" );
+}
+
+void InputManager::setState( Control::State state ) {
+
+    // We only care about the transition to or away from PLAYING
+    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
+        ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
+        QMutexLocker locker( &mutex );
+        bool run = ( state == Control::PLAYING );
+
+        setGamepadControlsFrontend( !run );
+
+        if( run ) {
+            qCDebug( phxInput ) << "Reading game input from keyboard";
+            sdlEventLoop.stop();
+            installKeyboardFilter();
+
+            for( auto device : deviceList ) {
+                if( device ) {
+                    device->setEditMode( false );
+                }
+            }
+        }
+
+        else {
+            qCDebug( phxInput ) << "No longer reading keyboard input";
+            sdlEventLoop.start();
+            removeKeyboardFilter();
+        }
+    }
+
+    this->currentState = state;
 
 }
 
@@ -124,32 +151,6 @@ void InputManager::removeAt( int index ) {
 
     if( deviceList.first() == nullptr ) {
         deviceList[ 0 ] = keyboard;
-    }
-
-    mutex.unlock();
-
-}
-
-void InputManager::setRun( bool run ) {
-
-    mutex.lock();
-
-    setGamepadControlsFrontend( !run );
-
-    if( run ) {
-        sdlEventLoop.stop();
-        installKeyboardFilter();
-
-        for( auto device : deviceList ) {
-            if( device ) {
-                device->setEditMode( false );
-            }
-        }
-    }
-
-    else {
-        sdlEventLoop.start();
-        removeKeyboardFilter();
     }
 
     mutex.unlock();
@@ -234,6 +235,7 @@ int16_t InputManager::getInputState( unsigned controllerPort, unsigned retroDevi
 
     auto event = static_cast<InputDeviceEvent::Event>( buttonID );
 
+
     if( controllerPort == 0 ) {
         auto keyState = keyboard->value( event, 0 );
 
@@ -242,6 +244,7 @@ int16_t InputManager::getInputState( unsigned controllerPort, unsigned retroDevi
         }
 
         auto deviceState = inputDevice->value( event, 0 );
+
         return deviceState | keyState;
     }
 

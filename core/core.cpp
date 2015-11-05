@@ -6,7 +6,6 @@ Core::Core( QObject *parent ) : QObject( parent ),
     resettable( false ),
     rewindable( false ),
     source(),
-    state( Core::INIT ),
     volume( 1.0 ) {
 }
 
@@ -32,24 +31,24 @@ void Core::setVolume( qreal volume ) {
 }
 
 void Core::load() {
-    setState( LOADING );
-    setState( PAUSED );
+    setState( Control::LOADING );
+    setState( Control::PAUSED );
 }
 
 void Core::play() {
-    setState( PLAYING );
+    setState( Control::PLAYING );
 }
 
 void Core::pause() {
-    setState( PAUSED );
+    setState( Control::PAUSED );
 }
 
 void Core::reset() {
 }
 
 void Core::stop() {
-    setState( UNLOADING );
-    setState( STOPPED );
+    setState( Control::UNLOADING );
+    setState( Control::STOPPED );
 }
 
 // Protected
@@ -60,7 +59,7 @@ void Core::allPropertiesChanged() {
     emit resettableChanged( resettable );
     emit rewindableChanged( rewindable );
     emit sourceChanged( source );
-    emit stateChanged( state );
+    emit stateChanged( currentState );
     emit volumeChanged( volume );
 }
 
@@ -79,8 +78,8 @@ void Core::setRewindable( bool rewindable ) {
     emit rewindableChanged( rewindable );
 }
 
-void Core::setState( Core::State state ) {
-    this->state = state;
+void Core::setState( Control::State state ) {
+    this->currentState = state;
     emit stateChanged( state );
-    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << state;
+    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << ( ControlHelper::State )state;
 }

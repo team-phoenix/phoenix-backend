@@ -3,11 +3,14 @@
 
 #include "backendcommon.h"
 
+#include "controllable.h"
 #include "producer.h"
+
 #include "qmlinputdevice.h"
 #include "sdleventloop.h"
 #include "inputdevice.h"
 #include "keyboard.h"
+
 #include "logging.h"
 
 /*
@@ -15,7 +18,7 @@
  * maintains a list of connected controllers.
  */
 
-class InputManager : public QObject, public Producer {
+class InputManager : public QObject, public Producer, public Controllable {
         Q_OBJECT
 
         Q_PROPERTY( bool gamepadControlsFrontend READ gamepadControlsFrontend
@@ -41,8 +44,8 @@ class InputManager : public QObject, public Producer {
         static void registerTypes();
 
     public slots:
-        // Handle when the game has started playing
-        void setRun( bool run );
+        void setState( Control::State currentState ) override;
+        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
 
         // Allows the user to change controller ports
         void swap( const int index1, const int index2 );
@@ -61,9 +64,6 @@ class InputManager : public QObject, public Producer {
 
         void pollStates();
 
-        // Polls per second
-        void setPollRate( qreal rate );
-
         // Called by the SDLEventLoop
 
         // Insert or append an inputDevice to the deviceList.
@@ -71,6 +71,7 @@ class InputManager : public QObject, public Producer {
 
         // Remove and delete inputDevice at index
         void removeAt( int index );
+
 
     signals:
         PRODUCER_SIGNALS
@@ -85,6 +86,7 @@ class InputManager : public QObject, public Producer {
         // void device( InputDevice *device );
 
     private:
+
         QMutex mutex;
 
         QList<InputDevice *> deviceList;
@@ -98,8 +100,6 @@ class InputManager : public QObject, public Producer {
         void installKeyboardFilter();
 
         void removeKeyboardFilter();
-
-        qreal pollRate;
 
         // Helper ripped from old Core input state callback
         int16_t inputStates[ 16 ];

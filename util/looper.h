@@ -3,13 +3,23 @@
 
 #include "backendcommon.h"
 
-class Looper : public QObject {
+#include "controllable.h"
+#include "logging.h"
+
+/*
+ * An ultra-high precision timer that offers far more granularity than anything Qt has to offer. Tests have shown it to
+ * be as accurate as +-50us to its target. The drawback, however, is that using this will cause high CPU usage.
+ */
+
+class LooperPrivate : public QObject {
         Q_OBJECT
+
     public:
-        explicit Looper( QObject *parent = 0 );
+        explicit LooperPrivate( QObject *parent = 0 );
+        ~LooperPrivate();
 
     signals:
-        void signalFrame();
+        void timeout();
 
     public slots:
         // Start the loop. 'interval' is in ms
@@ -18,6 +28,29 @@ class Looper : public QObject {
 
     private:
         bool running;
+
+};
+
+class Looper : public QObject, public Controllable {
+        Q_OBJECT
+
+    public:
+        explicit Looper( QObject *parent = 0 );
+        ~Looper();
+
+    public slots:
+        // Control
+        void setState( Control::State currentState ) override;
+        void setFramerate( qreal framerate ) override;
+
+    signals:
+        void beginLoop( double interval );
+        void endLoop();
+        void timeout();
+
+    private:
+        LooperPrivate *looper;
+        QThread looperThread;
 
 };
 

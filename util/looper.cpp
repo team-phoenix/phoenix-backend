@@ -1,10 +1,13 @@
 #include "looper.h"
 
-Looper::Looper( QObject *parent ) : QObject( parent ) {
-
+LooperPrivate::LooperPrivate( QObject *parent ): QObject( parent ) {
 }
 
-void Looper::beginLoop( double interval ) {
+LooperPrivate::~LooperPrivate() {
+}
+
+
+void LooperPrivate::beginLoop( double interval ) {
 
     // High-precision elapsed time timer
     QElapsedTimer timer;
@@ -35,15 +38,15 @@ void Looper::beginLoop( double interval ) {
 
             if( printDebug && ( outerLoopCounter % printEvery == 0 ) )  {
                 // Remember, the stuff printed here are snapshots in time, NOT averages!
-                qDebug() << "Inner loop ran" << innerLoopCounter << "times";
-                qDebug() << "averageTimerDelta =" << averageTimerDifference << "ms";
-                qDebug() << "timeElapsed =" << timeElapsed << "ms | interval =" << interval << "ms";
-                qDebug() << "Difference:" << timeElapsed - interval << " -- " << ( ( timeElapsed - interval ) / interval ) * 100.0 << "%";
+                qCDebug( phxControl ) << "Inner loop ran" << innerLoopCounter << "times";
+                qCDebug( phxControl ) << "averageTimerDelta =" << averageTimerDifference << "ms";
+                qCDebug( phxControl ) << "timeElapsed =" << timeElapsed << "ms | interval =" << interval << "ms";
+                qCDebug( phxControl ) << "Difference:" << timeElapsed - interval << " -- " << ( ( timeElapsed - interval ) / interval ) * 100.0 << "%";
             }
 
             innerLoopCounter = 0;
 
-            emit signalFrame();
+            emit timeout();
 
             // Reset the frame timer
             timeElapsed = ( double )timer.nsecsElapsed() / 1000.0 / 1000.0;
@@ -68,6 +71,48 @@ void Looper::beginLoop( double interval ) {
     }
 }
 
-void Looper::endLoop() {
+void LooperPrivate::endLoop() {
     running = false;
+}
+
+Looper::Looper( QObject *parent ) : QObject( parent ),
+    looper( new LooperPrivate() ),
+    looperThread( this ) {
+    connect( this, &Looper::beginLoop, looper, &LooperPrivate::beginLoop );
+    connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
+    connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
+    looper->moveToThread( &looperThread );
+    looperThread.setObjectName( "Looper thread (internal)" );
+    looperThread.start();
+}
+
+Looper::~Looper() {
+    looperThread.quit();
+    looperThread.wait();
+}
+
+void Looper::setState( Control::State state ) {
+
+    // We only care about the transition to or away from PLAYING
+    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
+        ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
+        if( state == Control::PLAYING ) {
+            emit beginLoop( ( 1.0 / framerate ) * 1000.0 );
+        } else {
+            emit endLoop();
+        }
+    }
+
+    this->currentState = state;
+
+}
+
+void Looper::setFramerate( qreal framerate ) {
+    if( this->framerate != framerate ) {
+        qCDebug( phxControl ).nospace() << "Looper beginning loop at " << framerate << "fps";
+        emit endLoop();
+        emit beginLoop( ( 1.0 / framerate ) * 1000.0 );
+    }
+
+    this->framerate = framerate;
 }

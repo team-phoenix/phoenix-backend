@@ -3,6 +3,12 @@
 
 #include "backendcommon.h"
 
+#include "control.h"
+#include "controllable.h"
+
+// Timers that drive frame production (controllers)
+#include "looper.h"
+
 // Producers
 #include "producer.h"
 #include "inputmanager.h"
@@ -16,10 +22,9 @@
 
 // Misc
 #include "logging.h"
-#include "looper.h"
 
 /*
- * CoreControl is a QML type that manages the execution of an emulation session via an instance of Core.
+ * CoreControl is a QML type and controller that manages the execution of an emulation session via an instance of Core.
  *
  * Internally, CoreControl is a QML proxy for the Core. It manages Core's lifecycle and connects it to consumers,
  * keeping them in a thread separate from the UI (except VideoOutput).
@@ -34,14 +39,7 @@
  *
  */
 
-// Check producer.h for an explanation for this syntax
-#define CONNECT_PRODUCER_CONSUMER( producer, consumer ) \
-connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),\
-         dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );\
-connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ),\
-         dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
-
-class CoreControl : public QObject {
+class CoreControl : public QObject, public Control {
         Q_OBJECT
 
         // Producers and consumers that live in QML (and the QML thread)
@@ -58,7 +56,7 @@ class CoreControl : public QObject {
         Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
         Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
-        Q_PROPERTY( Core::State state READ getState NOTIFY stateChanged )
+        Q_PROPERTY( ControlHelper::State state READ getState NOTIFY stateChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
 
     public:
@@ -67,16 +65,21 @@ class CoreControl : public QObject {
 
         // Core property proxy
         // May be called from QML
-        Q_INVOKABLE void load();
-        Q_INVOKABLE void play();
-        Q_INVOKABLE void pause();
-        Q_INVOKABLE void stop();
-        Q_INVOKABLE void reset();
+        Q_INVOKABLE void load() override;
+        Q_INVOKABLE void play() override;
+        Q_INVOKABLE void pause() override;
+        Q_INVOKABLE void stop() override;
+        Q_INVOKABLE void reset() override;
 
     signals:
+        // Control signals
+        CONTROL_SIGNALS
         void startLooper( double interval );
         void stopLooper();
         void setFramerate( qreal FPS );
+
+        // FIXME: Find better ways to do this
+        void setActive( bool active );
 
         // Core property proxy (Step 4: to anywhere)
         // These acknowledge that Core's state has been changed
@@ -85,7 +88,7 @@ class CoreControl : public QObject {
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
         void sourceChanged( QVariantMap source );
-        void stateChanged( Core::State state );
+        void stateChanged( ControlHelper::State state );
         void volumeChanged( qreal volume );
 
         // Core property proxy (Step 2: to Core)
@@ -103,8 +106,10 @@ class CoreControl : public QObject {
 
     public slots:
         // Used to grab native framerate from LibretroCore
-        // CoreControl is NOT a consumer, this slot being here is kind of a hack
-        void consumerFormat( ProducerFormat consumerFmt );
+        void libretroCoreNativeFramerate( qreal framerate );
+
+        // Pass Core's new state down to all other Controllables
+        void coreStateChanged( Control::State state );
 
     private:
         bool vsyncEnabled;
@@ -142,7 +147,7 @@ class CoreControl : public QObject {
         void setResettableProxy( bool resettable );
         void setRewindableProxy( bool rewindable );
         void setSourceProxy( QStringMap sourceQStringMap );
-        void setStateProxy( Core::State state );
+        void setStateProxy( Control::State state );
         void setVolumeProxy( qreal volume );
 
         // Bonus setters!
@@ -155,14 +160,13 @@ class CoreControl : public QObject {
         bool resettable;
         bool rewindable;
         QStringMap source;
-        Core::State state;
         qreal volume;
         bool getPausable() const;
         qreal getPlaybackSpeed() const;
         bool getResettable() const;
         bool getRewindable() const;
         QVariantMap getSource() const;
-        Core::State getState() const;
+        ControlHelper::State getState() const;
         qreal getVolume() const;
 
 };

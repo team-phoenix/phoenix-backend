@@ -45,10 +45,10 @@ void CoreControl::setSource( QVariantMap sourceQVariantMap ) {
     // Determine Core type, instantiate appropiate type
     if( sourceQStringMap[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
         initLibretro();
-        qCDebug( phxController ) << "LibretroCore fully initalized and connected";
+        qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
     } else {
-        qCCritical( phxController ).nospace() << QStringLiteral( "Unknown type " )
-                                              << sourceQStringMap[ "type" ] << QStringLiteral( " passed to load()!" );
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
+                                           << sourceQStringMap[ "type" ] << QStringLiteral( " passed to load()!" );
     }
 
     emit sourceChangedProxy( sourceQStringMap );
@@ -77,7 +77,7 @@ void CoreControl::setRewindableProxy( bool rewindable ) {
 
 void CoreControl::setSourceProxy( QStringMap sourceQStringMap ) {
 
-    // qCDebug( phxController ) << "Core source change to" << sourceQStringMap << "acknowedged";
+    // qCDebug( phxControl ) << "Core source change to" << sourceQStringMap << "acknowedged";
 
     // Convert to a QVariantMap
     QVariantMap sourceQVariantMap;
@@ -90,10 +90,10 @@ void CoreControl::setSourceProxy( QStringMap sourceQStringMap ) {
     emit sourceChanged( sourceQVariantMap );
 }
 
-void CoreControl::setStateProxy( Core::State state ) {
-    // qCDebug( phxController ) << Q_FUNC_INFO << "State change to" << state << "acknowledged";
+void CoreControl::setStateProxy( Control::State state ) {
+    qCDebug( phxControl ) << Q_FUNC_INFO << "State change to" << ( ControlHelper::State )state << "acknowledged";
     this->state = state;
-    emit stateChanged( state );
+    emit stateChanged( ( ControlHelper::State )state );
 }
 
 void CoreControl::setVolumeProxy( qreal volume ) {
@@ -132,7 +132,7 @@ void CoreControl::notifyAllProperties() {
     emit resettableChanged( resettable );
     emit rewindableChanged( rewindable );
     emit sourceChanged( getSource() );
-    emit stateChanged( state );
+    emit stateChanged( ( ControlHelper::State )state );
     emit volumeChanged( volume );
 }
 
@@ -163,8 +163,8 @@ QVariantMap CoreControl::getSource() const {
     return sourceQVariantMap;
 }
 
-Core::State CoreControl::getState() const {
-    return state;
+ControlHelper::State CoreControl::getState() const {
+    return ( ControlHelper::State )state;
 }
 
 qreal CoreControl::getVolume() const {
