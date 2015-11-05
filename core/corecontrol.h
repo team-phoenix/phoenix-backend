@@ -34,6 +34,13 @@
  *
  */
 
+// Check producer.h for an explanation for this syntax
+#define CONNECT_PRODUCER_CONSUMER( producer, consumer ) \
+connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),\
+         dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );\
+connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ),\
+         dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
+
 class CoreControl : public QObject {
         Q_OBJECT
 

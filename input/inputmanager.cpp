@@ -3,7 +3,8 @@
 InputManager::InputManager( QObject *parent )
     : QObject( parent ),
       keyboard( new Keyboard() ),
-      sdlEventLoop( this ) {
+      sdlEventLoop( this ),
+      inputStates{ 0 } {
 
     keyboard->loadMapping();
 
@@ -54,8 +55,21 @@ InputDevice *InputManager::at( int index ) {
 }
 
 void InputManager::pollStates() {
+    QMutexLocker locker( &producerMutex );
+
+    // Clear input states
+    memset( inputStates, 0, sizeof( inputStates ) );
+
+    // Fetch input states
     sdlEventLoop.pollEvents();
-    emit producerData( QStringLiteral( "input" ), &producerMutex, nullptr, 0, QDateTime::currentMSecsSinceEpoch() );
+
+    for( int i = 0; i < 16; i++ ) {
+        for( int j = 0; j < 16; j++ ) {
+            inputStates[ i ] |= getInputState( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
+        }
+    }
+
+    emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
 }
 
 void InputManager::setPollRate( qreal rate ) {
@@ -203,5 +217,42 @@ void InputManager::removeKeyboardFilter() {
 
     Q_CHECK_PTR( window );
     window->removeEventFilter( this );
+}
+
+int16_t InputManager::getInputState( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID ) {
+    Q_UNUSED( analogIndex )
+
+    // FIXME: We don't handle index for now...
+
+    // Return nothing if there's no InputManager or no controllers connected to the given port
+    if( static_cast<int>( controllerPort ) >= deviceList.size() ) {
+        return 0;
+    }
+
+    // Grab the input device
+    auto *inputDevice = deviceList.at( controllerPort );
+
+    auto event = static_cast<InputDeviceEvent::Event>( buttonID );
+
+    if( controllerPort == 0 ) {
+        auto keyState = keyboard->value( event, 0 );
+
+        if( !inputDevice ) {
+            return keyState;
+        }
+
+        auto deviceState = inputDevice->value( event, 0 );
+        return deviceState | keyState;
+    }
+
+    // make sure the InputDevice was configured
+    // to map to the requested RETRO_DEVICE.
+
+    if( !inputDevice || inputDevice->type() != static_cast<InputDevice::LibretroType>( retroDeviceType ) ) {
+        return 0;
+    }
+
+    return inputDevice->value( event, 0 );
+
 }
 

@@ -18,6 +18,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     init( true ),
     audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
     videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
+    consumerFmt(), inputStates{ 0 },
     variables() {
     core = this;
 
@@ -254,6 +255,14 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
 
         QMutexLocker locker( mutex );
 
+        // Copy incoming input data
+        int16_t *newInputStates = ( int16_t * )data;
+
+        for( int i = 0; i < 16; i++ ) {
+            inputStates[ i ] = newInputStates[ i ];
+        }
+
+        // Run the emulator for a frame if we're supposed to
         if( state == PLAYING ) {
             symbols.retro_run();
         }
@@ -700,43 +709,25 @@ void LibretroCore::logCallback( enum retro_log_level level, const char *fmt, ...
 }
 
 int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    Q_UNUSED( port )
-    Q_UNUSED( device )
     Q_UNUSED( index )
-    Q_UNUSED( id )
 
-    //    // we don't handle index for now...
+    // TODO: Support more than the default joypad
+    if( device != RETRO_DEVICE_JOYPAD ) {
+        return 0;
+    }
 
+    // TODO: ...and their buttons
+    if( id > 15 ) {
+        return 0;
+    }
 
-    //    if( !core->inputManager || static_cast<int>( port ) >= core->inputManager->size() ) {
-    //        return 0;
-    //    }
+    int16_t value = ( ( core->inputStates[ port ] >> id ) & 0x01 );
 
+    if( port == 0 ) {
+        qCDebug( phxCore ) << "Valid input request" << port << device << index << id << "Value:" << value << "Raw:" << core->inputStates[ port ];
+    }
 
-    //    auto *inputDevice = core->inputManager->at( port );
-
-    //    auto event = static_cast<InputDeviceEvent::Event>( id );
-
-    //    if( port == 0 ) {
-    //        auto keyState = core->inputManager->keyboard->value( event, 0 );
-
-    //        if( !inputDevice ) {
-    //            return keyState;
-    //        }
-
-    //        auto deviceState = inputDevice->value( event, 0 );
-    //        return deviceState | keyState;
-    //    }
-
-    //    // make sure the InputDevice was configured
-    //    // to map to the requested RETRO_DEVICE.
-
-    //    if( !inputDevice || inputDevice->type() != static_cast<InputDevice::LibretroType>( device ) ) {
-    //        return 0;
-    //    }
-
-    //    return inputDevice->value( event, 0 );
-    return 0;
+    return value;
 }
 
 void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {

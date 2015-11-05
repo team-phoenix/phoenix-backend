@@ -138,6 +138,7 @@ class LibretroCore : public Core {
         // Consumer data
 
         ProducerFormat consumerFmt;
+        int16_t inputStates[ 16 ];
 
         // Callbacks
 

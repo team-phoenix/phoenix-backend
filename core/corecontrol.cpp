@@ -70,7 +70,13 @@ void CoreControl::initLibretro() {
     // Connect LibretroCore to the proxy system
     connectCoreProxy();
 
-    // Create Looper (control)
+    // Connect LibretroCore to this so we can grab the current session's native framerate
+    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerFormat( ProducerFormat ) ),
+             this, SLOT( consumerFormat( ProducerFormat ) ) );
+
+    // Looper (control)
+
+    // Create Looper
     looper = new Looper();
     looper->moveToThread( looperThread );
     looperThread->setObjectName( QStringLiteral( "Looper thread (libretro)" ) );
@@ -79,41 +85,30 @@ void CoreControl::initLibretro() {
     connect( this, &CoreControl::startLooper, looper, &Looper::beginLoop );
     connect( this, &CoreControl::stopLooper, looper, &Looper::endLoop );
 
-    // InputManager (Producer) is a property and a reference to it should be set by this point
+    // InputManager (Producer)
 
-    // Connect this (controller) to InputManager
+    // inputManager is a property and a reference to it should be set by this point
+    // Connect InputManager to LibretroCore (produces input data which also drives frame production in LibretroCore)
+    CONNECT_PRODUCER_CONSUMER( inputManager, libretroCore );
+
+    // Connect this to InputManager (set framerate? FIXME: why?)
     connect( this, &CoreControl::setFramerate, inputManager, &InputManager::setPollRate );
 
-    // Connect Looper to InputManager
+    // Connect Looper to InputManager (drive input polling)
     connect( looper, &Looper::signalFrame, inputManager, &InputManager::pollStates );
 
-    // Connect InputManager to LibretroCore (see producer.h for an explanation for this funky syntax)
-    connect( dynamic_cast<QObject *>( inputManager ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),
-             dynamic_cast<QObject *>( libretroCore ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );
-    connect( dynamic_cast<QObject *>( inputManager ), SIGNAL( producerFormat( ProducerFormat ) ),
-             dynamic_cast<QObject *>( libretroCore ), SLOT( consumerFormat( ProducerFormat ) ) );
+    // Consumers
 
-    // Create the Consumers
+    // Create the consumers
     audioOutput = new AudioOutput();
     audioOutput->moveToThread( audioOutputThread );
     audioOutputThread->setObjectName( "Audio thread (libretro)" );
 
     // VideoOutput (Consumer) is a property and a reference to it should be set by this point
 
-    // Connect LibretroCore to the consumers
-    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),
-             dynamic_cast<QObject *>( audioOutput ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );
-    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerFormat( ProducerFormat ) ),
-             dynamic_cast<QObject *>( audioOutput ), SLOT( consumerFormat( ProducerFormat ) ) );
-
-    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),
-             dynamic_cast<QObject *>( videoOutput ),  SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );
-    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerFormat( ProducerFormat ) ),
-             dynamic_cast<QObject *>( videoOutput ), SLOT( consumerFormat( ProducerFormat ) ) );
-
-    // Connect LibretroCore to this so we can grab the current session's native framerate
-    connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( producerFormat( ProducerFormat ) ),
-             this, SLOT( consumerFormat( ProducerFormat ) ) );
+    // Connect LibretroCore to the consumers (AV output)
+    CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
+    CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
 
     // Start threads
     looperThread->start( QThread::TimeCriticalPriority );
