@@ -10,7 +10,7 @@
 /*
  * Functionality and structures common to all consumers.
  *
- * To declare these signals in an abstract class you must use the define provided:
+ * To declare these slots in an abstract class you must use the define provided:
  * class AbstractConsumerSubclass : public QObject, public Consumer {
  *     public slots:
  *         CONSUMER_SLOTS_ABSTRACT
@@ -19,7 +19,7 @@
  *
  * You can then override them in whatever subclass of the abstract class like normal.
  *
- * To connect to these slots:
+ * To connect to these slots, use the macro provided in "producer.h" or just follow this form:
  * connect( dynamic_cast<QObject *>( ProducerSubclassPtr ), SIGNAL( producerSignal( argType, anotherArgType ) ),
  *          dynamic_cast<QObject *>( ConsumerSubclassPtr ), SLOT( consumerSlot( argType, anotherArgType ) ) );
  *
@@ -32,7 +32,7 @@
 // Documented below
 #define CONSUMER_SLOTS_ABSTRACT \
     virtual void consumerFormat( ProducerFormat consumerFmt ) override = 0; \
-    virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override = 0; \
+    virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override = 0;
 
 class Consumer {
 

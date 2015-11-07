@@ -200,7 +200,6 @@ void LibretroCore::load() {
         qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
         emit producerFormat( producerFmt );
-        qCDebug( phxCore ) << "emit libretroCoreNativeFramerate(" << avInfo->timing.fps << ");";
         emit libretroCoreNativeFramerate( avInfo->timing.fps );
 
         // Allocate buffers to fit this max size

@@ -49,23 +49,23 @@ CoreControlProxy::~CoreControlProxy() {
 // Safe to call from QML
 
 void CoreControlProxy::load() {
-    emit loadProxy();
+    emit loadForwarder();
 }
 
 void CoreControlProxy::play() {
-    emit playProxy();
+    emit playForwarder();
 }
 
 void CoreControlProxy::pause() {
-    emit pauseProxy();
+    emit pauseForwarder();
 }
 
 void CoreControlProxy::stop() {
-    emit stopProxy();
+    emit stopForwarder();
 }
 
 void CoreControlProxy::reset() {
-    emit resetProxy();
+    emit resetForwarder();
 }
 
 // Private slots, cannot be called from QML. Use the respective properties instead
@@ -187,11 +187,11 @@ void CoreControlProxy::connectCoreControlProxy() {
     connect( coreControl, &CoreControl::vsyncChanged, this, &CoreControlProxy::setVsyncProxy );
 
     // Connect the methods, too
-    connect( this, &CoreControlProxy::loadProxy, coreControl, &CoreControl::load );
-    connect( this, &CoreControlProxy::playProxy, coreControl, &CoreControl::play );
-    connect( this, &CoreControlProxy::pauseProxy, coreControl, &CoreControl::pause );
-    connect( this, &CoreControlProxy::stopProxy, coreControl, &CoreControl::stop );
-    connect( this, &CoreControlProxy::resetProxy, coreControl, &CoreControl::reset );
+    connect( this, &CoreControlProxy::loadForwarder, coreControl, &CoreControl::load );
+    connect( this, &CoreControlProxy::playForwarder, coreControl, &CoreControl::play );
+    connect( this, &CoreControlProxy::pauseForwarder, coreControl, &CoreControl::pause );
+    connect( this, &CoreControlProxy::stopForwarder, coreControl, &CoreControl::stop );
+    connect( this, &CoreControlProxy::resetForwarder, coreControl, &CoreControl::reset );
 
 }
 
@@ -213,6 +213,7 @@ void CoreControlProxy::notifyAllProperties() {
     emit sourceChanged( getSource() );
     emit stateChanged( ( ControlHelper::State )state );
     emit volumeChanged( volume );
+    emit vsyncChanged( vsync );
 }
 
 bool CoreControlProxy::getPausable() const {

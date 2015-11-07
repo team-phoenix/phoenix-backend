@@ -138,7 +138,7 @@ void CoreControl::deleteGameThreadChildren() {
 
         gameThreadChildren.clear();
     } else {
-        qCDebug( phxControl ) << "No children in game thread to delete, skipping";
+        qCDebug( phxControl ) << "No children in game thread to delete, continuing";
     }
 }
 
@@ -152,25 +152,25 @@ void CoreControl::cleanup() {
 void CoreControl::connectCoreForwarder() {
     // Forward these signals that are important to QML (but not us) to whoever's concerned (such as Core)
     // In some rare cases we DO hook our own signal to do stuff, but not generally
-    connect( core, &Core::pausableChanged, this, &CoreControl::pausableChanged );
-    connect( core, &Core::playbackSpeedChanged, this, &CoreControl::playbackSpeedChanged );
-    connect( core, &Core::resettableChanged, this, &CoreControl::resettableChanged );
-    connect( core, &Core::rewindableChanged, this, &CoreControl::rewindableChanged );
-    connect( core, &Core::sourceChanged, this, &CoreControl::sourceChanged );
-    connect( core, &Core::stateChanged, this, &CoreControl::stateChanged );
-    connect( core, &Core::volumeChanged, this, &CoreControl::volumeChanged );
+    connectionList << connect( core, &Core::pausableChanged, this, &CoreControl::pausableChanged );
+    connectionList << connect( core, &Core::playbackSpeedChanged, this, &CoreControl::playbackSpeedChanged );
+    connectionList << connect( core, &Core::resettableChanged, this, &CoreControl::resettableChanged );
+    connectionList << connect( core, &Core::rewindableChanged, this, &CoreControl::rewindableChanged );
+    connectionList << connect( core, &Core::sourceChanged, this, &CoreControl::sourceChanged );
+    connectionList << connect( core, &Core::stateChanged, this, &CoreControl::stateChanged );
+    connectionList << connect( core, &Core::volumeChanged, this, &CoreControl::volumeChanged );
 
     // Forward these setter signals we receive to Core
-    connect( this, &CoreControl::setPlaybackSpeedForwarder, core, &Core::setPlaybackSpeed );
-    connect( this, &CoreControl::setSourceForwarder, core, &Core::setSource );
-    connect( this, &CoreControl::setVolumeForwarder, core, &Core::setVolume );
+    connectionList << connect( this, &CoreControl::setPlaybackSpeedForwarder, core, &Core::setPlaybackSpeed );
+    connectionList << connect( this, &CoreControl::setSourceForwarder, core, &Core::setSource );
+    connectionList << connect( this, &CoreControl::setVolumeForwarder, core, &Core::setVolume );
 
     // Forward these method signals we receive to Core
-    connect( this, &CoreControl::loadForwarder, core, &Core::load );
-    connect( this, &CoreControl::playForwarder, core, &Core::play );
-    connect( this, &CoreControl::pauseForwarder, core, &Core::pause );
-    connect( this, &CoreControl::stopForwarder, core, &Core::stop );
-    connect( this, &CoreControl::resetForwarder, core, &Core::reset );
+    connectionList << connect( this, &CoreControl::loadForwarder, core, &Core::load );
+    connectionList << connect( this, &CoreControl::playForwarder, core, &Core::play );
+    connectionList << connect( this, &CoreControl::pauseForwarder, core, &Core::pause );
+    connectionList << connect( this, &CoreControl::stopForwarder, core, &Core::stop );
+    connectionList << connect( this, &CoreControl::resetForwarder, core, &Core::reset );
 }
 
 void CoreControl::trackCoreStateChanges() {
@@ -189,13 +189,28 @@ void CoreControl::disconnectConnections() {
         }
 
         connectionList.clear();
+    } else {
+        qCDebug( phxControl ) << "No connections to disconnect, continuing";
     }
 }
+
+// Private (Core loaders)
 
 void CoreControl::initLibretroCore() {
     /*
      * Data flow:
      * Looper/(vsync signal) >> InputManager >> LibretroCore >> [ AudioOutput, VideoOutput ]
+     *
+     * Special considerations:
+     * If VSync is off:
+     * Libretro cores have native framerates (coreFPS), but we may drive frame production at a different rate (hostFPS).
+     * LibretroCore has a signal called libretroCoreNativeFramerate() which we hook up to Looper and AudioOutput to
+     * ensure they're aware of this framerate so they may use it. This signal gets emitted right after emitting
+     * producerFormat().
+     *
+     * If VSync is on, we instead bootstrap continuous window updates once we go to PLAYING for the first time by
+     * manually invoking the first frame. VideoOutput will then provide the libretroCoreDoFrame() signals from there on.
+     * TODO: Don't hook window updates, instead create a VSynced timer object and hook that
      */
 
     // Make sure the last run properly cleaned up
@@ -223,20 +238,22 @@ void CoreControl::initLibretroCore() {
 
             if( !vsync ) {
                 emit libretroSetFramerate( hostFPS );
+            } else {
+                qCDebug( phxControl ) << "Ignoring coreFPS value";
             }
         } );
 
         trackCoreStateChanges();
 
         // Forward LibretroCore control signals as our own
-        connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( stateChanged( Control::State ) ),
-                 dynamic_cast<QObject *>( this ), SIGNAL( setState( Control::State ) ) );
+        connectionList << connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( stateChanged( Control::State ) ),
+                                   dynamic_cast<QObject *>( this ), SIGNAL( setState( Control::State ) ) );
 
         // Connect LibretroCore to the forwarder system
         connectCoreForwarder();
 
         // Intercept our own signal to handle state changes
-        // In VSync mode, we have to get a chain reaction going in VideoOutput by manually asking for the first frame
+        // Inform consumers of vsync rate once we start playing
         // Will only fire once per session thanks to the disconnect()
         // Credit for the std::make_shared idea: http://stackoverflow.com/a/14829520/4190028
         // TODO: Let the user set this to the true value (based on pixel clock and timing parameters/measuring)
@@ -247,7 +264,6 @@ void CoreControl::initLibretroCore() {
 
                 if( vsync ) {
                     emit libretroSetFramerate( 60.0 );
-                    emit libretroCoreDoFrame();
                 }
             }
         } );
@@ -262,7 +278,7 @@ void CoreControl::initLibretroCore() {
         // Connect control and framerate assigning signals to Looper
         if( !vsync ) {
             CONNECT_CONTROL_CONTROLLABLE( this, looper );
-            connect( this, &CoreControl::libretroSetFramerate, looper, &Looper::libretroSetFramerate );
+            connectionList << connect( this, &CoreControl::libretroSetFramerate, looper, &Looper::libretroSetFramerate );
         }
 
         // InputManager (Producer)
@@ -278,7 +294,7 @@ void CoreControl::initLibretroCore() {
 
         // Connect Looper to InputManager (drive input polling)
         if( !vsync ) {
-            connect( looper, &Looper::timeout, inputManager, &InputManager::libretroGetInputState );
+            connectionList << connect( looper, &Looper::timeout, inputManager, &InputManager::libretroGetInputState );
         }
     }
 
@@ -301,13 +317,23 @@ void CoreControl::initLibretroCore() {
         CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
 
         // Connect framerate assigning signal to AudioOutput
-        connect( this, &CoreControl::libretroSetFramerate, audioOutput, &AudioOutput::libretroSetFramerate );
+        connectionList << connect( this, &CoreControl::libretroSetFramerate, audioOutput, &AudioOutput::libretroSetFramerate );
 
         // Connect VideoOutput, this to InputManager (drive input polling)
+        // TODO: Don't hook window updates, instead create a VSynced timer object and hook that
         if( vsync ) {
-            connect( videoOutput, &VideoOutput::windowUpdate, inputManager, &InputManager::libretroGetInputState );
-            connect( this, &CoreControl::libretroCoreDoFrame, inputManager, &InputManager::libretroGetInputState );
+            connectionList << connect( videoOutput, &VideoOutput::windowUpdate, inputManager, &InputManager::libretroGetInputState );
+            connectionList << connect( this, &CoreControl::libretroCoreDoFrame, inputManager, &InputManager::libretroGetInputState );
         }
+
+        // Force a frame if we're playing and vsync mode is on (this starts a chain reaction in VideoOutput)
+        connectionList << connect( this, &CoreControl::stateChanged, this, [ this ]( Control::State newState ) {
+            if( ( Control::State )newState == Control::PLAYING ) {
+                if( vsync ) {
+                    emit libretroCoreDoFrame();
+                }
+            }
+        } );
     }
 
     // Set up cleanup stuff

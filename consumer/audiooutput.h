@@ -29,8 +29,10 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) override;
         void setState( Control::State currentState ) override;
 
-        // Tell AudioOutput what the framerate driving the frame production is as it might differ from the core's
-        // native framerate. This will automatically compensate if it does
+        // Systems have varying native framerates (coreFPS) which determine the *amount* of audio we'll get each
+        // video frame period. This could be different from the rate frame production is driven (hostFPS).
+        // AudioOutput will automatically compensate for this. Use this slot to set hostFPS.
+        // Must be called *after* consumerData (which will make hostFPS = coreFPS)
         void libretroSetFramerate( qreal hostFPS );
 
     private slots:

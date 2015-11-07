@@ -145,7 +145,7 @@ class CoreControl : public QObject, public Control {
 
         // Misc
 
-        // A list of *reusable* ad-hoc lambda slots we've created for this session
+        // A list of connections we've made this session. Make sure you've registered ALL connections with this list!
         // You can also make an ad-hoc lambda slot that disconnects itself on use (single-shot)
         QList<QMetaObject::Connection> connectionList;
         void disconnectConnections();
