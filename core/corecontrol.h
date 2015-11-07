@@ -24,151 +24,135 @@
 #include "logging.h"
 
 /*
- * CoreControl is a QML type and controller that manages the execution of an emulation session via an instance of Core.
+ * CoreControl is a control object that manages the execution of an emulation session via an instance of Core.
+ * In other words, CoreControl is the glue that holds the other components together.
  *
- * Internally, CoreControl is a QML proxy for the Core. It manages Core's lifecycle and connects it to consumers,
- * keeping them in a thread separate from the UI (except VideoOutput).
- * Writes via the set___() slot cause a ___changedProxy() signal to be emitted, which is then handled by a setter slot
- * in Core. Core emits a ___changed() signal of its own which we have connected to a set___Proxy() slot, which finally
- * assigns the proxied value and emits a ___changed() signal to notify anyone concerned.
+ * CoreControl manages Core's lifecycle and connects it to consumers, which live in different threads.
  *
- * From the perspective of QML, the interface exposed is similar to that of a game console. See Core for more details.
+ * Externally, the interface exposed is similar to that of a game console. See Control (control.h) for more details.
  *
- * WARNING: Do not call load() until you have passed refernces to instances of the consumers and producers as needed
- * for your particular Core subtype. See the property list for what's necessary
+ * WARNING: Do not call load() until you have passed refernces to instances of the consumers and producers needed
+ * for your particular Core subtype:
+ *
+ * "libretro": InputManager, VideoOutput
+ *
+ * WARNING: Ensure that all control objects (such as Looper, LibretroCore and this object) live in the same thread. It
+ * is critical that all control signals are synchronous.
  *
  */
 
 class CoreControl : public QObject, public Control {
         Q_OBJECT
 
-        // Producers and consumers that live in QML (and the QML thread)
-
-        // Needed by: "libretro"
-        Q_PROPERTY( VideoOutput *videoOutput MEMBER videoOutput )
-
-        // Needed by: "libretro"
-        Q_PROPERTY( InputManager *inputManager MEMBER inputManager )
-
-        // Core property proxy
-        Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
-        Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
-        Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
-        Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
-        Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
-        Q_PROPERTY( ControlHelper::State state READ getState NOTIFY stateChanged )
-        Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
-
     public:
         explicit CoreControl( QObject *parent = 0 );
         ~CoreControl();
 
-        // Core property proxy
-        // May be called from QML
-        Q_INVOKABLE void load() override;
-        Q_INVOKABLE void play() override;
-        Q_INVOKABLE void pause() override;
-        Q_INVOKABLE void stop() override;
-        Q_INVOKABLE void reset() override;
-
     signals:
-        // Control signals
         CONTROL_SIGNALS
-        void startLooper( double interval );
-        void stopLooper();
-        void setFramerate( qreal FPS );
 
-        // FIXME: Find better ways to do this
-        void setActive( bool active );
-
-        // Core property proxy (Step 4: to anywhere)
-        // These acknowledge that Core's state has been changed
+        // Notifiers
+        void videoOutputChanged( VideoOutput *videoOutput );
+        void inputManagerChanged( InputManager *inputManager );
         void pausableChanged( bool pausable );
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void sourceChanged( QVariantMap source );
-        void stateChanged( ControlHelper::State state );
+        void sourceChanged( QStringMap source );
+        void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
+        void vsyncChanged( bool vsync );
 
-        // Core property proxy (Step 2: to Core)
-        // These tell Core to change its state
-        void playbackSpeedChangedProxy( qreal playbackSpeed );
-        void sourceChangedProxy( QStringMap source );
-        void volumeChangedProxy( qreal volume );
+        // Setter forwarders (to Core)
+        void setPlaybackSpeedForwarder( qreal playbackSpeed );
+        void setSourceForwarder( QStringMap source );
+        void setVolumeForwarder( qreal volume );
 
-        // Core property proxy
-        void loadProxy();
-        void playProxy();
-        void pauseProxy();
-        void stopProxy();
-        void resetProxy();
+        // Method forwarders (to Core)
+        void loadForwarder();
+        void playForwarder();
+        void pauseForwarder();
+        void stopForwarder();
+        void resetForwarder();
+
+        // Special
+
+        // Necessary in certain scenarios to emit this ourselves (like getting a chain reaction going in VideoOutput)
+        void libretroCoreDoFrame();
+
+        // Inform any consumer or producer about the rate that drives the production of frames, which may be different
+        // than the native framerate
+        void libretroSetFramerate( qreal hostFPS );
 
     public slots:
-        // Used to grab native framerate from LibretroCore
-        void libretroCoreNativeFramerate( qreal framerate );
+        // We cannot use the destructor to clean up, we can't emit signals to anything anymore
+        // Use this instead to do all cleanup
+        void shutdown();
 
-        // Pass Core's new state down to all other Controllables
-        void coreStateChanged( Control::State state );
+        // Setters (from anywhere)
+        void setVideoOutput( VideoOutput *videoOutput );
+        void setInputManager( InputManager *inputManager );
+        void setPlaybackSpeed( qreal playbackSpeed );
+        void setSource( QStringMap source );
+        void setVolume( qreal volume );
+        void setVsync( bool vsync );
+
+        // State changers
+        void load() override;
+        void play() override;
+        void pause() override;
+        void stop() override;
+        void reset() override;
 
     private:
-        bool vsyncEnabled;
+        // Thread management
+
+        // Holds all the children for each thread in use
+        // WARNING: You must register all objects created in your initXXXX() function to *one* of these two lists if not
+        // a member of the QML thread!
+        QMap<QThread *, QList<QObject *>> threadChildren;
+        QList<QObject *> gameThreadChildren;
+
+        // Delete all threads in threadChildren (children are implicitly deleted)
+        void deleteThreads();
+
+        // Delete all children in gameThreadChildren directly (these children all live in the current thread)
+        void deleteGameThreadChildren();
+
+        // Run all of the above, in order
+        void cleanup();
 
         // Controllers
+
         Looper *looper;
-        QThread *looperThread;
 
         // Producers
+
         InputManager *inputManager;
 
-        // Producer/consumer (Core)
+        // Core (and core loaders)
 
         Core *core;
-        QThread *coreThread;
-
-        void initLibretro();
-        qreal libretroCoreFPS;
+        void connectCoreForwarder();
+        void trackCoreStateChanges();
 
         // Consumers
+
         AudioOutput *audioOutput;
         QThread *audioOutputThread;
         VideoOutput *videoOutput;
+        bool vsync;
 
-        // Core property proxy (Step 1: from anywhere)
-        // These change Core's state ...once it gets around to it
-        void setPlaybackSpeed( qreal playbackSpeed );
-        void setSource( QVariantMap sourceQVariantMap );
-        void setVolume( qreal volume );
+        // Misc
 
-        // Core property proxy (Step 3: from Core)
-        // These tell us that Core has acknowledged our request and changed state
-        void setPausableProxy( bool pausable );
-        void setPlaybackSpeedProxy( qreal playbackSpeed );
-        void setResettableProxy( bool resettable );
-        void setRewindableProxy( bool rewindable );
-        void setSourceProxy( QStringMap sourceQStringMap );
-        void setStateProxy( Control::State state );
-        void setVolumeProxy( qreal volume );
+        // A list of *reusable* ad-hoc lambda slots we've created for this session
+        // You can also make an ad-hoc lambda slot that disconnects itself on use (single-shot)
+        QList<QMetaObject::Connection> connectionList;
+        void disconnectConnections();
 
-        // Bonus setters!
+        // Core loaders
 
-        // Core property proxy
-        void notifyAllProperties();
-        void connectCoreProxy();
-        bool pausable;
-        qreal playbackSpeed;
-        bool resettable;
-        bool rewindable;
-        QStringMap source;
-        qreal volume;
-        bool getPausable() const;
-        qreal getPlaybackSpeed() const;
-        bool getResettable() const;
-        bool getRewindable() const;
-        QVariantMap getSource() const;
-        ControlHelper::State getState() const;
-        qreal getVolume() const;
-
+        void initLibretroCore();
 };
 
 #endif // CORECONTROL_H

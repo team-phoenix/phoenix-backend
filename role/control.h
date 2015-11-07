@@ -11,6 +11,10 @@
  *
  * Control signals must be declared in all subclasses using the CONTROL_SIGNALS macro.
  * Use the CONNECT_CONTROL_CONTROLLABLE() macro to easily connect a Control and Controllable together.
+ *
+ * Control::State defines the global state machine, along with a set of functions to manipulate that state machine.
+ *
+ * An example of an implementation of Control can be found in CoreControl.
  */
 
 #define CONTROL_SIGNALS \
@@ -18,9 +22,7 @@
 
 #define CONNECT_CONTROL_CONTROLLABLE( control, controllable ) \
     connect( dynamic_cast<QObject *>( control ), SIGNAL( setState( Control::State ) ),\
-             dynamic_cast<QObject *>( controllable ), SLOT( setState( Control::State ) ) );\
-    connect( dynamic_cast<QObject *>( control ), SIGNAL( setFramerate( qreal ) ),\
-             dynamic_cast<QObject *>( controllable ), SLOT( setFramerate( qreal ) ) )
+             dynamic_cast<QObject *>( controllable ), SLOT( setState( Control::State ) ) );
 
 class Control {
     public:
@@ -44,17 +46,15 @@ class Control {
         };
         Q_ENUMS( State )
 
-    signals:
+        // This signal has been commented out because the linker will complain no implementation of them
+        // exists for Producer. Remember, this does NOT have the Q_OBJECT macro and is NOT a QObject!
+
         // Directly set the state
         // void setState( Control::State state );
-
-        // Inform everyone what the framerate driving control signals is
-        // void setFramerate( qreal framerate );
 
     protected:
         State state;
 
-    public slots:
 };
 
 #endif // CONTROL_H

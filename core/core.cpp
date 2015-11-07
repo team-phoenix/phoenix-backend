@@ -79,7 +79,7 @@ void Core::setRewindable( bool rewindable ) {
 }
 
 void Core::setState( Control::State state ) {
+    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << ( ControlHelper::State )state;
     this->currentState = state;
     emit stateChanged( state );
-    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << ( ControlHelper::State )state;
 }

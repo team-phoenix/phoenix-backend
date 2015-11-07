@@ -34,10 +34,10 @@
     void producerFormat( ProducerFormat format ); \
 
 #define CONNECT_PRODUCER_CONSUMER( producer, consumer ) \
-connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),\
-         dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );\
-connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ),\
-         dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
+    connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ),\
+             dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) );\
+    connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ),\
+             dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
 
 // Type of video output (for use by video consumers)
 enum VideoRendererType {
@@ -56,14 +56,10 @@ struct ProducerFormat {
     ProducerFormat();
     ~ProducerFormat();
 
+    // Control
+
     // "libretro", etc.
     QString producerType;
-
-    // Is the session currently active?
-    //bool active;
-
-    // Is this the start of a new session? Check this to know when to do some first-time initalization
-    //bool init;
 
     // Audio
 
@@ -94,9 +90,8 @@ class Producer {
         Producer();
         ~Producer();
 
-    signals:
-        // These have been commented out because the linker will complain no implementation of them exists for Producer.
-        // Remember, this does NOT have the Q_OBJECT macro and is NOT a QObject!
+        // These signals have been commented out because the linker will complain no implementation of them
+        // exists for Producer. Remember, this does NOT have the Q_OBJECT macro and is NOT a QObject!
 
         // Data for consumers. Pointers will be valid for the lifetime of the producer
         // Use QDateTime::currentMSecsSinceEpoch() to get the time
@@ -104,8 +99,6 @@ class Producer {
 
         // Format information for consumers.
         // void producerFormat( ProducerFormat format );
-
-    public slots:
 
     protected:
         // A copy of the data we send out to the consumers

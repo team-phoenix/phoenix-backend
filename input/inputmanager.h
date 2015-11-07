@@ -23,29 +23,17 @@ class InputManager : public QObject, public Producer, public Controllable {
 
         Q_PROPERTY( bool gamepadControlsFrontend READ gamepadControlsFrontend
                     WRITE setGamepadControlsFrontend NOTIFY gamepadControlsFrontendChanged )
-        Q_PROPERTY( int count READ count NOTIFY countChanged )
+        Q_PROPERTY( int count READ size NOTIFY countChanged )
         Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
 
     public:
         explicit InputManager( QObject *parent = 0 );
         ~InputManager();
 
-        // One keyboard is reserved for being always active
-        Keyboard *keyboard;
-
-        int count() const;
-        int size() const;
-
-        bool gamepadControlsFrontend() const;
-
-        // This is just a wrapper around InputDevice::gamepadControlsFrontend
-        void setGamepadControlsFrontend( const bool control );
-
         static void registerTypes();
 
     public slots:
         void setState( Control::State currentState ) override;
-        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
 
         // Allows the user to change controller ports
         void swap( const int index1, const int index2 );
@@ -60,9 +48,9 @@ class InputManager : public QObject, public Producer, public Controllable {
         // Fetch an InputDevice by the device name used by SDL
         InputDevice *get( const QString name );
 
-        bool eventFilter( QObject *object, QEvent *event );
+        bool eventFilter( QObject *object, QEvent *event ) override;
 
-        void pollStates();
+        void libretroGetInputState();
 
         // Called by the SDLEventLoop
 
@@ -71,7 +59,6 @@ class InputManager : public QObject, public Producer, public Controllable {
 
         // Remove and delete inputDevice at index
         void removeAt( int index );
-
 
     signals:
         PRODUCER_SIGNALS
@@ -86,14 +73,25 @@ class InputManager : public QObject, public Producer, public Controllable {
         // void device( InputDevice *device );
 
     private:
+        // The internal list of available input devices
+        // One keyboard is reserved for being always active and is guarantied to be at gamepadList[ 0 ]
+        Keyboard *keyboard;
+        QList<InputDevice *> gamepadList;
+
+        // Convenient getter for getting gamepad list size
+        int size() const;
+
+        bool gamepadControlsFrontend() const;
+
+        // This is just a wrapper around InputDevice::gamepadControlsFrontend
+        // Global property that affects all gamepads
+        void setGamepadControlsFrontend( const bool control );
 
         QMutex mutex;
 
-        QList<InputDevice *> deviceList;
-
         SDLEventLoop sdlEventLoop;
 
-        QHash<QString, int> mDeviceNameMapping;
+        QHash<QString, int> gamepadNameMapping;
 
         QString controllerDBFile;
 
@@ -102,8 +100,9 @@ class InputManager : public QObject, public Producer, public Controllable {
         void removeKeyboardFilter();
 
         // Helper ripped from old Core input state callback
+        // TODO: Support more than 16 RETRO_DEVICE_JOYPADs
         int16_t inputStates[ 16 ];
-        int16_t getInputState( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID );
+        int16_t libretroGetInputStateHelper( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID );
 
 };
 

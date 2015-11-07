@@ -23,16 +23,18 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         ~VideoOutput();
 
     signals:
+        // Properties
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
+
+        // A signal that can be hooked to drive frame production
+        // Note that although it fires at vsync rate, it may not fire 100% of the time
         void windowUpdate();
 
     public slots:
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
         CONTROLLABLE_SLOT_SETSTATE_DEFAULT
-        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
-
 
     private:
         // The texture that will hold video frames from core. The texture itself lives in GPU RAM

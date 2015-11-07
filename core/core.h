@@ -46,8 +46,7 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
 
     public slots:
         CONSUMER_SLOTS_ABSTRACT
-        CONTROLLABLE_SLOT_FRAMERATE_DEFAULT
-        virtual void setState( Control::State state );
+        virtual void setState( Control::State state ) override;
 
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
@@ -60,7 +59,6 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         virtual void pause();
         virtual void reset();
         virtual void stop();
-
 
     protected:
         // Property notifier helper

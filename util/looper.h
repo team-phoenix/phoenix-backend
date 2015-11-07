@@ -41,7 +41,9 @@ class Looper : public QObject, public Controllable {
     public slots:
         // Control
         void setState( Control::State currentState ) override;
-        void setFramerate( qreal framerate ) override;
+
+        // If Looper is used with a LibretroCore, it's meant to drive the core at its native framerate. This will set it.
+        void libretroSetFramerate( qreal hostFPS );
 
     signals:
         void beginLoop( double interval );
@@ -50,7 +52,8 @@ class Looper : public QObject, public Controllable {
 
     private:
         LooperPrivate *looper;
-        QThread looperThread;
+        QThread *looperThread;
+        qreal hostFPS;
 
 };
 

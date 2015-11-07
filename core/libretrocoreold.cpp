@@ -722,7 +722,7 @@ bool LibretroCoreOld::environmentCallback( unsigned cmd, void *data ) {
 void LibretroCoreOld::inputPollCallback( void ) {
 
     if ( core->inputManager ) {
-        core->inputManager->pollStates();
+        core->inputManager->libretroGetInputState();
     }
     // qDebug() << "Core::inputPollCallback";
     return;
@@ -790,25 +790,25 @@ int16_t LibretroCoreOld::inputStateCallback( unsigned controllerPort, unsigned r
     // we don't handle index for now...
 
     // Return nothing if there's no InputManager or no controllers connected to the given port
-    if( !core->inputManager || static_cast<int>( controllerPort ) >= core->inputManager->size() ) {
-        return 0;
-    }
+    // if( !core->inputManager || static_cast<int>( controllerPort ) >= core->inputManager->size() ) {
+    //     return 0;
+    // }
 
     // Grab the input device
     auto *inputDevice = core->inputManager->at( controllerPort );
 
     auto event = static_cast<InputDeviceEvent::Event>( buttonID );
 
-    if( controllerPort == 0 ) {
-        auto keyState = core->inputManager->keyboard->value( event, 0 );
+//    if( controllerPort == 0 ) {
+//        auto keyState = core->inputManager->keyboard->value( event, 0 );
 
-        if( !inputDevice ) {
-            return keyState;
-        }
+//        if( !inputDevice ) {
+//            return keyState;
+//        }
 
-        auto deviceState = inputDevice->value( event, 0 );
-        return deviceState | keyState;
-    }
+//        auto deviceState = inputDevice->value( event, 0 );
+//        return deviceState | keyState;
+//    }
 
     // make sure the InputDevice was configured
     // to map to the requested RETRO_DEVICE.

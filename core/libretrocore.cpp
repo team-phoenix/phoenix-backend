@@ -29,7 +29,10 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
 }
 
 LibretroCore::~LibretroCore() {
-    stop();
+    for( int i = 0; i < POOL_SIZE; i++ ) {
+        free( audioBufferPool[i] );
+        free( videoBufferPool[i] );
+    }
 }
 
 // Slots
@@ -197,6 +200,7 @@ void LibretroCore::load() {
         qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
         emit producerFormat( producerFmt );
+        qCDebug( phxCore ) << "emit libretroCoreNativeFramerate(" << avInfo->timing.fps << ");";
         emit libretroCoreNativeFramerate( avInfo->timing.fps );
 
         // Allocate buffers to fit this max size
@@ -217,7 +221,20 @@ void LibretroCore::load() {
 void LibretroCore::stop() {
     Core::setState( Control::UNLOADING );
 
-    // Write SRAM, free memory
+    // Write SRAM
+
+    qCInfo( phxCore ) << "=======Saving game...=======";
+    storeSaveData();
+    qCInfo( phxCore ) << "============================";
+
+    // Unload core
+
+    // symbols.retro_audio is the first symbol set to null in the constructor, so check that one
+    if( symbols.retro_audio ) {
+        symbols.retro_unload_game();
+        symbols.retro_deinit();
+        symbols.clear();
+    }
 
     Core::setState( Control::STOPPED );
 }
@@ -257,9 +274,18 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
 
         // Run the emulator for a frame if we're supposed to
         if( currentState == Control::PLAYING ) {
+            // printFPSStatistics();
             symbols.retro_run();
         }
 
+    }
+}
+
+void LibretroCore::testDoFrame() {
+    // Run the emulator for a frame if we're supposed to
+    if( currentState == Control::PLAYING ) {
+        // printFPSStatistics();
+        symbols.retro_run();
     }
 }
 
@@ -297,6 +323,10 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
 void LibretroCore::LibretroCore::loadSaveData() {
     saveDataBuf = symbols.retro_get_memory_data( RETRO_MEMORY_SAVE_RAM );
 
+    if( !saveDataBuf ) {
+        qCInfo( phxCore ) << "Unable to get save data, the core may be handling saving internally or an error happened";
+    }
+
     QFile file( savePathInfo.absolutePath() % QStringLiteral( "/" ) % gameFileInfo.baseName() % QStringLiteral( ".sav" ) );
 
     if( file.open( QIODevice::ReadOnly ) ) {
@@ -313,25 +343,27 @@ void LibretroCore::LibretroCore::loadSaveData() {
 }
 
 void LibretroCore::LibretroCore::storeSaveData() {
-    auto localFile = savePathInfo.absolutePath() % QStringLiteral( "/" ) % gameFileInfo.baseName() % QStringLiteral( ".sav" );
+    QString localFile = savePathInfo.absolutePath() % QStringLiteral( "/" ) % gameFileInfo.baseName() % QStringLiteral( ".sav" );
+
+    qCDebug( phxCore ).nospace() << "Saving: " << localFile;
 
     if( saveDataBuf == nullptr ) {
-        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << localFile << "(nullptr)";
+        qCDebug( phxCore ).nospace() << "Skipping, the core has done the save by itself";
         return;
     }
 
     QFile file( localFile );
 
     if( file.open( QIODevice::WriteOnly ) ) {
-        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << file.fileName();
         char *data = static_cast<char *>( saveDataBuf );
         size_t size = symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
         file.write( data, size );
         file.close();
+        qCDebug( phxCore ) << "Save successful";
     }
 
     else {
-        qCDebug( phxCore ) << Q_FUNC_INFO << ": " << file.fileName() << "(Failed)";
+        qCDebug( phxCore ).nospace() << "Failed: " << file.errorString();
     }
 }
 
@@ -711,11 +743,13 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
 void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
     Q_UNUSED( width );
 
-    QMutexLocker locker( &core->producerMutex );
-
     // Current frame exists, send it on its way
     if( data ) {
+
+        core->producerMutex.lock();
         memcpy( core->videoBufferPool[ core->videoPoolCurrentBuffer ], data, height * pitch );
+        core->producerMutex.unlock();
+
         core->emitVideoData( core->videoBufferPool[ core->videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
         core->videoPoolCurrentBuffer = ( core->videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
@@ -734,5 +768,6 @@ void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsig
 }
 
 QString LibretroCore::inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    return QString( port ) % ',' % QString( device ) % ',' % QString( index ) % ',' % QString( id );
+    return QString::number( port, 16 ) % ',' % QString::number( device, 16 ) % ','
+           % QString::number( index, 16 ) % ',' % QString::number( id, 16 );
 }

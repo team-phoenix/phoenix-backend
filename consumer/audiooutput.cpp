@@ -6,7 +6,7 @@ const auto samplesPerFrame = 2;
 
 AudioOutput::AudioOutput( QObject *parent ): QObject( parent ),
     resamplerState( nullptr ),
-    sampleRate( 0 ), framerate( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
+    sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
     inputDataFloat( nullptr ),
     outputDataFloat( nullptr ), outputDataShort( nullptr ),
     coreIsRunning( false ),
@@ -31,62 +31,12 @@ AudioOutput::~AudioOutput() {
 
 void AudioOutput::consumerFormat( ProducerFormat format ) {
     this->consumerFmt = format;
-}
-
-void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-
-    if( type == QStringLiteral( "audio" ) ) {
-
-        // Discard data that's too far from the past to matter anymore
-        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 500 ) {
-            return;
-        }
-
-        QMutexLocker locker( mutex );
-
-        audioData( ( int16_t * )data, bytes );
-
-    } else if( type == QStringLiteral( "audiovolume" ) ) {
-
-        QMutexLocker locker( mutex );
-
-        if( outputAudioInterface ) {
-            outputAudioInterface->setVolume( *( qreal * )data );
-        }
-
-    }
-
-}
-
-void AudioOutput::setState( Control::State state ) {
-    // We only care about the transition to PLAYING, PAUSED or UNLOADING
-    if( this->currentState != Control::PLAYING && state == Control::PLAYING ) {
-        setAudioActive( true );
-    }
-
-    if( this->currentState != Control::PAUSED && state == Control::PAUSED ) {
-        setAudioActive( false );
-    }
-
-    if( this->currentState != Control::UNLOADING && state == Control::UNLOADING ) {
-        setAudioActive( false );
-        shutdown();
-    }
-
-    this->currentState = state;
-
-}
-
-void AudioOutput::setFramerate( qreal framerate ) {
-
-    // Loading is not considered "complete" for AudioOutput until it gets the host framerate
-    Q_ASSERT( currentState == Control::LOADING );
 
     this->sampleRate = consumerFmt.audioFormat.sampleRate();
     this->coreFPS = consumerFmt.videoFramerate;
-    this->framerate = framerate;
+    this->hostFPS = coreFPS;
 
-    qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, framerate );
+    qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
 
     inputAudioFormat.setSampleSize( 16 );
     inputAudioFormat.setSampleRate( sampleRate );
@@ -117,6 +67,53 @@ void AudioOutput::setFramerate( qreal framerate ) {
 
     resetAudio();
     allocateMemory();
+}
+
+void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+    // Buffer pool makes this unnecessary
+    Q_UNUSED( mutex )
+
+    if( type == QStringLiteral( "audio" ) ) {
+
+        // Discard data that's too far from the past to matter anymore
+        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 500 ) {
+            return;
+        }
+
+        audioData( ( int16_t * )data, bytes );
+
+    } else if( type == QStringLiteral( "audiovolume" ) ) {
+
+        if( outputAudioInterface ) {
+            outputAudioInterface->setVolume( *( qreal * )data );
+        }
+
+    }
+
+}
+
+void AudioOutput::setState( Control::State state ) {
+    // We only care about the transition to PLAYING, PAUSED or UNLOADING
+    if( this->currentState != Control::PLAYING && state == Control::PLAYING ) {
+        setAudioActive( true );
+    }
+
+    if( this->currentState != Control::PAUSED && state == Control::PAUSED ) {
+        setAudioActive( false );
+    }
+
+    if( this->currentState != Control::UNLOADING && state == Control::UNLOADING ) {
+        setAudioActive( false );
+        shutdown();
+    }
+
+    this->currentState = state;
+
+}
+
+void AudioOutput::libretroSetFramerate( qreal hostFPS ) {
+    qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
+    this->hostFPS = hostFPS;
 }
 
 // Private slots
@@ -169,7 +166,7 @@ void AudioOutput::audioData( int16_t *inputDataShort, int inputBytes ) {
 
     // Calculate the final DRC ratio
     double DRCRatio = 1.0 + maxDeviation * bufferTargetCorrectionRatio;
-    double adjustedSampleRateRatio = sampleRateRatio * DRCRatio * ( framerate / coreFPS );
+    double adjustedSampleRateRatio = sampleRateRatio * DRCRatio * ( hostFPS / coreFPS );
 
     // libsamplerate works in floats, must convert to floats for processing
     src_short_to_float_array( ( short * )inputDataShort, inputDataFloat, inputSamples );

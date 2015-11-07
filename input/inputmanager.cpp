@@ -17,7 +17,7 @@ InputManager::InputManager( QObject *parent )
     // unless changed by the user.
 
     for( int i = 0; i < Joystick::maxNumOfDevices; ++i ) {
-        deviceList.append( nullptr );
+        gamepadList.append( nullptr );
     }
 
     sdlEventLoop.start();
@@ -31,7 +31,7 @@ InputManager::~InputManager() {
     // I can't guarantee that the device won't be deleted by the deviceRemoved() signal.
     // So make sure we check.
 
-    for( auto device : deviceList ) {
+    for( auto device : gamepadList ) {
         if( device ) {
             device->selfDestruct();
         }
@@ -41,22 +41,18 @@ InputManager::~InputManager() {
 
 }
 
-int InputManager::count() const {
-    return size();
-}
-
 int InputManager::size() const {
-    return deviceList.size();
+    return gamepadList.size();
 }
 
 InputDevice *InputManager::at( int index ) {
     QMutexLocker locker( &mutex );
-    return deviceList.at( index );
+    return gamepadList.at( index );
 }
 
-void InputManager::pollStates() {
+void InputManager::libretroGetInputState() {
     if( currentState == Control::PLAYING ) {
-        QMutexLocker locker( &producerMutex );
+        producerMutex.lock();
 
         // Clear input states
         memset( inputStates, 0, sizeof( inputStates ) );
@@ -66,9 +62,10 @@ void InputManager::pollStates() {
 
         for( int i = 0; i < 16; i++ ) {
             for( int j = 0; j < 16; j++ ) {
-                inputStates[ i ] |= getInputState( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
+                inputStates[ i ] |= libretroGetInputStateHelper( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
             }
         }
+        producerMutex.unlock();
 
         emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
     }
@@ -106,7 +103,7 @@ void InputManager::setState( Control::State state ) {
             sdlEventLoop.stop();
             installKeyboardFilter();
 
-            for( auto device : deviceList ) {
+            for( auto device : gamepadList ) {
                 if( device ) {
                     device->setEditMode( false );
                 }
@@ -130,11 +127,11 @@ void InputManager::insert( InputDevice *device ) {
     mutex.lock();
     auto *joystick = device;
 
-    deviceList[ joystick->port() ] = joystick;
+    gamepadList[ joystick->port() ] = joystick;
 
     mutex.unlock();
 
-    mDeviceNameMapping.insert( joystick->name(), joystick->port() );
+    gamepadNameMapping.insert( joystick->name(), joystick->port() );
     QQmlEngine::setObjectOwnership( joystick, QQmlEngine::CppOwnership );
     emit deviceAdded( joystick );
 
@@ -144,13 +141,13 @@ void InputManager::removeAt( int index ) {
 
     mutex.lock();
 
-    auto *device = static_cast<Joystick *>( deviceList.at( index ) );
+    auto *device = static_cast<Joystick *>( gamepadList.at( index ) );
     device->selfDestruct();
 
-    deviceList[ index ] = nullptr;
+    gamepadList[ index ] = nullptr;
 
-    if( deviceList.first() == nullptr ) {
-        deviceList[ 0 ] = keyboard;
+    if( gamepadList.first() == nullptr ) {
+        gamepadList[ 0 ] = keyboard;
     }
 
     mutex.unlock();
@@ -158,7 +155,7 @@ void InputManager::removeAt( int index ) {
 }
 
 void InputManager::swap( const int index1, const int index2 ) {
-    deviceList.swap( index1, index2 );
+    gamepadList.swap( index1, index2 );
 }
 
 void InputManager::emitConnectedDevices() {
@@ -166,9 +163,9 @@ void InputManager::emitConnectedDevices() {
     QQmlEngine::setObjectOwnership( keyboard, QQmlEngine::CppOwnership );
     emit deviceAdded( keyboard );
 
-    for( int i = 0; i < deviceList.size(); ++i ) {
+    for( int i = 0; i < gamepadList.size(); ++i ) {
 
-        auto *inputDevice = deviceList.at( i );
+        auto *inputDevice = gamepadList.at( i );
 
         if( inputDevice ) {
             QQmlEngine::setObjectOwnership( inputDevice, QQmlEngine::CppOwnership );
@@ -184,7 +181,7 @@ InputDevice *InputManager::get( const QString name ) {
         return keyboard;
     }
 
-    auto port = mDeviceNameMapping.value( name, -1 );
+    auto port = gamepadNameMapping.value( name, -1 );
     Q_ASSERT( port != -1 );
     return at( port );
 }
@@ -220,18 +217,18 @@ void InputManager::removeKeyboardFilter() {
     window->removeEventFilter( this );
 }
 
-int16_t InputManager::getInputState( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID ) {
+int16_t InputManager::libretroGetInputStateHelper( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID ) {
     Q_UNUSED( analogIndex )
 
     // FIXME: We don't handle index for now...
 
     // Return nothing if there's no InputManager or no controllers connected to the given port
-    if( static_cast<int>( controllerPort ) >= deviceList.size() ) {
+    if( static_cast<int>( controllerPort ) >= gamepadList.size() ) {
         return 0;
     }
 
     // Grab the input device
-    auto *inputDevice = deviceList.at( controllerPort );
+    auto *inputDevice = gamepadList.at( controllerPort );
 
     auto event = static_cast<InputDeviceEvent::Event>( buttonID );
 

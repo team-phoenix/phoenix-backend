@@ -17,34 +17,37 @@ VideoOutput::~VideoOutput() {
 
 void VideoOutput::consumerFormat( ProducerFormat format ) {
 
-    int oldGCD = greatestCommonDivisor( consumerFmt.videoSize.width(), consumerFmt.videoSize.height() );
-    int newGCD = greatestCommonDivisor( format.videoSize.width(), format.videoSize.height() );
-    int oldAspectRatioX = consumerFmt.videoSize.width() / oldGCD;
-    int oldAspectRatioY = consumerFmt.videoSize.height() / oldGCD;
-    int newAspectRatioX = format.videoSize.width() / newGCD;
-    int newAspectRatioY = format.videoSize.height() / newGCD;
-
-    consumerFmt = format;
-
     qreal newRatio = ( double )format.videoSize.width() / format.videoSize.height();
 
     if( aspectRatio != newRatio ) {
         aspectRatio = newRatio;
+
+        // Pretty-print the old and new aspect ratio (ex. "4:3")
         emit aspectRatioChanged( aspectRatio );
+        int oldGCD = greatestCommonDivisor( consumerFmt.videoSize.width(), consumerFmt.videoSize.height() );
+        int newGCD = greatestCommonDivisor( format.videoSize.width(), format.videoSize.height() );
+        int oldAspectRatioX = consumerFmt.videoSize.width() / oldGCD;
+        int oldAspectRatioY = consumerFmt.videoSize.height() / oldGCD;
+        int newAspectRatioX = format.videoSize.width() / newGCD;
+        int newAspectRatioY = format.videoSize.height() / newGCD;
         qCDebug( phxVideo ).nospace() << "Aspect ratio changed to " << newAspectRatioX << ":" << newAspectRatioY
                                       << " (was " << oldAspectRatioX << ":" << oldAspectRatioY << ")" ;
     }
+
+    consumerFmt = format;
 
     update();
 
 }
 
 void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+    // Buffer pool makes this unnecessary
+    Q_UNUSED( mutex )
+
     Q_UNUSED( bytes )
     Q_UNUSED( timestamp )
 
-    if( type == QStringLiteral( "video" ) ) {
-        QMutexLocker lock( mutex );
+    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
 
         // Schedule old texture for deletion
         if( texture ) {
@@ -70,15 +73,19 @@ void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t 
 QSGNode *VideoOutput::updatePaintNode( QSGNode *node, QQuickItem::UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
 
+    emit windowUpdate();
+
     QSGSimpleTextureNode *textureNode = static_cast<QSGSimpleTextureNode *>( node );
 
     if( !textureNode ) {
         textureNode = new QSGSimpleTextureNode();
     }
 
-    // First frame, no video data yet. Tell core to render a frame
-    // then display it next time.
-    if( !texture ) {
+    // Do not use the texture if it doesn't exist or the buffer passed down the line is no longer valid
+    // FIXME: A race condition involving the buffer passed from ConsumerData down to this texture might still be possible
+    // if the producer shuts down fast enough and the buffer is freed before the QSG thread can use it, crashes can
+    // still happen
+    if( !texture || ( currentState != Control::PLAYING && currentState != Control::PAUSED ) ) {
         return QQuickItem::updatePaintNode( textureNode, paintData );
     }
 
@@ -93,8 +100,6 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *node, QQuickItem::UpdatePaintNod
 
     textureNode->setTextureCoordinatesTransform( QSGSimpleTextureNode::MirrorVertically |
             QSGSimpleTextureNode::MirrorHorizontally );
-
-    emit windowUpdate();
 
     return textureNode;
 }

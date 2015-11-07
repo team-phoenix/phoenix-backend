@@ -5,6 +5,8 @@
 
 #include "producer.h"
 
+#include "logging.h"
+
 /*
  * Functionality and structures common to all consumers.
  *
@@ -29,8 +31,8 @@
 // In order to properly declare the slots in your abstract subclass of Consumer, simply use this macro under "public slots:"
 // Documented below
 #define CONSUMER_SLOTS_ABSTRACT \
-    virtual void consumerFormat( ProducerFormat consumerFmt ) = 0; \
-    virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) = 0; \
+    virtual void consumerFormat( ProducerFormat consumerFmt ) override = 0; \
+    virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override = 0; \
 
 class Consumer {
 
@@ -38,9 +40,6 @@ class Consumer {
         Consumer();
         ~Consumer();
 
-    signals:
-
-    public slots:
         // Information about the type of data to expect
         virtual void consumerFormat( ProducerFormat consumerFmt ) = 0;
 
@@ -52,6 +51,9 @@ class Consumer {
     protected:
         // Data given by the producer
         ProducerFormat consumerFmt;
+
+        // Print statistics every (printEvery) times this function is called
+        void printFPSStatistics( int printEvery = 60 );
 
 };
 

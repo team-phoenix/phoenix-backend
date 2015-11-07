@@ -40,10 +40,14 @@ class LibretroCore : public Core {
 
     signals:
         void libretroCoreNativeFramerate( qreal framerate );
+        void libretroCoreNTSC( bool NTSC );
 
     public slots:
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
+
+        // FIXME: For testing only. Delete once InputManagerProxy is working
+        void testDoFrame();
 
         // State changers
         void load() override;

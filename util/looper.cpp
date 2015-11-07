@@ -54,16 +54,18 @@ void LooperPrivate::beginLoop( double interval ) {
 
         timer.start();
 
+        // Busy wait by processing messages and letting other threads do stuff
         // Running these just once per loop means massive overhead from calling timer.start() so many times unaccounted
         //     for by the timer itself
         // The higher the number of loops, the better the accuracy (too high and the low precision will lead to bad timing)
         // The lower the number of loops, the higher the precision (but the results are less trustworthy)
         // 100 seems to be the sweet spot, testing on Windows and OS X give about +-50us accuracy with this value when
         //     running Looper in a QThread with QThread::TimeCriticalPriority
+        // This busy waiting is only necessary if Looper does not share its thread with anything else. Set to 1 if it does.
         for( int i = 0; i < 100; i++ ) {
             innerLoopCounter++;
             QCoreApplication::processEvents();
-            QThread::yieldCurrentThread();
+            // QThread::yieldCurrentThread();
         }
 
         timeElapsed += ( double )timer.nsecsElapsed() / 1000.0 / 1000.0;
@@ -77,18 +79,25 @@ void LooperPrivate::endLoop() {
 
 Looper::Looper( QObject *parent ) : QObject( parent ),
     looper( new LooperPrivate() ),
-    looperThread( this ) {
+    looperThread( new QThread() ) {
+
     connect( this, &Looper::beginLoop, looper, &LooperPrivate::beginLoop );
     connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
     connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
-    looper->moveToThread( &looperThread );
-    looperThread.setObjectName( "Looper thread (internal)" );
-    looperThread.start();
+    looper->moveToThread( looperThread );
+    looper->setObjectName( "Looper (internal)" );
+    looperThread->setObjectName( "Looper thread (internal)" );
+    looperThread->start();
+
 }
 
 Looper::~Looper() {
-    looperThread.quit();
-    looperThread.wait();
+    if( looperThread->isRunning() ) {
+        emit endLoop();
+        looperThread->exit();
+        looperThread->wait();
+        looperThread->deleteLater();
+    }
 }
 
 void Looper::setState( Control::State state ) {
@@ -97,7 +106,7 @@ void Looper::setState( Control::State state ) {
     if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
         ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
         if( state == Control::PLAYING ) {
-            emit beginLoop( ( 1.0 / framerate ) * 1000.0 );
+            emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
         } else {
             emit endLoop();
         }
@@ -107,12 +116,12 @@ void Looper::setState( Control::State state ) {
 
 }
 
-void Looper::setFramerate( qreal framerate ) {
-    if( this->framerate != framerate ) {
-        qCDebug( phxControl ).nospace() << "Looper beginning loop at " << framerate << "fps";
+void Looper::libretroSetFramerate(qreal hostFPS ) {
+    if( this->hostFPS != hostFPS ) {
+        qCDebug( phxControl ).nospace() << "Looper beginning loop at " << hostFPS << "fps";
         emit endLoop();
-        emit beginLoop( ( 1.0 / framerate ) * 1000.0 );
+        emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
     }
 
-    this->framerate = framerate;
+    this->hostFPS = hostFPS;
 }

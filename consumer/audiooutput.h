@@ -28,7 +28,10 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) override;
         void setState( Control::State currentState ) override;
-        void setFramerate( qreal framerate ) override;
+
+        // Tell AudioOutput what the framerate driving the frame production is as it might differ from the core's
+        // native framerate. This will automatically compensate if it does
+        void libretroSetFramerate( qreal hostFPS );
 
     private slots:
         void slotAudioOutputStateChanged( QAudio::State currentState );
@@ -55,7 +58,7 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
 
         // Audio and video timing provided by Core via the controller
         int sampleRate;
-        double framerate;
+        double hostFPS;
         double coreFPS;
         double sampleRateRatio;
 

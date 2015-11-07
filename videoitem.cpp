@@ -60,23 +60,23 @@ VideoItem::VideoItem( QQuickItem *parent ) :
     connect( audioOutputThread, &QThread::finished, audioOutput, &AudioOutput::deleteLater );
     
     // Catch the user exit signal and clean up
-    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
-    
-        qCDebug( phxControl ) << "===========QCoreApplication::aboutToQuit()===========";
-        
-        // Shut down Core and the consumers
-        if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
-            emit signalShutdown();
-        }
-        
-        // Stop processing events in the other threads, then block the main thread until they're finished
-        
-        // Stop consumer threads
-        audioOutputThread->exit();
-        audioOutputThread->wait();
-        audioOutputThread->deleteLater();
-        
-    } );
+    // connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [ = ]() {
+    //
+    //     qCDebug( phxControl ) << "===========QCoreApplication::aboutToQuit()===========";
+    //
+    //     // Shut down Core and the consumers
+    //     if( coreState() != LibretroCoreOld::STATEUNINITIALIZED ) {
+    //         emit signalShutdown();
+    //     }
+    //
+    //     // Stop processing events in the other threads, then block the main thread until they're finished
+    //
+    //     // Stop consumer threads
+    //     audioOutputThread->exit();
+    //     audioOutputThread->wait();
+    //     audioOutputThread->deleteLater();
+    //
+    // } );
     
     // Start threads
     audioOutputThread->start();
