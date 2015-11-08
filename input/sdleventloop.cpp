@@ -33,7 +33,7 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
 
     sdlPollTimer.setInterval( 5 );
 
-    connect( &sdlPollTimer, &QTimer::timeout, this, &SDLEventLoop::pollEvents );
+    // connect( &sdlPollTimer, &QTimer::timeout, this, &SDLEventLoop::pollEvents );
 
     // Load SDL
     initSDL();

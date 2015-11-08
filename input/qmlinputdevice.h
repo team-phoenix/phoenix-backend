@@ -1,13 +1,15 @@
 #ifndef QMLINPUTDEVICE_H
 #define QMLINPUTDEVICE_H
 
+#include "backendcommon.h"
+
 #include "inputdevice.h"
 
 // This QMLInputDevice is responsible for controlling the frontend, such as selecting games, and
 // editing settings while using any InputDevice. The main reason for this is so the a Joystick
 // instance can control the UI.
 
-// Currently, every single InputDevice stored in the InputManager, should connect their
+// Currently, every single InputDevice stored in the InputManager should connect their
 // InputDevice::inputDeviceEvent() signal to this classes insert() function.
 // The actual button presses can then be obtained by reading the Q_PROPERTY values.
 
@@ -35,38 +37,14 @@ class QMLInputDevice : public InputDevice {
         Q_PROPERTY( bool rightTrigger READ rightTrigger NOTIFY rightTriggerChanged )
 
     public:
-
         using InputDevice::insert;
 
         QMLInputDevice( QObject *parent = 0 );
 
-        bool a() const;
-        bool b() const;
-        bool x() const;
-        bool y() const;
-
-        bool left() const;
-        bool right() const;
-        bool up() const;
-        bool down() const;
-
-        bool start() const;
-        bool select() const;
-        bool guide() const;
-
-        bool leftShoulder() const;
-        bool rightShoulder() const;
-        bool leftTrigger() const;
-        bool rightTrigger() const;
-
-
-
     public slots:
-
         void insert( const InputDeviceEvent::Event &value, const int &state );
 
     signals:
-
         void aChanged();
         void bChanged();
         void xChanged();
@@ -87,7 +65,6 @@ class QMLInputDevice : public InputDevice {
         void rightTriggerChanged();
 
     private:
-
         bool qmlA;
         bool qmlB;
         bool qmlX;
@@ -106,6 +83,25 @@ class QMLInputDevice : public InputDevice {
         bool qmlRightShoulder;
         bool qmlLeftTrigger;
         bool qmlRightTrigger;
+
+        bool a() const;
+        bool b() const;
+        bool x() const;
+        bool y() const;
+
+        bool left() const;
+        bool right() const;
+        bool up() const;
+        bool down() const;
+
+        bool start() const;
+        bool select() const;
+        bool guide() const;
+
+        bool leftShoulder() const;
+        bool rightShoulder() const;
+        bool leftTrigger() const;
+        bool rightTrigger() const;
 
         void setA( const bool &state );
         void setB( const bool &state );

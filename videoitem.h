@@ -4,7 +4,7 @@
 #include "backendcommon.h"
 
 #include "libretro.h"
-#include "core.h"
+#include "libretrocoreold.h"
 #include "audiooutput.h"
 #include "logging.h"
 
@@ -17,10 +17,9 @@ class VideoItem : public QQuickItem {
         Q_PROPERTY( InputManager *inputManager READ inputManager WRITE setInputManager NOTIFY inputManagerChanged )
         Q_PROPERTY( double aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool running READ running NOTIFY signalRunChanged )
-        Q_PROPERTY( Core::State coreState READ coreState NOTIFY coreStateChanged )
+        Q_PROPERTY( LibretroCoreOld::State coreState READ coreState NOTIFY coreStateChanged )
 
     public:
-
         VideoItem( QQuickItem *parent = 0 );
         ~VideoItem();
 
@@ -33,10 +32,9 @@ class VideoItem : public QQuickItem {
         // QML Property Getters
         bool running() const;
 
-        Core::State coreState() const;
+        LibretroCoreOld::State coreState() const;
 
     signals:
-
         // Controller
         void signalLoadCore( QString path );
         void signalLoadGame( QString path );
@@ -62,9 +60,8 @@ class VideoItem : public QQuickItem {
         void setRunning( const bool running );
 
     public slots:
-
         // Controller
-        void slotCoreStateChanged( Core::State newState, Core::Error error );
+        void slotCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error );
         void slotCoreAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat );
         void slotPause();
         void slotResume();
@@ -77,12 +74,10 @@ class VideoItem : public QQuickItem {
         void emitFrame();
 
     private slots:
-
         // For future consumer use?
         void handleWindowChanged( QQuickWindow *window );
 
     private:
-
         // QML Varibles
         bool qmlRunning;
 
@@ -103,7 +98,7 @@ class VideoItem : public QQuickItem {
         QThread *audioOutputThread;
 
         // The emulator itself, a libretro core
-        Core *core;
+        LibretroCoreOld *core;
 
         // The timer that makes the core produce frames at regular intervals
         // QTimer *coreTimer;
@@ -113,8 +108,8 @@ class VideoItem : public QQuickItem {
         QTimer coreTimer;
 
         // Core's 'current' state (since core lives on another thread, it could be in a different state)
-        Core::State qmlCoreState;
-        void setCoreState( Core::State state );
+        LibretroCoreOld::State qmlCoreState;
+        void setCoreState( LibretroCoreOld::State state );
 
         // Timing and format information provided by core once the core/game is loaded
         // Needs to be passed down to all consumers via signals
@@ -159,7 +154,7 @@ class VideoItem : public QQuickItem {
 
 Q_DECLARE_METATYPE( retro_system_av_info )
 Q_DECLARE_METATYPE( retro_pixel_format )
-Q_DECLARE_METATYPE( Core::State )
-Q_DECLARE_METATYPE( Core::Error )
+Q_DECLARE_METATYPE( LibretroCoreOld::State )
+Q_DECLARE_METATYPE( LibretroCoreOld::Error )
 
 #endif // VIDEOITEM_H

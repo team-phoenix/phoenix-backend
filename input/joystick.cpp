@@ -208,14 +208,14 @@ void Joystick::saveMappings() {
 
     for( auto i = 0; i < mSDLButtonVector.size(); ++i ) {
         const auto eventString = SDL_GameControllerGetStringForButton( static_cast<SDL_GameControllerButton>( i ) );
-        mappingString += eventString + QStringLiteral( ":" ) + QStringLiteral( "b" )
-                         + QString::number( mSDLButtonVector.value( i ) ) + QStringLiteral( "," );
+        mappingString += eventString % QStringLiteral( ":" ) % QStringLiteral( "b" )
+                         % QString::number( mSDLButtonVector.value( i ) ) % QStringLiteral( "," );
     }
 
     for( auto i = 0; i < mSDLAxisVector.size(); ++i ) {
         const auto eventString = SDL_GameControllerGetStringForAxis( static_cast<SDL_GameControllerAxis>( i ) );
-        mappingString += eventString + QStringLiteral( ":" ) + QStringLiteral( "a" )
-                         + QString::number( mSDLAxisVector.value( i ) ) + QStringLiteral( "," );
+        mappingString += eventString % QStringLiteral( ":" ) % QStringLiteral( "a" )
+                         % QString::number( mSDLAxisVector.value( i ) ) % QStringLiteral( "," );
     }
 
 #if defined( Q_OS_WIN )

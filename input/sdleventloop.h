@@ -5,8 +5,7 @@
 
 #include "joystick.h"
 
-// The SDLEventLoop's job is to poll for button states,
-// and to react the handle to newly connected, or disconnected, devices.
+// The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
 
 class SDLEventLoop : public QObject {
         Q_OBJECT
@@ -26,24 +25,22 @@ class SDLEventLoop : public QObject {
         QHash<int, int> deviceLocationMap;
 
     public:
-
         explicit SDLEventLoop( QObject *parent = 0 );
 
     public slots:
-
         void pollEvents();
 
+        // FIXME: Delete, we use external events to drive the loop now
         void start();
         void stop();
+
         void onControllerDBFileChanged( QString controllerDBFile );
 
     signals:
-
         void deviceConnected( Joystick *joystick );
         void deviceRemoved( int which );
 
     private:
-
         void initSDL();
         void quitSDL();
 

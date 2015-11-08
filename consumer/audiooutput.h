@@ -1,10 +1,13 @@
-
-#ifndef AUDIO_H
-#define AUDIO_H
+#ifndef AUDIOOUTPUT_H
+#define AUDIOOUTPUT_H
 
 #include "backendcommon.h"
 
+#include "consumer.h"
+#include "controllable.h"
+
 #include "audiobuffer.h"
+
 #include "logging.h"
 
 /* The AudioOutput class writes data to the default output device. Its internal buffers must be set by calling
@@ -14,36 +17,37 @@
  * inclusive) with slotSetVolume().
  */
 
-class AudioOutput : public QObject {
+class AudioOutput : public QObject, public Consumer, public Controllable {
         Q_OBJECT
 
-    public slots:
-
-        // Tell Audio what sample rate to expect from Core
-        void slotAudioFormat( int sampleRate, double coreFPS, double hostFPS );
-
-        // Output incoming video frame of audio data to the audio output
-        void slotAudioData( int16_t *inputData, int inputBytes );
-
-        // Respond to the core running or not by keeping audio output active or not
-        // AKA Pause if core is paused
-        void slotSetAudioActive( bool coreIsRunning );
-
-        // Set volume level [0.0...1.0]
-        void slotSetVolume( qreal level );
-
-        void slotShutdown();
-
-    private slots:
-
-        void slotAudioOutputStateChanged( QAudio::State state );
-
     public:
-
-        AudioOutput();
+        explicit AudioOutput( QObject *parent = 0 );
         ~AudioOutput();
 
+    public slots:
+        void consumerFormat( ProducerFormat consumerFmt ) override;
+        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) override;
+        void setState( Control::State currentState ) override;
+
+        // Systems have varying native framerates (coreFPS) which determine the *amount* of audio we'll get each
+        // video frame period. This could be different from the rate frame production is driven (hostFPS).
+        // AudioOutput will automatically compensate for this. Use this slot to set hostFPS.
+        // Must be called *after* consumerData (which will make hostFPS = coreFPS)
+        void libretroSetFramerate( qreal hostFPS );
+
+    private slots:
+        void slotAudioOutputStateChanged( QAudio::State currentState );
+
     private:
+        // Respond to the core running or not by keeping audio output active or not
+        // AKA Pause if core is paused
+        void setAudioActive( bool coreIsRunning );
+
+        // Output incoming video frame of audio data to the audio output
+        void audioData( int16_t *inputData, int inputBytes );
+
+        // Free memory, clean up
+        void shutdown();
 
         // Completely init/re-init audio output
         void resetAudio();
@@ -56,8 +60,8 @@ class AudioOutput : public QObject {
 
         // Audio and video timing provided by Core via the controller
         int sampleRate;
-        double coreFPS;
         double hostFPS;
+        double coreFPS;
         double sampleRateRatio;
 
         // Internal buffers used for resampling
@@ -98,7 +102,6 @@ class AudioOutput : public QObject {
         //
         // ---
         //
-
 
 };
 

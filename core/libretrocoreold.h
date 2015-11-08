@@ -1,5 +1,5 @@
-#ifndef CORE_H
-#define CORE_H
+#ifndef LIBRETROCORE_H
+#define LIBRETROCORE_H
 
 #include "backendcommon.h"
 
@@ -27,82 +27,82 @@
 // Helper for resolving libretro methods
 #define resolved_sym( name ) symbols.name = ( decltype( symbols.name ) )libretroCore.resolve( #name );
 
-class LibretroSymbols {
-public:
-    LibretroSymbols();
+class LibretroSymbolsOld {
+    public:
+        LibretroSymbolsOld();
 
-    // Libretro core functions
-    unsigned( *retro_api_version )( void );
-    void ( *retro_cheat_reset )( void );
-    void ( *retro_cheat_set )( unsigned , bool , const char * );
-    void ( *retro_deinit )( void );
-    void *( *retro_get_memory_data )( unsigned );
-    size_t ( *retro_get_memory_size )( unsigned );
-    unsigned( *retro_get_region )( void );
-    void ( *retro_get_system_av_info )( struct retro_system_av_info * );
-    void ( *retro_get_system_info )( struct retro_system_info * );
-    void ( *retro_init )( void );
-    bool ( *retro_load_game )( const struct retro_game_info * );
-    bool ( *retro_load_game_special )( unsigned , const struct retro_game_info *, size_t );
-    void ( *retro_reset )( void );
-    void ( *retro_run )( void );
-    bool ( *retro_serialize )( void *, size_t );
-    size_t ( *retro_serialize_size )( void );
-    void ( *retro_unload_game )( void );
-    bool ( *retro_unserialize )( const void *, size_t );
+        // Libretro core functions
+        unsigned( *retro_api_version )( void );
+        void ( *retro_cheat_reset )( void );
+        void ( *retro_cheat_set )( unsigned , bool , const char * );
+        void ( *retro_deinit )( void );
+        void *( *retro_get_memory_data )( unsigned );
+        size_t ( *retro_get_memory_size )( unsigned );
+        unsigned( *retro_get_region )( void );
+        void ( *retro_get_system_av_info )( struct retro_system_av_info * );
+        void ( *retro_get_system_info )( struct retro_system_info * );
+        void ( *retro_init )( void );
+        bool ( *retro_load_game )( const struct retro_game_info * );
+        bool ( *retro_load_game_special )( unsigned , const struct retro_game_info *, size_t );
+        void ( *retro_reset )( void );
+        void ( *retro_run )( void );
+        bool ( *retro_serialize )( void *, size_t );
+        size_t ( *retro_serialize_size )( void );
+        void ( *retro_unload_game )( void );
+        bool ( *retro_unserialize )( const void *, size_t );
 
-    // Frontend-defined callbacks
-    void ( *retro_set_audio_sample )( retro_audio_sample_t );
-    void ( *retro_set_audio_sample_batch )( retro_audio_sample_batch_t );
-    void ( *retro_set_controller_port_device )( unsigned, unsigned );
-    void ( *retro_set_environment )( retro_environment_t );
-    void ( *retro_set_input_poll )( retro_input_poll_t );
-    void ( *retro_set_input_state )( retro_input_state_t );
-    void ( *retro_set_video_refresh )( retro_video_refresh_t );
+        // Frontend-defined callbacks
+        void ( *retro_set_audio_sample )( retro_audio_sample_t );
+        void ( *retro_set_audio_sample_batch )( retro_audio_sample_batch_t );
+        void ( *retro_set_controller_port_device )( unsigned, unsigned );
+        void ( *retro_set_environment )( retro_environment_t );
+        void ( *retro_set_input_poll )( retro_input_poll_t );
+        void ( *retro_set_input_state )( retro_input_state_t );
+        void ( *retro_set_video_refresh )( retro_video_refresh_t );
 
-    // Optional core-defined callbacks
-    void ( *retro_audio )();
-    void ( *retro_audio_set_state )( bool enabled );
-    void ( *retro_frame_time )( retro_usec_t delta );
-    void ( *retro_keyboard_event )( bool down, unsigned keycode, uint32_t character, uint16_t key_modifiers );
+        // Optional core-defined callbacks
+        void ( *retro_audio )();
+        void ( *retro_audio_set_state )( bool enabled );
+        void ( *retro_frame_time )( retro_usec_t delta );
+        void ( *retro_keyboard_event )( bool down, unsigned keycode, uint32_t character, uint16_t key_modifiers );
 
-    void clear() {
-        retro_api_version = nullptr;
-        retro_cheat_reset = nullptr;
-        retro_cheat_set = nullptr;
-        retro_deinit = nullptr;
-        retro_init = nullptr;
-        retro_get_memory_data = nullptr;
-        retro_get_memory_size = nullptr;
-        retro_get_region = nullptr;
-        retro_get_system_av_info = nullptr;
-        retro_get_system_info = nullptr;
-        retro_load_game = nullptr;
-        retro_load_game_special = nullptr;
-        retro_reset = nullptr;
-        retro_run = nullptr;
-        retro_serialize = nullptr;
-        retro_serialize_size = nullptr;
-        retro_unload_game = nullptr;
-        retro_unserialize = nullptr;
+        void clear() {
+            retro_api_version = nullptr;
+            retro_cheat_reset = nullptr;
+            retro_cheat_set = nullptr;
+            retro_deinit = nullptr;
+            retro_init = nullptr;
+            retro_get_memory_data = nullptr;
+            retro_get_memory_size = nullptr;
+            retro_get_region = nullptr;
+            retro_get_system_av_info = nullptr;
+            retro_get_system_info = nullptr;
+            retro_load_game = nullptr;
+            retro_load_game_special = nullptr;
+            retro_reset = nullptr;
+            retro_run = nullptr;
+            retro_serialize = nullptr;
+            retro_serialize_size = nullptr;
+            retro_unload_game = nullptr;
+            retro_unserialize = nullptr;
 
-        retro_set_audio_sample = nullptr;
-        retro_set_audio_sample_batch = nullptr;
-        retro_set_controller_port_device = nullptr;
-        retro_set_environment = nullptr;
-        retro_set_input_poll = nullptr;
-        retro_set_input_state = nullptr;
-        retro_set_video_refresh = nullptr;
+            retro_set_audio_sample = nullptr;
+            retro_set_audio_sample_batch = nullptr;
+            retro_set_controller_port_device = nullptr;
+            retro_set_environment = nullptr;
+            retro_set_input_poll = nullptr;
+            retro_set_input_state = nullptr;
+            retro_set_video_refresh = nullptr;
 
-        retro_audio = nullptr;
-        retro_audio_set_state = nullptr;
-        retro_frame_time = nullptr;
-        retro_keyboard_event = nullptr;
-    }
+            retro_audio = nullptr;
+            retro_audio_set_state = nullptr;
+            retro_frame_time = nullptr;
+            retro_keyboard_event = nullptr;
+        }
 
 };
 
-class Core: public QObject {
+class LibretroCoreOld: public QObject {
         Q_OBJECT
 
         Q_PROPERTY( QString saveDirectory READ saveDirectory WRITE setSaveDirectory NOTIFY saveDirectoryChanged )
@@ -113,8 +113,8 @@ class Core: public QObject {
 
     public:
 
-        Core();
-        ~Core();
+        LibretroCoreOld();
+        ~LibretroCoreOld();
 
         InputManager *inputManager;
 
@@ -122,6 +122,7 @@ class Core: public QObject {
         // This needs to be public in order to be accessed by a static function.
         const int mPoolSize;
 
+        // TODO: Sync with GameManager's states
         enum State {
             STATEUNINITIALIZED = 0,
             STATEREADY,
@@ -245,7 +246,7 @@ class Core: public QObject {
     signals:
         void saveDirectoryChanged();
         void systemDirectoryChanged();
-        void signalCoreStateChanged( Core::State newState, Core::Error error );
+        void signalCoreStateChanged( LibretroCoreOld::State newState, LibretroCoreOld::Error error );
         void signalAVFormat( retro_system_av_info avInfo, retro_pixel_format pixelFormat );
         void signalAudioData( int16_t *data, int bytes );
         void signalVideoData( uchar *data, unsigned width, unsigned height, int pitch );
@@ -274,10 +275,10 @@ class Core: public QObject {
         // A hack that gives us the implicit C++ 'this' pointer while maintaining a C-style function signature
         // for the callbacks as required by libretro.h. Thanks to this, at this time we can only
         // have a single instance of Core running at any time.
-        static Core *core;
+        static LibretroCoreOld *core;
 
         // Struct containing libretro methods
-        LibretroSymbols symbols;
+        LibretroSymbolsOld symbols;
 
         // Used by environment callback
         // Info about the OpenGL context provided by the Phoenix frontend
@@ -381,7 +382,7 @@ class Core: public QObject {
         static bool environmentCallback( unsigned cmd, void *data );
         static void inputPollCallback( void );
         static void logCallback( enum retro_log_level level, const char *fmt, ... );
-        static int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
+        static int16_t inputStateCallback( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID );
         static void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
 
         //
@@ -389,7 +390,7 @@ class Core: public QObject {
         //
 
         // Core-specific variables
-        QMap<std::string, Core::Variable> variables;
+        QMap<std::string, LibretroCoreOld::Variable> variables;
 
 };
 

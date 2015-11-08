@@ -8,8 +8,9 @@
 #include <QtQuick>
 #include <QtMultimedia>
 
-#include <memory>
 #include <atomic>
+#include <memory>
+#include <string>
 
 #include <math.h>
 
@@ -17,7 +18,8 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-#include "libretro.h"
+typedef QMap<QString, QString> QStringMap;
+Q_DECLARE_METATYPE( QStringMap )
 
 #endif
 

@@ -43,38 +43,63 @@
     INCLUDEPATH += ../externals/quazip/quazip
 
     # Include our stuff
-    INCLUDEPATH += input
+    INCLUDEPATH += consumer core input role util
 
     HEADERS += \
         videoitem.h \
-        core.h \
-        libretro.h \
-        logging.h \
-        audiobuffer.h \
-        audiooutput.h \
+        consumer/audiobuffer.h \
+        consumer/audiooutput.h \
+        consumer/videooutput.h \
+        core/core.h \
+        core/corecontrol.h \
+        core/corecontrolproxy.h \
+        core/libretro.h \
+        core/libretrocoreold.h \
+        core/libretrocore.h \
+        core/libretrovariable.h \
+        core/libretrosymbols.h \
         input/keyboard.h \
         input/inputmanager.h \
         input/inputdevice.h \
         input/inputdeviceevent.h \
         input/joystick.h \
         input/sdleventloop.h \
-        input/qmlinputdevice.h
+        input/qmlinputdevice.h \
+        role/consumer.h \
+        role/controllable.h \
+        role/control.h \
+        role/producer.h \
+        util/controlhelper.h \
+        util/logging.h \
+        util/looper.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
     SOURCES += \
         videoitem.cpp \
-        core.cpp \
-        audiobuffer.cpp \
-        audiooutput.cpp \
-        logging.cpp \
+        consumer/audiobuffer.cpp \
+        consumer/audiooutput.cpp \
+        consumer/videooutput.cpp \
+        core/core.cpp \
+        core/corecontrol.cpp \
+        core/corecontrolproxy.cpp \
+        core/libretrocoreold.cpp \
+        core/libretrocore.cpp \
+        core/libretrovariable.cpp \
+        core/libretrosymbols.cpp \
         input/keyboard.cpp \
         input/inputmanager.cpp \
         input/joystick.cpp \
         input/sdleventloop.cpp \
         input/inputdevice.cpp \
         input/inputdeviceevent.cpp \
-        input/qmlinputdevice.cpp
+        input/qmlinputdevice.cpp \
+        role/consumer.cpp \
+        role/controllable.cpp \
+        role/control.cpp \
+        role/producer.cpp \
+        util/logging.cpp \
+        util/looper.cpp
 
     RESOURCES += input/controllerdb.qrc
 

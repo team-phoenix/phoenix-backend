@@ -1,11 +1,13 @@
-#ifndef INPUTDEVICE
-#define INPUTDEVICE
+#ifndef INPUTDEVICE_H
+#define INPUTDEVICE_H
 
 #include "backendcommon.h"
 
 #include "libretro.h"
 #include "logging.h"
 #include "inputdeviceevent.h"
+
+#include "producer.h"
 
 // InputDevice represents an abstract controller.
 
@@ -89,9 +91,7 @@ class InputDevice : public QObject {
         virtual void insert( const InputDeviceEvent::Event &value, const int16_t &state );
 
         // Set the device -> SDL2 gamepad mapping
-        virtual bool setMappings( const QVariant key
-                                  , const QVariant mapping
-                                  , const InputDeviceEvent::EditEventType ) = 0;
+        virtual bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) = 0;
 
         bool mappingCollision( const QString key, const QVariant mapping ) {
             Q_UNUSED( key );
@@ -113,6 +113,8 @@ class InputDevice : public QObject {
         std::unique_ptr<InputStateMap> deviceStates;
 
     signals:
+        // See producer.h
+        PRODUCER_SIGNALS
 
         void editModeChanged(); // QML
         void nameChanged(); // QML
@@ -155,5 +157,5 @@ class InputDevice : public QObject {
 
 Q_DECLARE_METATYPE( InputDevice * )
 
-#endif // INPUTDEVICE
+#endif // INPUTDEVICE_H
 

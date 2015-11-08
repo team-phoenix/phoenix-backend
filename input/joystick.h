@@ -3,7 +3,7 @@
 
 #include "backendcommon.h"
 
-#include "input/inputdevice.h"
+#include "inputdevice.h"
 
 class Joystick : public InputDevice {
 

@@ -1,5 +1,5 @@
-#ifndef INPUTDEVICEEVENT
-#define INPUTDEVICEEVENT
+#ifndef INPUTDEVICEEVENT_H
+#define INPUTDEVICEEVENT_H
 
 #include "backendcommon.h"
 
@@ -51,5 +51,5 @@ class InputDeviceEvent : public QObject {
 Q_DECLARE_METATYPE( InputDeviceEvent::EditEventType )
 Q_DECLARE_METATYPE( InputDeviceEvent::Event )
 
-#endif // INPUTDEVICEEVENT
+#endif // INPUTDEVICEEVENT_H
 
