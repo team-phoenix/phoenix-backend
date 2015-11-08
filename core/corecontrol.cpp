@@ -5,6 +5,7 @@
 CoreControl::CoreControl( QObject *parent ) : QObject( parent ),
     threadChildren(),
     gameThreadChildren(),
+    pointersToClear(),
     looper( nullptr ),
     inputManager( nullptr ),
     core( nullptr ),
@@ -12,7 +13,8 @@ CoreControl::CoreControl( QObject *parent ) : QObject( parent ),
     audioOutputThread( nullptr ),
     videoOutput( nullptr ),
     vsync( false ),
-    connectionList() {
+    connectionList(),
+    source() {
 
 }
 
@@ -52,19 +54,8 @@ void CoreControl::setPlaybackSpeed( qreal playbackSpeed ) {
 }
 
 void CoreControl::setSource( QStringMap source ) {
-    // Determine Core type, instantiate appropiate type
-    // We don't store it locally, we just tap into it
-    if( source[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
-        initLibretroCore();
-        // qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
-    } else {
-        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
-                                           << source[ "type" ] << QStringLiteral( " passed to load()!" );
-        return;
-    }
-
-    // Send it to Core
-    emit setSourceForwarder( source );
+    // Store this, we'll pass it to Core once it's time to load (also Core doesn't exist yet)
+    this->source = source;
 }
 
 void CoreControl::setVolume( qreal volume ) {
@@ -78,6 +69,21 @@ void CoreControl::setVsync( bool vsync ) {
 }
 
 void CoreControl::load() {
+    if( core ) {
+        stop();
+    }
+
+    // Determine Core type, instantiate appropiate type
+    if( source[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
+        initLibretroCore();
+        // qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
+    } else {
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
+                                           << source[ "type" ] << QStringLiteral( " passed to load()!" );
+        return;
+    }
+
+    emit setSourceForwarder( source );
     emit loadForwarder();
 }
 
@@ -95,6 +101,14 @@ void CoreControl::stop() {
 
 void CoreControl::reset() {
     emit resetForwarder();
+}
+
+void CoreControl::zeroPointers() {
+    if( pointersToClear.size() ) {
+        for( QObject **pointer : pointersToClear ) {
+            *pointer = nullptr;
+        }
+    }
 }
 
 // Private
@@ -146,6 +160,7 @@ void CoreControl::cleanup() {
     disconnectConnections();
     deleteThreads();
     deleteGameThreadChildren();
+    zeroPointers();
     qCDebug( phxControl ) << "Fully unloaded";
 }
 
@@ -223,12 +238,14 @@ void CoreControl::initLibretroCore() {
     {
         // Set names
         audioOutputThread->setObjectName( "Audio thread (libretro)" );
+        pointersToClear << ( QObject ** )&audioOutputThread;
     }
 
     // Create LibretroCore
     LibretroCore *libretroCore = new LibretroCore();
     {
         core = libretroCore;
+        pointersToClear << ( QObject ** )&core;
         libretroCore->setObjectName( "LibretroCore" );
         gameThreadChildren << libretroCore;
 
@@ -272,6 +289,7 @@ void CoreControl::initLibretroCore() {
     // Create Looper
     looper = new Looper();
     {
+        pointersToClear << ( QObject ** )&looper;
         looper->setObjectName( "Looper (Libretro)" );
         gameThreadChildren << looper;
 
@@ -303,6 +321,7 @@ void CoreControl::initLibretroCore() {
     // Create the consumers
     audioOutput = new AudioOutput();
     {
+        pointersToClear << ( QObject ** )&audioOutput;
         audioOutput->moveToThread( audioOutputThread );
         audioOutput->setObjectName( "AudioOutput (Libretro)" );
         threadChildren[ audioOutputThread ] << audioOutput;

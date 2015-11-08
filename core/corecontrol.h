@@ -39,6 +39,18 @@
  * WARNING: Ensure that all control objects (such as Looper, LibretroCore and this object) live in the same thread. It
  * is critical that all control signals are synchronous.
  *
+ * Only the following moves are legal:
+ * STATE: methodsAllowed()
+ *
+ * STOPPED: load()
+ * LOADING:
+ * PAUSED: load(), play(), stop()
+ * PLAYING: load(), pause(), stop()
+ * UNLOADING:
+ *
+ * Note that while CoreControl and Core share the same thread, methods valid for PAUSED may be called during LOADING
+ * and methods valid for STOPPED may be called during UNLOADING as these are transitional states.
+ *
  */
 
 class CoreControl : public QObject, public Control {
@@ -113,6 +125,10 @@ class CoreControl : public QObject, public Control {
         QMap<QThread *, QList<QObject *>> threadChildren;
         QList<QObject *> gameThreadChildren;
 
+        // Register any pointers to memory you allocate in your init function here so they may be zeroed on shutdown
+        QList<QObject **> pointersToClear;
+        void zeroPointers();
+
         // Delete all threads in threadChildren (children are implicitly deleted)
         void deleteThreads();
 
@@ -149,6 +165,9 @@ class CoreControl : public QObject, public Control {
         // You can also make an ad-hoc lambda slot that disconnects itself on use (single-shot)
         QList<QMetaObject::Connection> connectionList;
         void disconnectConnections();
+
+        // We need to keep track of this to know what type of Core to load
+        QStringMap source;
 
         // Core loaders
 
