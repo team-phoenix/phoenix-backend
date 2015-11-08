@@ -30,43 +30,45 @@ AudioOutput::~AudioOutput() {
 //
 
 void AudioOutput::consumerFormat( ProducerFormat format ) {
-    this->consumerFmt = format;
+    if( currentState == Control::LOADING ) {
+        this->consumerFmt = format;
 
-    this->sampleRate = consumerFmt.audioFormat.sampleRate();
-    this->coreFPS = consumerFmt.videoFramerate;
-    this->hostFPS = coreFPS;
+        this->sampleRate = consumerFmt.audioFormat.sampleRate();
+        this->coreFPS = consumerFmt.videoFramerate;
+        this->hostFPS = coreFPS;
 
-    qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
+        qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
 
-    inputAudioFormat.setSampleSize( 16 );
-    inputAudioFormat.setSampleRate( sampleRate );
-    inputAudioFormat.setChannelCount( 2 );
-    inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
-    inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
-    inputAudioFormat.setCodec( "audio/pcm" );
+        inputAudioFormat.setSampleSize( 16 );
+        inputAudioFormat.setSampleRate( sampleRate );
+        inputAudioFormat.setChannelCount( 2 );
+        inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
+        inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
+        inputAudioFormat.setCodec( "audio/pcm" );
 
-    // Try using the nearest supported format
-    QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
-    outputAudioFormat = info.nearestFormat( inputAudioFormat );
+        // Try using the nearest supported format
+        QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
+        outputAudioFormat = info.nearestFormat( inputAudioFormat );
 
-    // If that got us a format with a worse sample rate, use preferred format
-    if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
-        outputAudioFormat = info.preferredFormat();
+        // If that got us a format with a worse sample rate, use preferred format
+        if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
+            outputAudioFormat = info.preferredFormat();
+        }
+
+        // Force 16-bit audio (for now)
+        outputAudioFormat.setSampleSize( 16 );
+
+        sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
+
+        qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
+        qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
+        qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
+        qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
+                 outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
+
+        resetAudio();
+        allocateMemory();
     }
-
-    // Force 16-bit audio (for now)
-    outputAudioFormat.setSampleSize( 16 );
-
-    sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
-
-    qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
-    qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
-    qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
-    qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
-             outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
-
-    resetAudio();
-    allocateMemory();
 }
 
 void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {

@@ -3,12 +3,20 @@
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ),
     texture( nullptr ),
     aspectRatio( 1.0 ),
-    linearFiltering( false ) {
+    linearFiltering( false ),
+    television( false ),
+    ntsc( true ),
+    widescreen( false ) {
 
     // Mandatory for our own drawing code to do anything
     setFlag( QQuickItem::ItemHasContents, true );
 
-    update();
+    emit aspectRatioChanged( aspectRatio );
+    emit linearFilteringChanged( linearFiltering );
+    emit televisionChanged( television );
+    emit ntscChanged( ntsc );
+    emit widescreenChanged( widescreen );
+
 }
 
 VideoOutput::~VideoOutput() {
@@ -19,24 +27,65 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
 
     qreal newRatio = ( double )format.videoSize.width() / format.videoSize.height();
 
-    if( aspectRatio != newRatio ) {
-        aspectRatio = newRatio;
+    if( television ) {
+
+        // We always assume that the given framebuffer was meant to be stretched across the entire scanline
+        // Thus, we don't touch the numerator
+        qreal parNumerator = 1.0;
+        qreal parDenominator = 1.0;
+        qreal inputAspectRatio = 1.0;
+
+        if( ntsc ) {
+            parDenominator = ( format.videoSize.height() > 240 ) ?
+                             ( double )format.videoSize.height() / 480.0 :
+                             ( double )format.videoSize.height() / 240.0 ;
+        }
+
+        // PAL
+        else {
+            parDenominator = ( format.videoSize.height() > 288 ) ?
+                             ( double )format.videoSize.height() / 576.0 :
+                             ( double )format.videoSize.height() / 288.0 ;
+        }
+
+        // Anamorphic widescreen
+        if( widescreen ) {
+            inputAspectRatio = 16.0 / 9.0;
+        }
+
+        // Non-widescreen
+        else {
+            inputAspectRatio = 4.0 / 3.0;
+        }
+
+        // Divide the intended output aspect ratio by the PAR to get the final ratio
+        newRatio = inputAspectRatio / ( parNumerator / parDenominator );
+
+    }
+
+
+    if( aspectRatio != newRatio || format.videoSize.width() != consumerFmt.videoSize.width() || format.videoSize.height() != consumerFmt.videoSize.height() ) {
 
         // Pretty-print the old and new aspect ratio (ex. "4:3")
+        int oldAspectRatioX = consumerFmt.videoSize.height() * aspectRatio;
+        int oldAspectRatioY = consumerFmt.videoSize.width() / aspectRatio;
+        int newAspectRatioX = format.videoSize.height() * newRatio;
+        int newAspectRatioY = format.videoSize.width() / newRatio;
+        int oldGCD = greatestCommonDivisor( oldAspectRatioX, oldAspectRatioY );
+        int newGCD = greatestCommonDivisor( newAspectRatioX, newAspectRatioY );
+        int oldAspectRatioXInt = oldAspectRatioX / oldGCD;
+        int oldAspectRatioYInt = oldAspectRatioY / oldGCD;
+        int newAspectRatioXInt = newAspectRatioX / newGCD;
+        int newAspectRatioYInt = newAspectRatioY / newGCD;
+        qCDebug( phxVideo ).nospace() << "Aspect ratio changed to " << newAspectRatioXInt << ":" << newAspectRatioYInt
+                                      << " (was " << oldAspectRatioXInt << ":" << oldAspectRatioYInt << ")" ;
+
+        aspectRatio = newRatio;
         emit aspectRatioChanged( aspectRatio );
-        int oldGCD = greatestCommonDivisor( consumerFmt.videoSize.width(), consumerFmt.videoSize.height() );
-        int newGCD = greatestCommonDivisor( format.videoSize.width(), format.videoSize.height() );
-        int oldAspectRatioX = consumerFmt.videoSize.width() / oldGCD;
-        int oldAspectRatioY = consumerFmt.videoSize.height() / oldGCD;
-        int newAspectRatioX = format.videoSize.width() / newGCD;
-        int newAspectRatioY = format.videoSize.height() / newGCD;
-        qCDebug( phxVideo ).nospace() << "Aspect ratio changed to " << newAspectRatioX << ":" << newAspectRatioY
-                                      << " (was " << oldAspectRatioX << ":" << oldAspectRatioY << ")" ;
+
     }
 
     consumerFmt = format;
-
-    update();
 
 }
 

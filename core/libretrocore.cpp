@@ -623,7 +623,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
         break;
 
         case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: { // 31
-            qCDebug( phxCore ) << QStringLiteral( "\tRETRO_ENVIRONMENT_GET_saveDirectory (31) (handled)" );
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SAVE_DIRECTORY (31) (handled)";
             *( const char ** )data = core->savePathCString;
             return true;
         }

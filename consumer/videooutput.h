@@ -17,6 +17,9 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool linearFiltering MEMBER linearFiltering NOTIFY linearFilteringChanged )
+        Q_PROPERTY( bool television MEMBER television NOTIFY televisionChanged )
+        Q_PROPERTY( bool ntsc MEMBER ntsc NOTIFY ntscChanged )
+        Q_PROPERTY( bool widescreen MEMBER widescreen NOTIFY widescreenChanged )
 
     public:
         explicit VideoOutput( QQuickItem *parent = 0 );
@@ -26,6 +29,9 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Properties
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
+        void televisionChanged( bool television );
+        void ntscChanged( bool ntsc );
+        void widescreenChanged( bool widescreen );
 
         // A signal that can be hooked to drive frame production
         // Note that although it fires at vsync rate, it may not fire 100% of the time
@@ -45,8 +51,23 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Called from the scene graph (render) thread whenever it's time to redraw
         QSGNode *updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintData ) override;
 
+        // The correct aspect ratio to display this picture in
         qreal aspectRatio;
+
+        // Linear vs nearest-neighbor filtering
         bool linearFiltering;
+
+        // Controls whether to use analog television mode or not (false = digital TV or handheld games, etc... anything
+        // with a square PAR)
+        bool television;
+
+        // Do we expect 480 vertical lines (NTSC, true) or 576 vertical lines (PAL, false)?
+        // Ignored if television is false
+        bool ntsc;
+
+        // Is this standard 4:3 (false) or is the image anamorphic widescreen (16:9 packed into a 4:3 frame, true)?
+        // Ignored if television is false
+        bool widescreen;
 
         // Helper for printing aspect ratios as fractions
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor

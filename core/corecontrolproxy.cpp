@@ -94,12 +94,10 @@ void CoreControlProxy::setSource( QVariantMap sourceQVariantMap ) {
 }
 
 void CoreControlProxy::setVolume( qreal volume ) {
-    this->volume = volume;
     emit volumeChangedProxy( volume );
 }
 
 void CoreControlProxy::setVsync( bool vsync ) {
-    this->vsync = vsync;
     emit vsyncChangedProxy( vsync );
 }
 

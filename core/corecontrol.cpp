@@ -206,9 +206,9 @@ void CoreControl::initLibretroCore() {
      * Libretro cores have native framerates (coreFPS), but we may drive frame production at a different rate (hostFPS).
      * LibretroCore has a signal called libretroCoreNativeFramerate() which we hook up to Looper and AudioOutput to
      * ensure they're aware of this framerate so they may use it. This signal gets emitted right after emitting
-     * producerFormat().
+     * producerFormat(). In other words, when VSync is off, make hostFPS = coreFPS.
      *
-     * If VSync is on, we instead bootstrap continuous window updates once we go to PLAYING for the first time by
+     * If VSync is on, we instead bootstrap continuous window updates once we go to PLAYING by
      * manually invoking the first frame. VideoOutput will then provide the libretroCoreDoFrame() signals from there on.
      * TODO: Don't hook window updates, instead create a VSynced timer object and hook that
      */
