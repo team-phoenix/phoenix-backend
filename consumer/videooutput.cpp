@@ -25,44 +25,7 @@ VideoOutput::~VideoOutput() {
 
 void VideoOutput::consumerFormat( ProducerFormat format ) {
 
-    qreal newRatio = ( double )format.videoSize.width() / format.videoSize.height();
-
-    if( television ) {
-
-        // We always assume that the given framebuffer was meant to be stretched across the entire scanline
-        // Thus, we don't touch the numerator
-        qreal parNumerator = 1.0;
-        qreal parDenominator = 1.0;
-        qreal inputAspectRatio = 1.0;
-
-        if( ntsc ) {
-            parDenominator = ( format.videoSize.height() > 240 ) ?
-                             ( double )format.videoSize.height() / 480.0 :
-                             ( double )format.videoSize.height() / 240.0 ;
-        }
-
-        // PAL
-        else {
-            parDenominator = ( format.videoSize.height() > 288 ) ?
-                             ( double )format.videoSize.height() / 576.0 :
-                             ( double )format.videoSize.height() / 288.0 ;
-        }
-
-        // Anamorphic widescreen
-        if( widescreen ) {
-            inputAspectRatio = 16.0 / 9.0;
-        }
-
-        // Non-widescreen
-        else {
-            inputAspectRatio = 4.0 / 3.0;
-        }
-
-        // Divide the intended output aspect ratio by the PAR to get the final ratio
-        newRatio = inputAspectRatio / ( parNumerator / parDenominator );
-
-    }
-
+    qreal newRatio = calculateAspectRatio( format );
 
     if( aspectRatio != newRatio || format.videoSize.width() != consumerFmt.videoSize.width() || format.videoSize.height() != consumerFmt.videoSize.height() ) {
 
@@ -151,6 +114,69 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *node, QQuickItem::UpdatePaintNod
             QSGSimpleTextureNode::MirrorHorizontally );
 
     return textureNode;
+}
+
+qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
+    qreal newRatio = ( double )format.videoSize.width() / format.videoSize.height();
+
+    if( television ) {
+
+        // We always assume that the given framebuffer was meant to be stretched across the entire scanline
+        // Thus, we don't touch the numerator
+        qreal parNumerator = 1.0;
+        qreal parDenominator = 1.0;
+        qreal inputAspectRatio = 1.0;
+
+        if( ntsc ) {
+            parDenominator = ( format.videoSize.height() > 240 ) ?
+                             ( double )format.videoSize.height() / 480.0 :
+                             ( double )format.videoSize.height() / 240.0 ;
+        }
+
+        // PAL
+        else {
+            parDenominator = ( format.videoSize.height() > 288 ) ?
+                             ( double )format.videoSize.height() / 576.0 :
+                             ( double )format.videoSize.height() / 288.0 ;
+        }
+
+        // Anamorphic widescreen
+        if( widescreen ) {
+            inputAspectRatio = 16.0 / 9.0;
+        }
+
+        // Non-widescreen
+        else {
+            inputAspectRatio = 4.0 / 3.0;
+        }
+
+        // Divide the intended output aspect ratio by the PAR to get the final ratio
+        newRatio = inputAspectRatio / ( parNumerator / parDenominator );
+
+    }
+
+    return newRatio;
+}
+
+void VideoOutput::setTelevision( bool television ) {
+    if( this->television != television ) {
+        this->television = television;
+        consumerFormat( consumerFmt );
+    }
+}
+
+void VideoOutput::setNtsc( bool ntsc ) {
+    if( this->ntsc != ntsc ) {
+        this->ntsc = ntsc;
+        consumerFormat( consumerFmt );
+    }
+}
+
+void VideoOutput::setWidescreen( bool widescreen ) {
+    if( this->widescreen != widescreen ) {
+        this->widescreen = widescreen;
+        consumerFormat( consumerFmt );
+    }
 }
 
 int VideoOutput::greatestCommonDivisor( int m, int n ) {

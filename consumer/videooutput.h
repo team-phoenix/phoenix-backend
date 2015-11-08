@@ -17,9 +17,9 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool linearFiltering MEMBER linearFiltering NOTIFY linearFilteringChanged )
-        Q_PROPERTY( bool television MEMBER television NOTIFY televisionChanged )
-        Q_PROPERTY( bool ntsc MEMBER ntsc NOTIFY ntscChanged )
-        Q_PROPERTY( bool widescreen MEMBER widescreen NOTIFY widescreenChanged )
+        Q_PROPERTY( bool television MEMBER television WRITE setTelevision NOTIFY televisionChanged )
+        Q_PROPERTY( bool ntsc MEMBER ntsc WRITE setNtsc NOTIFY ntscChanged )
+        Q_PROPERTY( bool widescreen MEMBER widescreen WRITE setWidescreen NOTIFY widescreenChanged )
 
     public:
         explicit VideoOutput( QQuickItem *parent = 0 );
@@ -54,6 +54,8 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // The correct aspect ratio to display this picture in
         qreal aspectRatio;
 
+        qreal calculateAspectRatio( ProducerFormat format );
+
         // Linear vs nearest-neighbor filtering
         bool linearFiltering;
 
@@ -68,6 +70,11 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Is this standard 4:3 (false) or is the image anamorphic widescreen (16:9 packed into a 4:3 frame, true)?
         // Ignored if television is false
         bool widescreen;
+
+        // Setters for the above 3 properties, will force a recheck of the aspect ratio if any are called
+        void setTelevision( bool television );
+        void setNtsc( bool ntsc );
+        void setWidescreen( bool widescreen );
 
         // Helper for printing aspect ratios as fractions
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
