@@ -46,7 +46,6 @@
     INCLUDEPATH += consumer core input role util
 
     HEADERS += \
-        videoitem.h \
         consumer/audiobuffer.h \
         consumer/audiooutput.h \
         consumer/videooutput.h \
@@ -76,7 +75,6 @@
     PRECOMPILED_HEADER += backendcommon.h
 
     SOURCES += \
-        videoitem.cpp \
         consumer/audiobuffer.cpp \
         consumer/audiooutput.cpp \
         consumer/videooutput.cpp \

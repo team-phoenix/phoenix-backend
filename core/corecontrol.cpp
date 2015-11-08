@@ -102,10 +102,10 @@ void CoreControl::reset() {
 void CoreControl::deleteThreads() {
 
     if( threadChildren.size() ) {
-        qCDebug( phxControl ) << "Shutting down threads";
+        qCDebug( phxControl ) << "Shutting down" << threadChildren.size() << "thread(s)";
 
         for( QThread *thread_ : threadChildren.keys() ) {
-            qCDebug( phxControl ).nospace() << "Shutting down thread: " << thread_ << "...";
+            qCDebug( phxControl ).nospace() << "Shutting down thread: " << thread_;
 
             // No harm in connecting right before the thread dies!
             for( QObject *obj : threadChildren[ thread_ ] ) {
@@ -128,7 +128,7 @@ void CoreControl::deleteThreads() {
 
 void CoreControl::deleteGameThreadChildren() {
     if( gameThreadChildren.size() ) {
-        qCDebug( phxControl ) << "Shutting down game thread children";
+        qCDebug( phxControl ) << "Shutting down" << gameThreadChildren.size() << "game thread children";
 
         for( QObject *obj : gameThreadChildren ) {
             qCDebug( phxControl ) << "    Shutting down:" << obj;
@@ -214,9 +214,9 @@ void CoreControl::initLibretroCore() {
      */
 
     // Make sure the last run properly cleaned up
+    Q_ASSERT( !connectionList.size() );
     Q_ASSERT( !threadChildren.size() );
     Q_ASSERT( !gameThreadChildren.size() );
-    Q_ASSERT( !connectionList.size() );
 
     // Create threads
     audioOutputThread = new QThread();
@@ -277,20 +277,22 @@ void CoreControl::initLibretroCore() {
 
         // Connect control and framerate assigning signals to Looper
         if( !vsync ) {
-            CONNECT_CONTROL_CONTROLLABLE( this, looper );
+            CLIST_CONNECT_CONTROL_CONTROLLABLE( this, looper );
             connectionList << connect( this, &CoreControl::libretroSetFramerate, looper, &Looper::libretroSetFramerate );
         }
+    }
 
-        // InputManager (Producer)
-
+    // InputManager (Producer)
+    {
         // inputManager is a property should've been set by this point
         // Belongs to the QML thread
         Q_ASSERT( inputManager );
+
         // Connect InputManager to LibretroCore (produces input data which also drives frame production in LibretroCore)
-        CONNECT_PRODUCER_CONSUMER( inputManager, libretroCore );
+        CLIST_CONNECT_PRODUCER_CONSUMER( inputManager, libretroCore );
 
         // Connect control signals to InputManager
-        CONNECT_CONTROL_CONTROLLABLE( this, inputManager );
+        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, inputManager );
 
         // Connect Looper to InputManager (drive input polling)
         if( !vsync ) {
@@ -303,18 +305,19 @@ void CoreControl::initLibretroCore() {
     {
         audioOutput->moveToThread( audioOutputThread );
         audioOutput->setObjectName( "AudioOutput (Libretro)" );
-        threadChildren[ audioOutputThread ] << audioOutput ;
+        threadChildren[ audioOutputThread ] << audioOutput;
+
         // videoOutput is a property should've been set by this point
         // Belongs to the QML thread
         Q_ASSERT( videoOutput );
 
         // Connect LibretroCore to the consumers (AV output)
-        CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
-        CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
+        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
+        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
 
         // Connect control signals to consumers
-        CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
-        CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
+        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
+        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
 
         // Connect framerate assigning signal to AudioOutput
         connectionList << connect( this, &CoreControl::libretroSetFramerate, audioOutput, &AudioOutput::libretroSetFramerate );

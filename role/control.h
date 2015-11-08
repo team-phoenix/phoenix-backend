@@ -24,6 +24,10 @@
     connect( dynamic_cast<QObject *>( control ), SIGNAL( setState( Control::State ) ),\
              dynamic_cast<QObject *>( controllable ), SLOT( setState( Control::State ) ) );
 
+#define CLIST_CONNECT_CONTROL_CONTROLLABLE( control, controllable ) \
+    connectionList << connect( dynamic_cast<QObject *>( control ), SIGNAL( setState( Control::State ) ),\
+             dynamic_cast<QObject *>( controllable ), SLOT( setState( Control::State ) ) );
+
 class Control {
     public:
         Control();

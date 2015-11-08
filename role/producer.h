@@ -39,6 +39,12 @@
     connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ), \
              dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
 
+#define CLIST_CONNECT_PRODUCER_CONSUMER( producer, consumer ) \
+    connectionList << connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerData( QString, QMutex *, void *, size_t, qint64 ) ), \
+             dynamic_cast<QObject *>( consumer ), SLOT( consumerData( QString, QMutex *, void *, size_t, qint64 ) ) ); \
+    connectionList << connect( dynamic_cast<QObject *>( producer ), SIGNAL( producerFormat( ProducerFormat ) ), \
+             dynamic_cast<QObject *>( consumer ), SLOT( consumerFormat( ProducerFormat ) ) )
+
 // Type of video output (for use by video consumers)
 enum VideoRendererType {
 

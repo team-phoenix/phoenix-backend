@@ -21,7 +21,7 @@ CoreControlProxy::CoreControlProxy( QObject *parent ) : QObject( parent ),
 
     connectCoreControlProxy();
 
-    coreControlThread->start();
+    coreControlThread->start( QThread::HighestPriority );
 
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
         qDebug() << "";
