@@ -38,8 +38,7 @@ LibretroSymbolsOld::LibretroSymbolsOld()
 LibretroCoreOld::LibretroCoreOld()
     : mPoolSize( 30 ),
       pixelFormat( RETRO_PIXEL_FORMAT_RGB565 ),
-      SRAMDataRaw( nullptr )
-{
+      SRAMDataRaw( nullptr ) {
 
     LibretroCoreOld::core = this;
 
@@ -368,7 +367,8 @@ void LibretroCoreOld::loadSRAM( const QString &baseName ) {
 void LibretroCoreOld::saveSRAM( const QString &baseName ) {
 
     auto localFile = saveDirectory() + "/" + baseName + ".srm";
-    if ( SRAMDataRaw == nullptr ) {
+
+    if( SRAMDataRaw == nullptr ) {
         qCDebug( phxCore ) << Q_FUNC_INFO << ": " << localFile << "(nullptr)";
         return;
     }
@@ -721,9 +721,10 @@ bool LibretroCoreOld::environmentCallback( unsigned cmd, void *data ) {
 
 void LibretroCoreOld::inputPollCallback( void ) {
 
-    if ( core->inputManager ) {
+    if( core->inputManager ) {
         core->inputManager->libretroGetInputState();
     }
+
     // qDebug() << "Core::inputPollCallback";
     return;
 
@@ -799,16 +800,16 @@ int16_t LibretroCoreOld::inputStateCallback( unsigned controllerPort, unsigned r
 
     auto event = static_cast<InputDeviceEvent::Event>( buttonID );
 
-//    if( controllerPort == 0 ) {
-//        auto keyState = core->inputManager->keyboard->value( event, 0 );
+    //    if( controllerPort == 0 ) {
+    //        auto keyState = core->inputManager->keyboard->value( event, 0 );
 
-//        if( !inputDevice ) {
-//            return keyState;
-//        }
+    //        if( !inputDevice ) {
+    //            return keyState;
+    //        }
 
-//        auto deviceState = inputDevice->value( event, 0 );
-//        return deviceState | keyState;
-//    }
+    //        auto deviceState = inputDevice->value( event, 0 );
+    //        return deviceState | keyState;
+    //    }
 
     // make sure the InputDevice was configured
     // to map to the requested RETRO_DEVICE.

@@ -116,7 +116,7 @@ void Looper::setState( Control::State state ) {
 
 }
 
-void Looper::libretroSetFramerate(qreal hostFPS ) {
+void Looper::libretroSetFramerate( qreal hostFPS ) {
     if( this->hostFPS != hostFPS ) {
         qCDebug( phxControl ).nospace() << "Looper beginning loop at " << hostFPS << "fps";
         emit endLoop();

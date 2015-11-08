@@ -65,6 +65,7 @@ void InputManager::libretroGetInputState() {
                 inputStates[ i ] |= libretroGetInputStateHelper( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
             }
         }
+
         producerMutex.unlock();
 
         emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );

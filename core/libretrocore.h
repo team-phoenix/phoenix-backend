@@ -32,7 +32,7 @@
  */
 
 class LibretroCore : public Core {
-    Q_OBJECT
+        Q_OBJECT
 
     public:
         explicit LibretroCore( Core *parent = 0 );
