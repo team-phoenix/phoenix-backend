@@ -17,7 +17,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     inputDescriptors(),
     audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
     videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
-    consumerFmt(), inputStates{ 0 },
+    consumerFmt(), inputStates{ 0 }, touchCoords(), touchState( false ), touchModeSet( false ),
     variables() {
     core = this;
 
@@ -278,6 +278,12 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
         }
 
     }
+
+    if( type == QStringLiteral( "touchinput" ) ) {
+        QMutexLocker locker( mutex );
+        touchCoords = *( QPointF * )data;
+        touchState = ( bool )bytes;
+    }
 }
 
 void LibretroCore::testDoFrame() {
@@ -527,13 +533,20 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             break;
 
         case RETRO_ENVIRONMENT_GET_VARIABLE: { // 15
-            auto *rv = static_cast<struct retro_variable *>( data );
+            // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
+            auto *retroVariable = static_cast<struct retro_variable *>( data );
 
-            if( core->variables.contains( rv->key ) ) {
-                const auto &var = core->variables[rv->key];
+            if( core->variables.contains( retroVariable->key ) ) {
+                const auto &var = core->variables[ retroVariable->key ];
 
                 if( var.isValid() ) {
-                    rv->value = var.value().c_str();
+                    retroVariable->value = var.value().c_str();
+
+                    if( strlen( var.value().c_str() ) ) {
+                        qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
+                    }
+
+                    return true;
                 }
             }
 
@@ -546,16 +559,46 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
             for( ; rv->key != NULL; rv++ ) {
                 LibretroVariable v( rv );
-                core->variables.insert( v.key(), v );
-                qCDebug( phxCore ) << "\t" << v;
+
+                if( !( core->variables.contains( v.key() ) ) ) {
+                    core->variables.insert( v.key(), v );
+                }
+
+                qCDebug( phxCore ) << "        " << v;
+
+                // Look for an indication this is DeSmuME, set DeSmuME variables
+                if( QString( rv->key ).contains( QString( "desmume" ) ) && !( core->touchModeSet ) ) {
+                    core->touchModeSet = true;
+                    qCDebug( phxCore ) << ">>>>>>>> DeSmuME found, setting touch mode!";
+                }
+            }
+
+            return true;
+            break;
+        }
+
+        case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: { // 17
+            // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
+            // If we previously found that this is DeSmuME, mark the variables as updated (and make sure this doesn't
+            // return true again)
+            if( core->touchModeSet ) {
+                qCDebug( phxCore ) << "\tMarking all variables as dirty";
+                core->variables[ "desmume_pointer_mouse" ].setValue( "enable" );
+                core->variables[ "desmume_pointer_type" ].setValue( "touch" );
+                core->variables[ "desmume_cpu_mode" ].setValue( "jit" );
+                core->variables[ "desmume_advanced_timing" ].setValue( "enable" );
+                core->variables[ "desmume_num_cores" ].setValue( "4" );
+                // core->variables[ "desmume_internal_resolution" ].setValue( "1024x768" );
+                // core->variables[ "desmume_screens_gap" ].setValue( "64" );
+                core->touchModeSet = false;
+                *( bool * )data = true;
+                return true;
+            } else {
+                return false;
             }
 
             break;
         }
-
-        case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: // 17
-            // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)";
-            break;
 
         case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: // 18
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME (18) (handled)";
@@ -648,6 +691,18 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_MEMORY_MAPS (RETRO_ENVIRONMENT_EXPERIMENTAL)(36)";
             break;
 
+        case RETRO_ENVIRONMENT_SET_GEOMETRY: // 37
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37)";
+            break;
+
+        case RETRO_ENVIRONMENT_GET_USERNAME: // 38
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_USERNAME (38)";
+            break;
+
+        case RETRO_ENVIRONMENT_GET_LANGUAGE: // 39
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LANGUAGE (39)";
+            break;
+
         default:
             qCDebug( phxCore ) << "Error: Environment command " << cmd << " is not defined in the frontend's libretro.h!.";
             return false;
@@ -718,7 +773,62 @@ void LibretroCore::logCallback( enum retro_log_level level, const char *fmt, ...
 }
 
 int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    Q_UNUSED( index )
+    // Q_UNUSED( index )
+
+    // Touch input
+    if( device == RETRO_DEVICE_POINTER && port == 0 && index == 0 ) {
+        switch( id ) {
+            // 0 or 1
+            case RETRO_DEVICE_ID_POINTER_PRESSED: {
+                return core->touchState ? 1 : 0;
+            }
+            break;
+
+            // -0x7FFF to 0x7FFF, clamp incoming values to [0.0, 1.0]
+            // -32767 to 32767... odd range to use IMO (literally)
+            case RETRO_DEVICE_ID_POINTER_X: {
+                qreal x = core->touchCoords.x();
+
+                if( x > 1.0 ) {
+                    x = 1.0;
+                }
+
+                if( x < 0.0 ) {
+                    x = 0.0;
+                }
+
+                int ret = 0xFFFE;
+                ret *= x;
+                ret -= 0x7FFF;
+                ret &= 0xFFFF;
+                return ret;
+            }
+            break;
+
+            case RETRO_DEVICE_ID_POINTER_Y: {
+                qreal x = core->touchCoords.y();
+
+                if( x > 1.0 ) {
+                    x = 1.0;
+                }
+
+                if( x < 0.0 ) {
+                    x = 0.0;
+                }
+
+                int ret = 0xFFFE;
+                ret *= x;
+                ret -= 0x7FFF;
+                ret &= 0xFFFF;
+                return ret;
+            }
+            break;
+
+            default:
+                break;
+        }
+
+    }
 
     // TODO: Support more than the default joypad
     if( device != RETRO_DEVICE_JOYPAD ) {

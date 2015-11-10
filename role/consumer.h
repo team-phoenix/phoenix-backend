@@ -44,7 +44,7 @@ class Consumer {
         virtual void consumerFormat( ProducerFormat consumerFmt ) = 0;
 
         // Must obtain a mutex to access the data. Only hold onto the mutex long enough to make a copy
-        // Type can be one of the following: "audio", "video", "input"
+        // Type can be one of the following: "audio", "video", "input", "touchinput"
         // You can check the timestamp against QDateTime::currentMSecsSinceEpoch() to see how far out of sync you might be
         virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) = 0;
 

@@ -2,6 +2,7 @@
 
 InputManager::InputManager( QObject *parent )
     : QObject( parent ),
+      touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
       keyboard( new Keyboard() ),
       sdlEventLoop( this ),
       inputStates{ 0 } {
@@ -66,9 +67,19 @@ void InputManager::libretroGetInputState() {
             }
         }
 
+        // Set final touch state once per frame
+        // The flipflop is needed as the touched state may change several times *during* a frame
+        // This ensures it'll get touch input for one frame if at any point during said frame it gets a touch input
+        // Currently configured to keep touched state latched for 2 frames, releasing on 3rd
+        // Games I've tried don't like it only going for one then off the next
+        updateTouchLatch();
+
         producerMutex.unlock();
 
+        // Touch input must be done before regular input as that drives frame production
+        emit producerData( QStringLiteral( "touchinput" ), &producerMutex, &touchCoords, ( size_t )touchState, QDateTime::currentMSecsSinceEpoch() );
         emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
+
     }
 }
 
@@ -153,6 +164,95 @@ void InputManager::removeAt( int index ) {
 
     mutex.unlock();
 
+}
+
+void InputManager::updateTouchState( QPointF point, bool pressed ) {
+    if( currentState == Control::PLAYING ){
+        producerMutex.lock();
+        touchCoords = point;
+
+        if( pressed ) {
+            touchSet = true;
+        } else {
+            touchReset = true;
+        }
+
+        producerMutex.unlock();
+    }
+}
+
+void InputManager::updateTouchLatch() {
+    // Set for 2 frames, reset on 3rd
+    static int setDuration = 3;
+    static int frameCounter = 0;
+
+    // qCDebug( phxInput ) << "frame start";
+
+    // Execute transition function
+    if( !touchSet && !touchReset && touchLatchState != 3 ) {
+        // Latch (only if not in 3)
+        touchLatchState = 0;
+    }
+
+    if( !touchSet && !touchReset && touchLatchState == 3 ) {
+        // Otherwise, set if setDuration frames have not passed (should only execute once)
+        // Reset if they have (should only execute once)
+        if( ( frameCounter + 1 ) % setDuration == 0 ) {
+            // qCDebug( phxInput ) << "    resetting" << false;
+            touchLatchState = 1;
+            frameCounter = 0;
+        } else {
+            // qCDebug( phxInput ) << "    setting" << true;
+            frameCounter++;
+        }
+    }
+
+    if( !touchSet && touchReset ) {
+        // Reset
+        // qCDebug( phxInput ) << "    normal reset";
+        touchLatchState = 1;
+    }
+
+    if( touchSet && !touchReset ) {
+        // Set
+        // qCDebug( phxInput ) << "    normal set";
+        touchLatchState = 2;
+    }
+
+    if( touchSet && touchReset ) {
+        // Set (for 2 frames)
+        // This is the first of the 3 frames in the sequence
+        // qCDebug( phxInput ) << "    >>>event forced";
+        touchLatchState = 3;
+        frameCounter = 1;
+    }
+
+    // Get FF output
+    switch( touchLatchState ) {
+        case 0: // Latch
+            break;
+
+        case 1: // Reset
+            touchState = false;
+            break;
+
+        case 2: // Set
+            touchState = true;
+            break;
+
+        case 3: // Set (for a time)
+            touchState = true;
+            break;
+
+        default:
+            break;
+    }
+
+    // qCDebug( phxInput ) << "    frame end" << touchState;
+
+    // Clear FF inputs
+    touchSet = false;
+    touchReset = false;
 }
 
 void InputManager::swap( const int index1, const int index2 ) {

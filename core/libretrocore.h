@@ -139,6 +139,9 @@ class LibretroCore : public Core {
 
         ProducerFormat consumerFmt;
         int16_t inputStates[ 16 ];
+        QPointF touchCoords;
+        bool touchState;
+        bool touchModeSet;
 
         // Callbacks
 

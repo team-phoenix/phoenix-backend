@@ -46,6 +46,13 @@ LibretroVariable::LibretroVariable( const retro_variable *var ) {
     }
 }
 
+LibretroVariable::LibretroVariable( const std::string key ) {
+    m_key = key;
+    m_value = "";
+    m_description = "";
+    m_choices.append( "" );
+}
+
 LibretroVariable::~LibretroVariable() {}
 
 const std::string &LibretroVariable::key() const {
@@ -71,6 +78,11 @@ const std::string &LibretroVariable::description() const {
 
 const QVector<std::string> &LibretroVariable::choices() const {
     return m_choices;
+}
+
+bool LibretroVariable::setValue( std::string value ) {
+    m_value = std::move( value );
+    return true;
 }
 
 bool LibretroVariable::isValid() const {

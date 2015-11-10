@@ -60,6 +60,9 @@ class InputManager : public QObject, public Producer, public Controllable {
         // Remove and delete inputDevice at index
         void removeAt( int index );
 
+        // Update touch state
+        void updateTouchState( QPointF point, bool pressed );
+
     signals:
         PRODUCER_SIGNALS
 
@@ -73,9 +76,24 @@ class InputManager : public QObject, public Producer, public Controllable {
         // void device( InputDevice *device );
 
     private:
-        // The internal list of available input devices
+        // Current touch state
+        QPointF touchCoords;
+        bool touchState;
+
+        // A special S-dominated latch, 0 = hold, 1 = set, 2 = reset, 3 = set for 2 frames
+        // Specs:
+        // If set = reset = 1, output true for this and next frame then false for the 3rd
+        // only if for the final 2 frames the input is the normal hold input(set = reset = 0)
+        // Sequence begins anew if both inputs are 1 at any time
+        int touchLatchState;
+        bool touchSet;
+        bool touchReset;
+        void updateTouchLatch();
+
         // One keyboard is reserved for being always active and is guarantied to be at gamepadList[ 0 ]
         Keyboard *keyboard;
+
+        // The internal list of available input devices
         QList<InputDevice *> gamepadList;
 
         // Convenient getter for getting gamepad list size

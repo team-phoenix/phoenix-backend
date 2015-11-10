@@ -12,6 +12,8 @@ class LibretroVariable {
 
         LibretroVariable( const retro_variable *var );
 
+        LibretroVariable( const std::string key );
+
         virtual ~LibretroVariable();
 
         const std::string &key() const;
@@ -23,6 +25,8 @@ class LibretroVariable {
         const std::string &description() const;
 
         const QVector<std::string> &choices() const;
+
+        bool setValue( std::string value );
 
         bool isValid() const;
 
