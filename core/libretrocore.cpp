@@ -544,9 +544,8 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
                     if( strlen( var.value().c_str() ) ) {
                         qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
+                        return true;
                     }
-
-                    return true;
                 }
             }
 
