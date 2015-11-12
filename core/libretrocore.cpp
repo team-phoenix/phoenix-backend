@@ -17,7 +17,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     inputDescriptors(),
     audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
     videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
-    consumerFmt(), inputStates{ 0 }, touchCoords(), touchState( false ), touchModeSet( false ),
+    consumerFmt(), inputStates{ 0 }, touchCoords(), touchState( false ), variablesHaveChanged( false ),
     variables() {
     core = this;
 
@@ -214,6 +214,27 @@ void LibretroCore::load() {
 
     }
 
+    // Set all variables to their defaults, mark all variables as dirty
+    {
+        for( auto key : variables.keys() ) {
+            LibretroVariable &variable = variables[ key ];
+            if( !variable.choices().size() ) {
+                continue;
+            }
+
+            // Assume the defualt choice to be the first option offered
+            std::string defaultChoice = variable.choices().at( 0 );
+            if( !strlen( defaultChoice.c_str() ) ) {
+                continue;
+            }
+
+            // Assign
+            variable.setValue( defaultChoice );
+
+        }
+        variablesHaveChanged = true;
+    }
+
     Core::setState( Control::PAUSED );
 }
 
@@ -228,11 +249,15 @@ void LibretroCore::stop() {
 
     // Unload core
 
-    // symbols.retro_audio is the first symbol set to null in the constructor, so check that one
-    if( symbols.retro_audio ) {
+    // symbols.retro_api_version is reasonably expected to be defined if the core is loaded
+    if( symbols.retro_api_version ) {
         symbols.retro_unload_game();
         symbols.retro_deinit();
         symbols.clear();
+        coreFile.unload();
+        qCDebug( phxCore ) << "Unloaded core successfully";
+    } else {
+        qCCritical( phxCore ) << "stop() called on an unloaded core!";
     }
 
     Core::setState( Control::STOPPED );
@@ -564,12 +589,6 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
                 }
 
                 qCDebug( phxCore ) << "        " << v;
-
-                // Look for an indication this is DeSmuME, set DeSmuME variables
-                if( QString( rv->key ).contains( QString( "desmume" ) ) && !( core->touchModeSet ) ) {
-                    core->touchModeSet = true;
-                    qCDebug( phxCore ) << ">>>>>>>> DeSmuME found, setting touch mode!";
-                }
             }
 
             return true;
@@ -578,21 +597,18 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: { // 17
             // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
-            // If we previously found that this is DeSmuME, mark the variables as updated (and make sure this doesn't
-            // return true again)
-            if( core->touchModeSet ) {
-                qCDebug( phxCore ) << "\tMarking all variables as dirty";
-                core->variables[ "desmume_pointer_mouse" ].setValue( "enable" );
-                core->variables[ "desmume_pointer_type" ].setValue( "touch" );
-                core->variables[ "desmume_cpu_mode" ].setValue( "jit" );
-                core->variables[ "desmume_advanced_timing" ].setValue( "enable" );
-                core->variables[ "desmume_num_cores" ].setValue( "4" );
-                // core->variables[ "desmume_internal_resolution" ].setValue( "1024x768" );
-                // core->variables[ "desmume_screens_gap" ].setValue( "64" );
-                core->touchModeSet = false;
+            // Let the core know we have some variable changes if we set our internal flag (clear it so the change only happens once)
+            // TODO: Protect all variable-touching code with mutexes?
+            if( core->variablesHaveChanged ) {
+                // Special case: Force DeSmuME's pointer type variable to "touch" in order to work with our touch code
+                if( core->variables.contains( "desmume_pointer_type" ) ) {
+                    core->variables[ "desmume_pointer_type" ].setValue( "touch" );
+                }
+                core->variablesHaveChanged = false;
                 *( bool * )data = true;
                 return true;
             } else {
+                *( bool * )data = false;
                 return false;
             }
 
