@@ -802,7 +802,7 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
             // -0x7FFF to 0x7FFF, clamp incoming values to [0.0, 1.0]
             // -32767 to 32767... odd range to use IMO (literally)
             case RETRO_DEVICE_ID_POINTER_X: {
-                qreal x = core->touchCoords.x();
+                qreal x = 1.0 + -core->touchCoords.x();
 
                 if( x > 1.0 ) {
                     x = 1.0;
@@ -821,18 +821,18 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
             break;
 
             case RETRO_DEVICE_ID_POINTER_Y: {
-                qreal x = core->touchCoords.y();
+                qreal y = 1.0 + -core->touchCoords.y();
 
-                if( x > 1.0 ) {
-                    x = 1.0;
+                if( y > 1.0 ) {
+                    y = 1.0;
                 }
 
-                if( x < 0.0 ) {
-                    x = 0.0;
+                if( y < 0.0 ) {
+                    y = 0.0;
                 }
 
                 int ret = 0xFFFE;
-                ret *= x;
+                ret *= y;
                 ret -= 0x7FFF;
                 ret &= 0xFFFF;
                 return ret;
