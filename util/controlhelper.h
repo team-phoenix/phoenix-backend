@@ -14,8 +14,7 @@ class ControlHelper : public QObject {
         // States
         // WARNING: This must *exactly* match Control::State!
         enum State {
-            INIT = 0,
-            STOPPED,
+            STOPPED = 0,
             LOADING,
             PAUSED,
             PLAYING,

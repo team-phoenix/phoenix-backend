@@ -8,6 +8,7 @@ CoreControlProxy::CoreControlProxy( QObject *parent ) : QObject( parent ),
     resettable( false ),
     rewindable( false ),
     source(),
+    state( ControlHelper::STOPPED ),
     volume( 1.0 ),
     vsync( false ) {
 
@@ -209,7 +210,7 @@ void CoreControlProxy::notifyAllProperties() {
     emit resettableChanged( resettable );
     emit rewindableChanged( rewindable );
     emit sourceChanged( getSource() );
-    emit stateChanged( ( ControlHelper::State )state );
+    emit stateChanged( state );
     emit volumeChanged( volume );
     emit vsyncChanged( vsync );
 }

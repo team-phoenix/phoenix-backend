@@ -41,8 +41,7 @@ class Control {
 
         // States
         enum State {
-            INIT = 0,
-            STOPPED,
+            STOPPED = 0,
             LOADING,
             PAUSED,
             PLAYING,

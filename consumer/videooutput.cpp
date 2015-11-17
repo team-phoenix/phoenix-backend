@@ -110,9 +110,6 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *node, QQuickItem::UpdatePaintNod
         textureNode->setFiltering( QSGTexture::Nearest );
     }
 
-    textureNode->setTextureCoordinatesTransform( QSGSimpleTextureNode::MirrorVertically |
-            QSGSimpleTextureNode::MirrorHorizontally );
-
     return textureNode;
 }
 
