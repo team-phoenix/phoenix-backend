@@ -46,7 +46,7 @@ void LooperPrivate::beginLoop( double interval ) {
 
             innerLoopCounter = 0;
 
-            emit timeout();
+            emit timeout( QDateTime::currentMSecsSinceEpoch() );
 
             // Reset the frame timer
             timeElapsed = ( double )timer.nsecsElapsed() / 1000.0 / 1000.0;
@@ -64,6 +64,7 @@ void LooperPrivate::beginLoop( double interval ) {
         // This busy waiting is only necessary if Looper does not share its thread with anything else. Set to 1 if it does.
         for( int i = 0; i < 100; i++ ) {
             innerLoopCounter++;
+            // This should be safe as we're the only QObject on this thread
             QCoreApplication::processEvents();
             // QThread::yieldCurrentThread();
         }

@@ -49,6 +49,9 @@ class LibretroCore : public Core {
         // FIXME: For testing only. Delete once InputManagerProxy is working
         void testDoFrame();
 
+        // Properties
+        void setVolume( qreal volume ) override;
+
         // State changers
         void load() override;
         void stop() override;
@@ -120,7 +123,7 @@ class LibretroCore : public Core {
         // Value is a human-readable description
         QMap<QString, QString> inputDescriptors;
 
-        // Producer data
+        // Producer data (for consumers like AudioOutput, VideoOutput...)
 
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
         int16_t *audioBufferPool[ POOL_SIZE ];
@@ -135,7 +138,13 @@ class LibretroCore : public Core {
         uint8_t *videoBufferPool[ POOL_SIZE ];
         int videoPoolCurrentBuffer;
 
-        // Consumer data
+        // Get AV info from the core and pass along to consumers
+        void getAVInfo( retro_system_av_info *avInfo );
+
+        // Should only be called on load time (consumers expect buffers to be valid while Core is active)
+        void allocateBufferPool( retro_system_av_info *avInfo );
+
+        // Consumer data (from producers like InputManager)
 
         ProducerFormat consumerFmt;
         int16_t inputStates[ 16 ];

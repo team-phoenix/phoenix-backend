@@ -90,7 +90,7 @@ class CoreControl : public QObject, public Control {
         // Special
 
         // Necessary in certain scenarios to emit this ourselves (like getting a chain reaction going in VideoOutput)
-        void libretroCoreDoFrame();
+        void libretroCoreDoFrame( qint64 timestamp );
 
         // Inform any consumer or producer about the rate that drives the production of frames, which may be different
         // than the native framerate

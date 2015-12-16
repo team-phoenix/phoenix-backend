@@ -19,7 +19,7 @@ class LooperPrivate : public QObject {
         ~LooperPrivate();
 
     signals:
-        void timeout();
+        void timeout( qint64 timestamp );
 
     public slots:
         // Start the loop. 'interval' is in ms
@@ -48,7 +48,7 @@ class Looper : public QObject, public Controllable {
     signals:
         void beginLoop( double interval );
         void endLoop();
-        void timeout();
+        void timeout( qint64 timestamp );
 
     private:
         LooperPrivate *looper;

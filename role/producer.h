@@ -80,7 +80,9 @@ struct ProducerFormat {
 
     // Video
 
+    qreal videoAspectRatio;
     size_t videoBytesPerLine;
+    size_t videoBytesPerPixel;
     qreal videoFramerate;
     VideoRendererType videoMode;
     QImage::Format videoPixelFormat;

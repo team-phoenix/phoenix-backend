@@ -2,7 +2,7 @@
 
 // Public
 
-CoreControl::CoreControl( QObject *parent ) : QObject( parent ),
+CoreControl::CoreControl( QObject *parent ) : QObject( parent ), Control(),
     threadChildren(),
     gameThreadChildren(),
     pointersToClear(),
@@ -34,7 +34,7 @@ void CoreControl::shutdown() {
         qCDebug( phxControl ) << "Core has already stopped, continuing";
         cleanup();
     }
-
+    QThread::currentThread()->quit();
 }
 
 void CoreControl::setVideoOutput( VideoOutput *videoOutput ) {
@@ -103,6 +103,8 @@ void CoreControl::reset() {
     emit resetForwarder();
 }
 
+// Private
+
 void CoreControl::zeroPointers() {
     if( pointersToClear.size() ) {
         for( QObject **pointer : pointersToClear ) {
@@ -110,8 +112,6 @@ void CoreControl::zeroPointers() {
         }
     }
 }
-
-// Private
 
 void CoreControl::deleteThreads() {
 
@@ -213,7 +213,7 @@ void CoreControl::disconnectConnections() {
 
 void CoreControl::initLibretroCore() {
     /*
-     * Data flow:
+     * Pipeline:
      * Looper/(vsync signal) >> InputManager >> LibretroCore >> [ AudioOutput, VideoOutput ]
      *
      * Special considerations:
@@ -256,7 +256,7 @@ void CoreControl::initLibretroCore() {
             if( !vsync ) {
                 emit libretroSetFramerate( hostFPS );
             } else {
-                qCDebug( phxControl ) << "Ignoring coreFPS value";
+                qCDebug( phxControl ) << "VSync mode on, ignoring coreFPS value";
             }
         } );
 
@@ -352,7 +352,7 @@ void CoreControl::initLibretroCore() {
         connectionList << connect( this, &CoreControl::stateChanged, this, [ this ]( Control::State newState ) {
             if( ( Control::State )newState == Control::PLAYING ) {
                 if( vsync ) {
-                    emit libretroCoreDoFrame();
+                    emit libretroCoreDoFrame( QDateTime::currentMSecsSinceEpoch() );
                 }
             }
         } );
@@ -371,7 +371,22 @@ void CoreControl::initLibretroCore() {
         } );
     }
 
+    // Print all children and their threads
+    for( auto childList : threadChildren ) {
+        for( auto child : childList ) {
+            qCDebug( phxControl ) << child << child->thread();
+        }
+    }
+
+    for( auto child : gameThreadChildren ) {
+        qCDebug( phxControl ) << child << child->thread();
+    }
+
+    qCDebug( phxControl ) << inputManager << inputManager->thread();
+    qCDebug( phxControl ) << videoOutput << videoOutput->thread();
+    qCDebug( phxControl ) << this << this->thread();
+    qCDebug( phxControl ) << "Executing from:" << QThread::currentThread();
+
     // Start threads
     audioOutputThread->start();
-
 }

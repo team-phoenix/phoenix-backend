@@ -1,6 +1,6 @@
 #include "core.h"
 
-Core::Core( QObject *parent ) : QObject( parent ),
+Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable(),
     pausable( false ),
     playbackSpeed( 1.0 ),
     resettable( false ),

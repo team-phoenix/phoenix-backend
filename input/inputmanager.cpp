@@ -1,7 +1,7 @@
 #include "inputmanager.h"
 
 InputManager::InputManager( QObject *parent )
-    : QObject( parent ),
+    : QObject( parent ), Producer(), Controllable(),
       touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
       keyboard( new Keyboard() ),
       sdlEventLoop( this ),
@@ -51,7 +51,13 @@ InputDevice *InputManager::at( int index ) {
     return gamepadList.at( index );
 }
 
-void InputManager::libretroGetInputState() {
+void InputManager::libretroGetInputState( qint64 timestamp ) {
+    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+
+    if( currentTime - timestamp > 64 ) {
+        return;
+    }
+
     if( currentState == Control::PLAYING ) {
         producerMutex.lock();
 
@@ -77,8 +83,8 @@ void InputManager::libretroGetInputState() {
         producerMutex.unlock();
 
         // Touch input must be done before regular input as that drives frame production
-        emit producerData( QStringLiteral( "touchinput" ), &producerMutex, &touchCoords, ( size_t )touchState, QDateTime::currentMSecsSinceEpoch() );
-        emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), QDateTime::currentMSecsSinceEpoch() );
+        emit producerData( QStringLiteral( "touchinput" ), &producerMutex, &touchCoords, ( size_t )touchState, currentTime );
+        emit producerData( QStringLiteral( "input" ), &producerMutex, inputStates, sizeof( inputStates ), currentTime );
 
     }
 }
@@ -167,7 +173,7 @@ void InputManager::removeAt( int index ) {
 }
 
 void InputManager::updateTouchState( QPointF point, bool pressed ) {
-    if( currentState == Control::PLAYING ){
+    if( currentState == Control::PLAYING ) {
         producerMutex.lock();
         touchCoords = point;
 

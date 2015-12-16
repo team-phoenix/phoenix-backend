@@ -30,8 +30,8 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
 
 LibretroCore::~LibretroCore() {
     for( int i = 0; i < POOL_SIZE; i++ ) {
-        free( audioBufferPool[i] );
-        free( videoBufferPool[i] );
+        delete audioBufferPool[i];
+        delete videoBufferPool[i];
     }
 }
 
@@ -166,64 +166,26 @@ void LibretroCore::load() {
 
     // Get audio/video timing and send to consumers, allocate buffer pool
     {
-
         // Get info from the core
         retro_system_av_info *avInfo = new retro_system_av_info();
         symbols.retro_get_system_av_info( avInfo );
-
-        // Audio
-
-        // The Libretro API only support 16-bit stereo PCM
-        // Not sure, but I think that Libretro uses the host's native byte order for audio,
-        // which for x86_64 is little endian
-        producerFmt.audioFormat.setSampleSize( 16 );
-        producerFmt.audioFormat.setSampleRate( avInfo->timing.sample_rate );
-        producerFmt.audioFormat.setChannelCount( 2 );
-        producerFmt.audioFormat.setSampleType( QAudioFormat::SignedInt );
-        producerFmt.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
-        producerFmt.audioFormat.setCodec( "audio/pcm" );
-
-        // inputFormat may or may not be set at this point, either way is fine
-        // By default retro_run() is expected to be called at 60Hz
-        producerFmt.audioRatio = consumerFmt.videoFramerate / avInfo->timing.fps;
-
-        // Video
-
-        producerFmt.videoBytesPerLine = avInfo->geometry.base_width *
-                                        QImage().toPixelFormat( producerFmt.videoPixelFormat ).bitsPerPixel() / 8;
-        producerFmt.videoFramerate = avInfo->timing.fps;
-
-        producerFmt.videoSize.setWidth( avInfo->geometry.base_width );
-        producerFmt.videoSize.setHeight( avInfo->geometry.base_height );
-
-        qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
-        qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
-
-        emit producerFormat( producerFmt );
+        getAVInfo( avInfo );
+        allocateBufferPool( avInfo );
         emit libretroCoreNativeFramerate( avInfo->timing.fps );
-
-        // Allocate buffers to fit this max size
-        // Assume 16-bit stereo audio, 32-bit video
-        for( int i = 0; i < POOL_SIZE; i++ ) {
-            // Allocate a bit extra as some cores' numbers do not add up...
-            audioBufferPool[ i ] = ( int16_t * )calloc( 1, avInfo->timing.sample_rate * 5 );
-            videoBufferPool[ i ] = ( quint8 * )calloc( 1, avInfo->geometry.max_width * avInfo->geometry.max_height * 4 );
-        }
-
         delete avInfo;
-
     }
-
     // Set all variables to their defaults, mark all variables as dirty
     {
         for( auto key : variables.keys() ) {
             LibretroVariable &variable = variables[ key ];
+
             if( !variable.choices().size() ) {
                 continue;
             }
 
             // Assume the defualt choice to be the first option offered
             std::string defaultChoice = variable.choices().at( 0 );
+
             if( !strlen( defaultChoice.c_str() ) ) {
                 continue;
             }
@@ -232,8 +194,11 @@ void LibretroCore::load() {
             variable.setValue( defaultChoice );
 
         }
+
         variablesHaveChanged = true;
     }
+
+    Core::setPausable( true );
 
     Core::setState( Control::PAUSED );
 }
@@ -264,6 +229,7 @@ void LibretroCore::stop() {
 }
 
 void LibretroCore::consumerFormat( ProducerFormat format ) {
+    qCDebug( phxCore ) << Q_FUNC_INFO;
     consumerFmt = format;
 
     // Update all consumers if the audio ratio changes
@@ -319,6 +285,11 @@ void LibretroCore::testDoFrame() {
     }
 }
 
+void LibretroCore::setVolume( qreal volume ) {
+    Core::setVolume( volume );
+    emit producerData( QStringLiteral( "audiovolume" ), &producerMutex, &( this->volume ), sizeof( qreal ), QDateTime::currentMSecsSinceEpoch() );
+}
+
 // Protected
 
 LibretroCore *LibretroCore::core = nullptr;
@@ -354,7 +325,7 @@ void LibretroCore::LibretroCore::loadSaveData() {
     saveDataBuf = symbols.retro_get_memory_data( RETRO_MEMORY_SAVE_RAM );
 
     if( !saveDataBuf ) {
-        qCInfo( phxCore ) << "Unable to get save data, the core may be handling saving internally or an error happened";
+        qCInfo( phxCore ) << "The core will handle saving (passed a null pointer when asked for save buffer)";
     }
 
     QFile file( savePathInfo.absolutePath() % QStringLiteral( "/" ) % gameFileInfo.baseName() % QStringLiteral( ".sav" ) );
@@ -397,6 +368,53 @@ void LibretroCore::LibretroCore::storeSaveData() {
     }
 }
 
+void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
+    // Audio
+
+    // The Libretro API only support 16-bit stereo PCM
+    // Not sure, but I think that Libretro uses the host's native byte order for audio,
+    // which for x86_64 is little endian
+    producerFmt.audioFormat.setSampleSize( 16 );
+    producerFmt.audioFormat.setSampleRate( avInfo->timing.sample_rate );
+    producerFmt.audioFormat.setChannelCount( 2 );
+    producerFmt.audioFormat.setSampleType( QAudioFormat::SignedInt );
+    producerFmt.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
+    producerFmt.audioFormat.setCodec( "audio/pcm" );
+
+    // inputFormat may or may not be set at this point, either way is fine
+    // By default retro_run() is expected to be called at 60Hz
+    producerFmt.audioRatio = consumerFmt.videoFramerate / avInfo->timing.fps;
+
+    // Video
+
+    producerFmt.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
+                                   ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
+                                   avInfo->geometry.aspect_ratio;
+    producerFmt.videoBytesPerPixel = QImage().toPixelFormat( producerFmt.videoPixelFormat ).bitsPerPixel() / 8;
+    producerFmt.videoBytesPerLine = avInfo->geometry.base_width * producerFmt.videoBytesPerPixel;
+    producerFmt.videoFramerate = avInfo->timing.fps;
+
+    producerFmt.videoSize.setWidth( avInfo->geometry.base_width );
+    producerFmt.videoSize.setHeight( avInfo->geometry.base_height );
+
+    qCDebug( phxCore ) << "Core claims an aspect ratio of:" << avInfo->geometry.aspect_ratio;
+    qCDebug( phxCore ) << "Using aspect ratio:" << producerFmt.videoAspectRatio;
+    qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
+    qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
+
+    emit producerFormat( producerFmt );
+}
+
+void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
+    // Allocate buffers to fit this max size
+    // Assume 16-bit stereo audio, 32-bit video
+    for( int i = 0; i < POOL_SIZE; i++ ) {
+        // Allocate a bit extra as some cores' numbers do not add up...
+        audioBufferPool[ i ] = new int16_t[( size_t )( avInfo->timing.sample_rate * 3 ) ]();
+        videoBufferPool[ i ] = new quint8[( size_t )( avInfo->geometry.max_width * avInfo->geometry.max_height * 4 ) ]();
+    }
+}
+
 void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     LibretroCore *core = LibretroCore::core;
 
@@ -412,18 +430,29 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += 4;
+
+    // Flush if we have more than 1/2 of a frame's worth of data
+    if( core->audioBufferCurrentByte > core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+        core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
+        core->audioBufferCurrentByte = 0;
+        core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
+    }
 }
 
 size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frames ) {
     LibretroCore *core = LibretroCore::core;
 
+    // qCDebug( phxCore ) << frames;
+    // qCDebug( phxCore ) << ( double )( core->producerFmt.audioFormat.durationForFrames( frames ) ) / 1000.0;
+
     QMutexLocker locker( &core->producerMutex );
 
     // Sanity check
     Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
-                "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
+                "audio batch callback",
+                QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
-    // Need to do a bit of pointer arithmetic to get the right offset (the buffer is counted in increments of 2 bytes)
+    // Need to do a bit of pointer arithmetic to get the right offset (the buffer is indexed in increments of shorts -- 2 bytes)
     int16_t *dst_init = core->audioBufferPool[ core->audioPoolCurrentBuffer ];
     int16_t *dst = dst_init + ( core->audioBufferCurrentByte / 2 );
 
@@ -432,6 +461,13 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += frames * 4;
+
+    // Flush if we have 1/2 of a frame's worth of data or more
+    if( core->audioBufferCurrentByte >= core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+        core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
+        core->audioBufferCurrentByte = 0;
+        core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
+    }
 
     return frames;
 }
@@ -604,6 +640,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
                 if( core->variables.contains( "desmume_pointer_type" ) ) {
                     core->variables[ "desmume_pointer_type" ].setValue( "touch" );
                 }
+
                 core->variablesHaveChanged = false;
                 *( bool * )data = true;
                 return true;
@@ -686,9 +723,11 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             return true;
         }
 
-        case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: // 32
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_systemAVInfo (32)";
-            break;
+        case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: { // 32
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_systemAVInfo (32) (handled)";
+            return true;
+        }
+        break;
 
         case RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: // 33
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK (33)";
@@ -706,9 +745,20 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_MEMORY_MAPS (RETRO_ENVIRONMENT_EXPERIMENTAL)(36)";
             break;
 
-        case RETRO_ENVIRONMENT_SET_GEOMETRY: // 37
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37)";
-            break;
+        case RETRO_ENVIRONMENT_SET_GEOMETRY: { // 37
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37) (handled)";
+
+            // Get info from the core
+            retro_system_av_info *avInfo = new retro_system_av_info();
+            core->symbols.retro_get_system_av_info( avInfo );
+            // Although we hope the core would have updated its internal av_info struct by now, we'll play it safe and
+            // use the given geometry
+            memcpy( &( avInfo->geometry ), data, sizeof( struct retro_game_geometry ) );
+            core->getAVInfo( avInfo );
+            delete avInfo;
+
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_GET_USERNAME: // 38
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_USERNAME (38)";
@@ -882,11 +932,6 @@ void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsig
     else {
         core->emitVideoData( core->videoBufferPool[ core->videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
     }
-
-    // Flush the audio used so far
-    core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
-    core->audioBufferCurrentByte = 0;
-    core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
 
     return;
 }

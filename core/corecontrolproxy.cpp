@@ -2,7 +2,7 @@
 
 CoreControlProxy::CoreControlProxy( QObject *parent ) : QObject( parent ),
     coreControl( new CoreControl() ),
-    coreControlThread( new QThread() ),
+    gameThread( new QThread() ),
     pausable( false ),
     playbackSpeed( 1.0 ),
     resettable( false ),
@@ -17,25 +17,26 @@ CoreControlProxy::CoreControlProxy( QObject *parent ) : QObject( parent ),
 
     // Set up CoreControl
     coreControl->setObjectName( "CoreControl" );
-    connect( coreControlThread, &QThread::finished, coreControl, &QObject::deleteLater );
+    coreControl->moveToThread( gameThread );
+    connect( gameThread, &QThread::finished, coreControl, &QObject::deleteLater );
     connect( this, &CoreControlProxy::shutdown, coreControl, &CoreControl::shutdown );
 
     connectCoreControlProxy();
 
-    coreControlThread->start( QThread::HighestPriority );
+    gameThread->setObjectName( "Game thread" );
+    gameThread->start( QThread::HighestPriority );
 
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
         qDebug() << "";
-        qCInfo( phxControlProxy ) << ">>>>>>>> User requested app to close, shutting down...";
+        qCInfo( phxControlProxy ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
         qDebug() << "";
 
-        // Shut down coreControl
+        // Shut down coreControl (calls gameThread->exit() too)
         emit shutdown();
 
         // Shut down thread, block until it finishes
-        coreControlThread->exit();
-        coreControlThread->wait();
-        coreControlThread->deleteLater();
+        gameThread->wait( 30 * 1000 );
+        gameThread->deleteLater();
 
         qDebug() << "";
         qCInfo( phxControlProxy ) << ">>>>>>>> Fully unloaded, quitting!";

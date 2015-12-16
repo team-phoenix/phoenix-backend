@@ -35,7 +35,7 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
 
         // A signal that can be hooked to drive frame production
         // Note that although it fires at vsync rate, it may not fire 100% of the time
-        void windowUpdate();
+        void windowUpdate( qint64 timestamp );
 
     public slots:
         void consumerFormat( ProducerFormat consumerFmt ) override;
@@ -43,17 +43,22 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         CONTROLLABLE_SLOT_SETSTATE_DEFAULT
 
     private:
-        // The texture that will hold video frames from core. The texture itself lives in GPU RAM
+        // The framebuffer that holds the latest frame from Core
+        uchar *framebuffer;
+        size_t framebufferSize;
+
+        // Holds a pointer to the framebuffer via its underlying QImage, used by renderer to upload framebuffer to GPU
         QSGTexture *texture;
 
-        void pollStates();
-
-        // Called from the scene graph (render) thread whenever it's time to redraw
-        QSGNode *updatePaintNode( QSGNode *node, UpdatePaintNodeData *paintData ) override;
+        // Called by render thread whenever it's time to render and needs an update from us
+        // We'll assign the current texture to the stored node given to us, creating this stored node if it does not
+        // already exist
+        // Main thread (our thread) is guarantied to be suspended while this function executes, the rest run normally
+        // paintData is a pointer to a QSGTransformNode which contains the transformation matrix (unused)
+        QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData *paintData ) override;
 
         // The correct aspect ratio to display this picture in
         qreal aspectRatio;
-
         qreal calculateAspectRatio( ProducerFormat format );
 
         // Linear vs nearest-neighbor filtering

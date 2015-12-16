@@ -50,7 +50,7 @@ class InputManager : public QObject, public Producer, public Controllable {
 
         bool eventFilter( QObject *object, QEvent *event ) override;
 
-        void libretroGetInputState();
+        void libretroGetInputState( qint64 timestamp );
 
         // Called by the SDLEventLoop
 

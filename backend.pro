@@ -53,7 +53,6 @@
         core/corecontrol.h \
         core/corecontrolproxy.h \
         core/libretro.h \
-        core/libretrocoreold.h \
         core/libretrocore.h \
         core/libretrovariable.h \
         core/libretrosymbols.h \
@@ -81,7 +80,6 @@
         core/core.cpp \
         core/corecontrol.cpp \
         core/corecontrolproxy.cpp \
-        core/libretrocoreold.cpp \
         core/libretrocore.cpp \
         core/libretrovariable.cpp \
         core/libretrosymbols.cpp \

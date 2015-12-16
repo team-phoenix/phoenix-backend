@@ -15,6 +15,10 @@
  * it has the ability to pause and resume whether or not it 'expects' audio with slotSetAudioActive(). Make this match
  * whether or not the core is paused and you'll not have any underruns (hopefully). Set the volume (from 0 to 1
  * inclusive) with slotSetVolume().
+ *
+ * For clarity, assuming 16-bit stereo audio:
+ * 1 frame = 4 bytes (L, L, R, R)
+ * 1 sample = 2 bytes (L, L) or (R, R)
  */
 
 class AudioOutput : public QObject, public Consumer, public Controllable {
@@ -36,11 +40,12 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         void libretroSetFramerate( qreal hostFPS );
 
     private slots:
-        void slotAudioOutputStateChanged( QAudio::State currentState );
+        void handleStateChanged( QAudio::State currentState );
+        void handleUnderflow();
 
     private:
         // Respond to the core running or not by keeping audio output active or not
-        // AKA Pause if core is paused
+        // AKA we'll pause if core is paused
         void setAudioActive( bool coreIsRunning );
 
         // Output incoming video frame of audio data to the audio output
@@ -49,7 +54,7 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         // Free memory, clean up
         void shutdown();
 
-        // Completely init/re-init audio output
+        // Completely init/re-init audio output and resampler
         void resetAudio();
 
         // Allocate memory for conversion
@@ -65,6 +70,7 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         double sampleRateRatio;
 
         // Internal buffers used for resampling
+        short *inputDataShort;
         float *inputDataFloat;
         float *outputDataFloat;
         short *outputDataShort;
@@ -89,8 +95,7 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         // TODO: Make these configurable
         //
 
-        // Size of the outputBuffer. Currently doesn't really mean much, as outputBuffer can grow
-        // to an unlimited size
+        // Max size of the outputBuffer. Equivalent to "audio buffering" setting in other programs
         int outputLengthMs;
 
         // Ideal amount of data in the output buffer. Make this large enough to ensure no underruns

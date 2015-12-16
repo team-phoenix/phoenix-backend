@@ -143,7 +143,7 @@ class CoreControlProxy : public QObject {
 
     private:
         CoreControl *coreControl;
-        QThread *coreControlThread;
+        QThread *gameThread;
 
         // CoreControl property proxy
         void notifyAllProperties();
