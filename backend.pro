@@ -69,7 +69,8 @@
         role/producer.h \
         util/controlhelper.h \
         util/logging.h \
-        util/looper.h
+        util/looper.h \
+    cmdlineargs.h
 
     PRECOMPILED_HEADER += backendcommon.h
 
@@ -95,7 +96,8 @@
         role/control.cpp \
         role/producer.cpp \
         util/logging.cpp \
-        util/looper.cpp
+        util/looper.cpp \
+    cmdlineargs.cpp
 
     RESOURCES += input/controllerdb.qrc
 
