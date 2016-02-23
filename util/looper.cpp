@@ -80,13 +80,15 @@ void LooperPrivate::endLoop() {
 
 Looper::Looper( QObject *parent ) : QObject( parent ),
     looper( new LooperPrivate() ),
-    looperThread( new QThread() ) {
+    looperThread( new QThread( this ) ) {
 
     connect( this, &Looper::beginLoop, looper, &LooperPrivate::beginLoop );
     connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
     connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
     looper->moveToThread( looperThread );
     looper->setObjectName( "Looper (internal)" );
+    looper->setParent( looperThread );
+    qDebug() << looper->objectName() << " parent: " << looper->parent();
     looperThread->setObjectName( "Looper thread (internal)" );
     looperThread->start();
 
@@ -97,7 +99,6 @@ Looper::~Looper() {
         emit endLoop();
         looperThread->exit();
         looperThread->wait();
-        looperThread->deleteLater();
     }
 }
 

@@ -335,7 +335,6 @@ void LibretroCore::LibretroCore::loadSaveData() {
         memcpy( saveDataBuf, data.data(), data.size() );
 
         qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(true)";
-        file.close();
     }
 
     else {
@@ -359,7 +358,6 @@ void LibretroCore::LibretroCore::storeSaveData() {
         char *data = static_cast<char *>( saveDataBuf );
         size_t size = symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
         file.write( data, size );
-        file.close();
         qCDebug( phxCore ) << "Save successful";
     }
 

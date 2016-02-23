@@ -34,6 +34,10 @@ InputDevice::InputDevice( const InputDevice::LibretroType type, const QString na
     setRetroButtonCount( 15 );
 }
 
+InputDevice::~InputDevice() {
+
+}
+
 InputDevice::InputDevice( QObject *parent )
     : InputDevice( DigitalGamepad, parent ) {
 
@@ -109,7 +113,6 @@ bool InputDevice::loadMapping() {
 }
 
 void InputDevice::selfDestruct() {
-    saveMappings();
     delete this;
 }
 

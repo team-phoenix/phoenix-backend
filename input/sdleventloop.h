@@ -9,23 +9,12 @@
 
 class SDLEventLoop : public QObject {
         Q_OBJECT
-        QTimer sdlPollTimer;
-        int numOfDevices;
-        QMutex sdlEventMutex;
-
-        bool forceEventsHandling;
-
-        // The InputManager is in charge of deleting these devices.
-        // The InputManager gains access to these devices by the
-        // deviceConnected( Joystick * ) signal.
-
-        // Also for this list, make use of the 'which' index, for
-        // proper insertions and retrievals.
-        QList<Joystick *> sdlDeviceList;
-        QHash<int, int> deviceLocationMap;
 
     public:
         explicit SDLEventLoop( QObject *parent = 0 );
+        ~SDLEventLoop();
+
+        bool isInitialized() const;
 
     public slots:
         void pollEvents();
@@ -44,6 +33,22 @@ class SDLEventLoop : public QObject {
         void initSDL();
         void quitSDL();
 
+
+        QTimer sdlPollTimer;
+        int numOfDevices;
+        QMutex sdlEventMutex;
+
+        bool forceEventsHandling;
+        bool mInitialized;
+
+        // The InputManager is in charge of deleting these devices.
+        // The InputManager gains access to these devices by the
+        // deviceConnected( Joystick * ) signal.
+
+        // Also for this list, make use of the 'which' index, for
+        // proper insertions and retrievals.
+        QList<Joystick *> sdlDeviceList;
+        QHash<int, int> deviceLocationMap;
 };
 
 #endif // SDLEVENTLOOP_H

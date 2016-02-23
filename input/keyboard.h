@@ -23,6 +23,7 @@ class Keyboard : public InputDevice {
         using InputDevice::insert;
 
         explicit Keyboard( QObject *parent = 0 );
+        ~Keyboard();
 
         InputDeviceMapping &mapping();
 

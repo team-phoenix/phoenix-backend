@@ -3,7 +3,7 @@
 InputManager::InputManager( QObject *parent )
     : QObject( parent ), Producer(), Controllable(),
       touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
-      keyboard( new Keyboard() ),
+      keyboard( new Keyboard( this ) ),
       sdlEventLoop( this ),
       inputStates{ 0 } {
 
@@ -27,18 +27,14 @@ InputManager::InputManager( QObject *parent )
 
 InputManager::~InputManager() {
 
-    sdlEventLoop.stop();
-
     // I can't guarantee that the device won't be deleted by the deviceRemoved() signal.
     // So make sure we check.
 
-    for( auto device : gamepadList ) {
+    for( InputDevice* device : gamepadList ) {
         if( device ) {
-            device->selfDestruct();
+            delete device;
         }
     }
-
-    keyboard->selfDestruct();
 
 }
 
@@ -59,7 +55,8 @@ void InputManager::libretroGetInputState( qint64 timestamp ) {
     }
 
     if( currentState == Control::PLAYING ) {
-        producerMutex.lock();
+
+        QMutexLocker locker( &producerMutex );
 
         // Clear input states
         memset( inputStates, 0, sizeof( inputStates ) );
@@ -79,8 +76,6 @@ void InputManager::libretroGetInputState( qint64 timestamp ) {
         // Currently configured to keep touched state latched for 2 frames, releasing on 3rd
         // Games I've tried don't like it only going for one then off the next
         updateTouchLatch();
-
-        producerMutex.unlock();
 
         // Touch input must be done before regular input as that drives frame production
         emit producerData( QStringLiteral( "touchinput" ), &producerMutex, &touchCoords, ( size_t )touchState, currentTime );
@@ -141,13 +136,13 @@ void InputManager::setState( Control::State state ) {
 
 void InputManager::insert( InputDevice *device ) {
 
+    QMutexLocker locker( &mutex );
+
     device->loadMapping();
-    mutex.lock();
-    auto *joystick = device;
+
+    InputDevice *joystick = device;
 
     gamepadList[ joystick->port() ] = joystick;
-
-    mutex.unlock();
 
     gamepadNameMapping.insert( joystick->name(), joystick->port() );
     QQmlEngine::setObjectOwnership( joystick, QQmlEngine::CppOwnership );
@@ -157,9 +152,9 @@ void InputManager::insert( InputDevice *device ) {
 
 void InputManager::removeAt( int index ) {
 
-    mutex.lock();
+    QMutexLocker locker( &mutex );
 
-    auto *device = static_cast<Joystick *>( gamepadList.at( index ) );
+    InputDevice *device = static_cast<Joystick *>( gamepadList.at( index ) );
     device->selfDestruct();
 
     gamepadList[ index ] = nullptr;
@@ -168,13 +163,12 @@ void InputManager::removeAt( int index ) {
         gamepadList[ 0 ] = keyboard;
     }
 
-    mutex.unlock();
 
 }
 
 void InputManager::updateTouchState( QPointF point, bool pressed ) {
     if( currentState == Control::PLAYING ) {
-        producerMutex.lock();
+        QMutexLocker locker( &mutex );
         touchCoords = point;
 
         if( pressed ) {
@@ -183,7 +177,6 @@ void InputManager::updateTouchState( QPointF point, bool pressed ) {
             touchReset = true;
         }
 
-        producerMutex.unlock();
     }
 }
 
@@ -272,7 +265,7 @@ void InputManager::emitConnectedDevices() {
 
     for( int i = 0; i < gamepadList.size(); ++i ) {
 
-        auto *inputDevice = gamepadList.at( i );
+        InputDevice *inputDevice = gamepadList.at( i );
 
         if( inputDevice ) {
             QQmlEngine::setObjectOwnership( inputDevice, QQmlEngine::CppOwnership );

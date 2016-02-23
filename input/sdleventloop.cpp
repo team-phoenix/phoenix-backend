@@ -10,7 +10,8 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
     : QObject( parent ),
       sdlPollTimer( this ),
       numOfDevices( 0 ),
-      forceEventsHandling( true ) {
+      forceEventsHandling( true ),
+      mInitialized( false ) {
 
     // Init controller db file
     Q_INIT_RESOURCE( controllerdb );
@@ -25,8 +26,6 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
 
     SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
 
-    gameControllerDBFile.close();
-
     for( int i = 0; i < Joystick::maxNumOfDevices; ++i ) {
         sdlDeviceList.append( nullptr );
     }
@@ -38,6 +37,17 @@ SDLEventLoop::SDLEventLoop( QObject *parent )
     // Load SDL
     initSDL();
 
+}
+
+SDLEventLoop::~SDLEventLoop() {
+    if ( mInitialized ) {
+        quitSDL();
+    }
+}
+
+bool SDLEventLoop::isInitialized() const
+{
+    return mInitialized;
 }
 
 void SDLEventLoop::pollEvents() {
@@ -293,8 +303,6 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
 
     SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
 
-    gameControllerDBFile.close();
-
     qCDebug( phxInput ) << "Loaded custom controller DB successfully.";
 
     // Use the default one, too
@@ -305,8 +313,6 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
     mappingData = gameControllerEmbeddedDBFile.readAll();
 
     SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
-
-    gameControllerEmbeddedDBFile.close();
 
     initSDL();
     start();
@@ -321,6 +327,7 @@ void SDLEventLoop::initSDL() {
 
     // Allow game controller event states to be automatically updated.
     SDL_GameControllerEventState( SDL_ENABLE );
+    mInitialized = true;
 
 }
 

@@ -17,6 +17,10 @@ Keyboard::Keyboard( QObject *parent )
 
 }
 
+Keyboard::~Keyboard() {
+    saveMappings();
+}
+
 void Keyboard::loadDefaultMapping() {
 
     mDeviceMapping.insert( Qt::Key_A, InputDeviceEvent::A );

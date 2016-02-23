@@ -45,7 +45,9 @@ Joystick::Joystick( const int joystickIndex, QObject *parent )
 
 }
 
+
 Joystick::~Joystick() {
+    saveMappings();
     close();
 }
 

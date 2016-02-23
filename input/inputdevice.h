@@ -50,6 +50,8 @@ class InputDevice : public QObject {
 
         explicit InputDevice( const LibretroType type, const QString name, QObject *parent );
 
+        virtual ~InputDevice();
+
         // Getters
 
         // editMode stops incoming button events from being put into the deviceStates mapping. It causes the insert()
