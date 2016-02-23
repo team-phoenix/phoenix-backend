@@ -81,7 +81,7 @@ const QVector<std::string> &LibretroVariable::choices() const {
 }
 
 bool LibretroVariable::setValue( std::string value ) {
-    m_value = std::move( value );
+    m_value = value;
     return true;
 }
 
