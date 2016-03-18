@@ -1,7 +1,6 @@
 
 #include "logging.h"
 
-
 Q_LOGGING_CATEGORY( phxCore, "phoenix.core" )
 Q_LOGGING_CATEGORY( phxControl, "phoenix.control" )
 Q_LOGGING_CATEGORY( phxControlProxy, "phoenix.controlproxy" )

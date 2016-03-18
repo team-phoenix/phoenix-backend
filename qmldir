@@ -1,0 +1,4 @@
+module PhxVideoOutput
+PhxVideoOutput 1.0
+plugin phxvideooutputplugin
+class VideoOutput

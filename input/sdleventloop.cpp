@@ -1,6 +1,7 @@
 #include "sdleventloop.h"
-
 #include "logging.h"
+#include <SDL.h>
+#include "SDL_gamecontroller.h"
 
 #include <QFile>
 #include <QMutexLocker>

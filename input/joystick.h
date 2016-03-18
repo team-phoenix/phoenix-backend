@@ -2,7 +2,7 @@
 #define JOYSTICK_H
 
 #include "backendcommon.h"
-
+#include "SDL_gamecontroller.h"
 #include "inputdevice.h"
 
 class Joystick : public InputDevice {

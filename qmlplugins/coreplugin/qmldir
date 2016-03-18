@@ -1,0 +1,2 @@
+module Phoenix.PhxCore
+plugin phxcoreplugin

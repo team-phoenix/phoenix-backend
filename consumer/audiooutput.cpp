@@ -1,5 +1,5 @@
-
 #include "audiooutput.h"
+#include "logging.h"
 
 // FIXME: Stop assuming stereo?
 const auto samplesPerFrame = 2;

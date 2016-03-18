@@ -86,4 +86,6 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         int greatestCommonDivisor( int m, int n );
 };
 
+Q_DECLARE_METATYPE( VideoOutput * )
+
 #endif // VIDEOOUTPUT_H

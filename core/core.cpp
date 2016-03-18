@@ -1,5 +1,8 @@
 #include "core.h"
 
+#include "logging.h"
+
+
 Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable(),
     pausable( false ),
     playbackSpeed( 1.0 ),

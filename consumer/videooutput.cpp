@@ -32,6 +32,9 @@ VideoOutput::~VideoOutput() {
 }
 
 void VideoOutput::consumerFormat( ProducerFormat format ) {
+
+    qDebug() << "CONSUMER FORMAT START";
+
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
@@ -67,6 +70,9 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
         framebuffer = new uchar[ newSize ]();
         framebufferSize = newSize;
     }
+
+
+    qDebug() << "CONSUMER FORMAT END";
 
     consumerFmt = format;
 }

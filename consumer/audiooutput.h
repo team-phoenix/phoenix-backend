@@ -5,10 +5,8 @@
 
 #include "consumer.h"
 #include "controllable.h"
-
+#include <samplerate.h>
 #include "audiobuffer.h"
-
-#include "logging.h"
 
 /* The AudioOutput class writes data to the default output device. Its internal buffers must be set by calling
  * slotAudioFormat() with the proper arguments before any data can be passed to it with slotAudioData(). In addition,

@@ -1,8 +1,6 @@
 #ifndef SDLEVENTLOOP_H
 #define SDLEVENTLOOP_H
 
-#include "backendcommon.h"
-
 #include "joystick.h"
 
 // The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
