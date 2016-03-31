@@ -7,5 +7,4 @@ Q_LOGGING_CATEGORY( phxControlProxy, "phoenix.controlproxy" )
 Q_LOGGING_CATEGORY( phxVideo, "phoenix.video" )
 Q_LOGGING_CATEGORY( phxAudioOutput, "phoenix.audiooutput" )
 Q_LOGGING_CATEGORY( phxInput, "phoenix.input" )
-Q_LOGGING_CATEGORY( phxLibrary, "phoenix.library" )
 

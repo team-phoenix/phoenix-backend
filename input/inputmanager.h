@@ -6,12 +6,12 @@
 #include "controllable.h"
 #include "producer.h"
 
-#include "qmlinputdevice.h"
-#include "sdleventloop.h"
-#include "inputdevice.h"
-#include "keyboard.h"
-
 #include "logging.h"
+
+class InputDevice;
+class InputDeviceEvent;
+class Keyboard;
+class SDLEventLoop;
 
 /*
  * InputManager is a QObject that manages input devices. Internally it controls the lifecycle of the SDL library and
@@ -29,8 +29,6 @@ class InputManager : public QObject, public Producer, public Controllable {
     public:
         explicit InputManager( QObject *parent = 0 );
         ~InputManager();
-
-        static void registerTypes();
 
     public slots:
         void setState( Control::State currentState ) override;
@@ -107,7 +105,7 @@ class InputManager : public QObject, public Producer, public Controllable {
 
         QMutex mutex;
 
-        SDLEventLoop sdlEventLoop;
+        SDLEventLoop *sdlEventLoop;
 
         QHash<QString, int> gamepadNameMapping;
 

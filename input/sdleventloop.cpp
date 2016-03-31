@@ -6,6 +6,8 @@
 #include <QFile>
 #include <QMutexLocker>
 
+#include "joystick.h"
+
 
 SDLEventLoop::SDLEventLoop( QObject *parent )
     : QObject( parent ),

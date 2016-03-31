@@ -1,18 +1,23 @@
 #include "inputmanager.h"
 
+#include "joystick.h"
+#include "keyboard.h"
+#include "inputdevice.h"
+#include "sdleventloop.h"
+
 InputManager::InputManager( QObject *parent )
     : QObject( parent ), Producer(), Controllable(),
       touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
       keyboard( new Keyboard( this ) ),
-      sdlEventLoop( this ),
+      sdlEventLoop( new SDLEventLoop( this ) ),
       inputStates{ 0 } {
 
     keyboard->loadMapping();
 
-    connect( &sdlEventLoop, &SDLEventLoop::deviceConnected, this, &InputManager::insert );
-    connect( &sdlEventLoop, &SDLEventLoop::deviceRemoved, this, &InputManager::removeAt );
+    connect( sdlEventLoop, &SDLEventLoop::deviceConnected, this, &InputManager::insert );
+    connect( sdlEventLoop, &SDLEventLoop::deviceRemoved, this, &InputManager::removeAt );
 
-    connect( this, &InputManager::controllerDBFileChanged, &sdlEventLoop, &SDLEventLoop::onControllerDBFileChanged );
+    connect( this, &InputManager::controllerDBFileChanged, sdlEventLoop, &SDLEventLoop::onControllerDBFileChanged );
 
     // The Keyboard will be always active in port 0,
     // unless changed by the user.
@@ -21,7 +26,7 @@ InputManager::InputManager( QObject *parent )
         gamepadList.append( nullptr );
     }
 
-    sdlEventLoop.start();
+    sdlEventLoop->start();
 
 }
 
@@ -62,7 +67,7 @@ void InputManager::libretroGetInputState( qint64 timestamp ) {
         memset( inputStates, 0, sizeof( inputStates ) );
 
         // Fetch input states
-        sdlEventLoop.pollEvents();
+        sdlEventLoop->pollEvents();
 
         for( int i = 0; i < 16; i++ ) {
             for( int j = 0; j < 16; j++ ) {
@@ -93,14 +98,6 @@ void InputManager::setGamepadControlsFrontend( const bool control ) {
     emit gamepadControlsFrontendChanged();
 }
 
-void InputManager::registerTypes() {
-    qmlRegisterType<InputManager>( "vg.phoenix.backend", 1, 0, "InputManager" );
-    qmlRegisterType<InputDeviceEvent>( "vg.phoenix.backend", 1, 0, "InputDeviceEvent" );
-    qmlRegisterType<QMLInputDevice>( "vg.phoenix.backend", 1, 0, "QMLInputDevice" );
-
-    qRegisterMetaType<InputDevice *>( "InputDevice *" );
-}
-
 void InputManager::setState( Control::State state ) {
 
     // We only care about the transition to or away from PLAYING
@@ -113,7 +110,7 @@ void InputManager::setState( Control::State state ) {
 
         if( run ) {
             qCDebug( phxInput ) << "Reading game input from keyboard";
-            sdlEventLoop.stop();
+            sdlEventLoop->stop();
             installKeyboardFilter();
 
             for( auto device : gamepadList ) {
@@ -125,7 +122,7 @@ void InputManager::setState( Control::State state ) {
 
         else {
             qCDebug( phxInput ) << "No longer reading keyboard input";
-            sdlEventLoop.start();
+            sdlEventLoop->start();
             removeKeyboardFilter();
         }
     }

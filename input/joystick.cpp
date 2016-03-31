@@ -252,7 +252,7 @@ bool Joystick::loadSDLMapping( SDL_GameController *device ) {
         if( variant.isValid() ) {
             mappingString = variant.toString();
         } else {
-            qCWarning( phxLibrary ) << "Settings for " << name()
+            qCWarning( phxInput ) << "Settings for " << name()
                                     << "are invalid. Not settings were mapped.";
             return false;
         }
