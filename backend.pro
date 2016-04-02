@@ -1,12 +1,12 @@
-#################
-# Extra targets #
-#################
+##
+## Extra targets
+##
 
     QMAKE_EXTRA_TARGETS += portable
-____________________________________________________________________
-###############
-# Qt Settings #
-###############
+
+##
+## Qt settings
+##
 
     QT += qml quick multimedia
 
@@ -16,10 +16,12 @@ ____________________________________________________________________
     CONFIG -= debug_and_release debug_and_release_target
     CONFIG += qt plugin
 
-____________________________________________________________________
-#####################
-# Compiler Settings #
-#####################
+    # FIXME: Remove once newer Qt versions make this unnecessary
+    macx: QMAKE_MAC_SDK = macosx10.11
+
+##
+## Compiler settings
+##
 
     TARGET = $$qtLibraryTarget($$TARGET)
 
@@ -35,21 +37,13 @@ ____________________________________________________________________
     RCC_DIR     = .rcc
     UI_DIR      = .gui
 
-____________________________________________________________________
-#################
-# Include Files #
-#################
-
     # Include platform specific libraries
     win32: INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
-    unix:  INCLUDEPATH += /usr/include /usr/include/SDL2                           # Linux
     macx {
-        INCLUDEPATH += /usr/local/include /usr/local/include/SDL2               # Homebrew
-        INCLUDEPATH += /usr/local/include /opt/local/include/SDL2               # MacPorts
-
-        # FIXME: Remove once newer Qt versions make this unnecessary
-        QMAKE_MAC_SDK = macosx10.11
+        INCLUDEPATH += /usr/local/include /usr/local/include/SDL2                  # Homebrew
+        INCLUDEPATH += /usr/local/include /opt/local/include/SDL2                  # MacPorts
     }
+    unix:  INCLUDEPATH += /usr/include /usr/include/SDL2                           # Linux
 
     # Include external libraries
     # ...
@@ -59,61 +53,61 @@ ____________________________________________________________________
     INCLUDEPATH += core consumer input role util
 
     HEADERS += \
-            consumer/audiobuffer.h \
-            consumer/audiooutput.h \
-            consumer/videooutput.h \
-            core/core.h \
-            core/corecontrol.h \
-            core/corecontrolproxy.h \
-            core/libretro.h \
-            core/libretrocore.h \
-            core/libretrovariable.h \
-            core/libretrosymbols.h \
-            input/keyboard.h \
-            input/inputmanager.h \
-            input/inputdevice.h \
-            input/inputdeviceevent.h \
-            input/joystick.h \
-            input/sdleventloop.h \
-            input/qmlinputdevice.h \
-            role/consumer.h \
-            role/controllable.h \
-            role/control.h \
-            role/producer.h \
-            util/controlhelper.h \
-            util/logging.h \
-            util/looper.h \
-            backendplugin.h \
-            backendcommon.h
+    consumer/audiobuffer.h \
+    consumer/audiooutput.h \
+    consumer/videooutput.h \
+    core/core.h \
+    core/corecontrol.h \
+    core/corecontrolproxy.h \
+    core/libretro.h \
+    core/libretrocore.h \
+    core/libretrovariable.h \
+    core/libretrosymbols.h \
+    input/keyboard.h \
+    input/inputmanager.h \
+    input/inputdevice.h \
+    input/inputdeviceevent.h \
+    input/joystick.h \
+    input/sdleventloop.h \
+    input/qmlinputdevice.h \
+    role/consumer.h \
+    role/controllable.h \
+    role/control.h \
+    role/producer.h \
+    util/controlhelper.h \
+    util/logging.h \
+    util/looper.h \
+    backendplugin.h \
+    backendcommon.h \
 
     SOURCES += \
-        consumer/audiobuffer.cpp \
-        consumer/audiooutput.cpp \
-        consumer/videooutput.cpp \
-        core/core.cpp \
-        core/corecontrol.cpp \
-        core/corecontrolproxy.cpp \
-        core/libretrocore.cpp \
-        core/libretrovariable.cpp \
-        core/libretrosymbols.cpp \
-        input/keyboard.cpp \
-        input/inputmanager.cpp \
-        input/joystick.cpp \
-        input/sdleventloop.cpp \
-        input/inputdevice.cpp \
-        input/inputdeviceevent.cpp \
-        input/qmlinputdevice.cpp \
-        role/consumer.cpp \
-        role/controllable.cpp \
-        role/control.cpp \
-        role/producer.cpp \
-        util/logging.cpp \
-        util/looper.cpp  \
-        backendplugin.cpp
-____________________________________________________________________
-####################
-# Linkers Settings #
-####################
+    consumer/audiobuffer.cpp \
+    consumer/audiooutput.cpp \
+    consumer/videooutput.cpp \
+    core/core.cpp \
+    core/corecontrol.cpp \
+    core/corecontrolproxy.cpp \
+    core/libretrocore.cpp \
+    core/libretrovariable.cpp \
+    core/libretrosymbols.cpp \
+    input/keyboard.cpp \
+    input/inputmanager.cpp \
+    input/joystick.cpp \
+    input/sdleventloop.cpp \
+    input/inputdevice.cpp \
+    input/inputdeviceevent.cpp \
+    input/qmlinputdevice.cpp \
+    role/consumer.cpp \
+    role/controllable.cpp \
+    role/control.cpp \
+    role/producer.cpp \
+    util/logging.cpp \
+    util/looper.cpp  \
+    backendplugin.cpp \
+
+##
+## Linker settings
+##
 
     LIBS += -LC:/msys64/mingw64/lib
 
@@ -122,28 +116,18 @@ ____________________________________________________________________
     win32: LIBS += -lmingw32 -lSDL2main
     LIBS += -lSDL2
 
-    # Secret Rabbit Code ( libsamplerate )
+    # Secret Rabbit Code (libsamplerate)
     LIBS += -lsamplerate
-____________________________________________________________________
-######################
-# Copy File Commands #
-######################
 
+##
+## qmldir file
+##
+
+    # Copy the qmldir file to the output folder
     !equals(_PRO_FILE_PWD_, $$OUT_PWD) {
-        copy_qmldir.target = $$OUT_PWD/$$DESTDIR/qmldir
-        copy_qmldir.depends = $$_PRO_FILE_PWD_/qmldir
-        copy_qmldir.commands = $(COPY_FILE) \"$$replace(copy_qmldir.depends, /, $$QMAKE_DIR_SEP)\" \"$$replace(copy_qmldir.target, /, $$QMAKE_DIR_SEP)\"
-        QMAKE_EXTRA_TARGETS += copy_qmldir
-        PRE_TARGETDEPS += $$copy_qmldir.target
+        qmldir.target = $$OUT_PWD/$$DESTDIR/qmldir
+        qmldir.depends = $$_PRO_FILE_PWD_/qmldir
+        qmldir.commands = $(COPY_FILE) \"$$replace(qmldir.depends, /, $$QMAKE_DIR_SEP)\" \"$$replace(qmldir.target, /, $$QMAKE_DIR_SEP)\"
+        QMAKE_EXTRA_TARGETS += qmldir
+        PRE_TARGETDEPS += $$qmldir.target
     }
-____________________________________________________________________
-#########################
-# Make Install Commands #
-#########################
-
-    qmldir.files = qmldir
-    installPath = $$[QT_INSTALL_QML]/$$replace(uri, \\., /)
-    qmldir.path = $$installPath
-    target.path = $$installPath
-    INSTALLS += target qmldir
-____________________________________________________________________
