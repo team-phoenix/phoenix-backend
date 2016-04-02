@@ -62,10 +62,10 @@ class CoreControlProxy : public QObject {
         // Producers and consumers that live in QML (and the QML thread)
 
         // Needed by: "libretro"
-        Q_PROPERTY( QObject *videoOutput READ getVideoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
+        Q_PROPERTY( VideoOutput *videoOutput READ getVideoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
 
         // Needed by: "libretro"
-        Q_PROPERTY( QObject *inputManager READ getInputManager WRITE setInputManager NOTIFY inputManagerChanged )
+        Q_PROPERTY( InputManager *inputManager READ getInputManager WRITE setInputManager NOTIFY inputManagerChanged )
 
         // Proxy
         Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
@@ -124,8 +124,8 @@ class CoreControlProxy : public QObject {
     private slots:
         // CoreControl property proxy (Step 1: from anywhere)
         // These change CoreControl's state ...once it gets around to it
-        void setVideoOutput( QObject *videoOutput );
-        void setInputManager( QObject *inputManager );
+        void setVideoOutput( VideoOutput *videoOutput );
+        void setInputManager( InputManager *inputManager );
         void setPlaybackSpeed( qreal playbackSpeed );
         void setSource( QVariantMap sourceQVariantMap );
         void setVolume( qreal volume );

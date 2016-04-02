@@ -79,16 +79,12 @@ void CoreControlProxy::reset() {
 
 // Private slots, cannot be called from QML. Use the respective properties instead
 
-void CoreControlProxy::setVideoOutput( QObject *videoOutput ) {
-    VideoOutput *obj = dynamic_cast<VideoOutput *>( videoOutput );
-    Q_ASSERT_X( obj, Q_FUNC_INFO, "QObject * is not of type VideoOutput *" );
-    emit videoOutputChangedProxy( obj );
+void CoreControlProxy::setVideoOutput( VideoOutput *videoOutput ) {
+    emit videoOutputChangedProxy( videoOutput );
 }
 
-void CoreControlProxy::setInputManager( QObject *inputManager ) {
-    InputManager *obj = dynamic_cast<InputManager *>( inputManager );
-    Q_ASSERT_X( obj, Q_FUNC_INFO, "QObject * is not of type InputManager *" );
-    emit inputManagerChangedProxy( obj );
+void CoreControlProxy::setInputManager( InputManager *inputManager ) {
+    emit inputManagerChangedProxy( inputManager );
 }
 
 void CoreControlProxy::setPlaybackSpeed( qreal playbackSpeed ) {
