@@ -1,7 +1,7 @@
 #ifndef CONTROLQMLENUM_H
 #define CONTROLQMLENUM_H
 
-#include "backendcommon.h"
+#include <QObject>
 
 /*
  * Control cannot be a QObject, so this helper class was created so that the enumeration could be used within QML.

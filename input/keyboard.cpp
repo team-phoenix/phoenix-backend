@@ -1,6 +1,8 @@
 #include "keyboard.h"
 
 #include <QKeySequence>
+#include <QSettings>
+#include <QFile>
 
 Keyboard::Keyboard( QObject *parent )
     : InputDevice( LibretroType::DigitalGamepad, "Keyboard", parent ) {

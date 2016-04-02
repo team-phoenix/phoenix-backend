@@ -1,8 +1,8 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#include "backendcommon.h"
 #include <QDebug>
+#include <QLoggingCategory>
 
 /* This is used for debugging Phoenix. Instead of using qDebug(), developers should use qCDebug(%category%), such as
  * qCDebug(phxLibrary). The category used for debugging should be relevant to whatever class is being worked on.

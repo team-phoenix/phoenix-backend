@@ -1,12 +1,8 @@
 #ifndef INPUTMANAGER_H
 #define INPUTMANAGER_H
 
-#include "backendcommon.h"
-
 #include "controllable.h"
 #include "producer.h"
-
-#include "logging.h"
 
 class InputDevice;
 class InputDeviceEvent;

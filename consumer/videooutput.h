@@ -1,16 +1,18 @@
 #ifndef VIDEOOUTPUT_H
 #define VIDEOOUTPUT_H
 
-#include "backendcommon.h"
-
 #include "controllable.h"
 #include "consumer.h"
 #include "logging.h"
+
+#include <QQuickItem>
 
 /*
  * VideoOutput is a consumer of video data as provided by Core via CoreControl. As it's a QML item, it will always live
  * in the QML thread.
  */
+
+class QSGTexture;
 
 class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         Q_OBJECT

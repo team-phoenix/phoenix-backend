@@ -51,6 +51,9 @@
  *     CoreControl::connectCoreForwarder();
  */
 
+#include "videooutput.h"
+#include "inputmanager.h"
+
 class CoreControlProxy : public QObject {
         Q_OBJECT
 

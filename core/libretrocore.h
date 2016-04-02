@@ -7,7 +7,11 @@
 #include "libretro.h"
 #include "libretrosymbols.h"
 #include "libretrovariable.h"
-#include "logging.h"
+
+#include <QLibrary>
+#include <QFile>
+#include <QDir>
+#include <QFileInfo>
 
 // Since each buffer holds one frame, depending on core, 30 frames = ~500ms
 #define POOL_SIZE 30

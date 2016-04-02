@@ -1,8 +1,6 @@
 #ifndef QMLINPUTDEVICE_H
 #define QMLINPUTDEVICE_H
 
-#include "backendcommon.h"
-
 #include "inputdevice.h"
 
 // This QMLInputDevice is responsible for controlling the frontend, such as selecting games, and

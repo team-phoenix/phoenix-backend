@@ -1,4 +1,7 @@
 #include "consumer.h"
+#include "logging.h"
+
+#include <QElapsedTimer>
 
 Consumer::Consumer():
     consumerFmt() {

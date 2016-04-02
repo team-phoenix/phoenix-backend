@@ -1,11 +1,7 @@
 #ifndef CONSUMER_H
 #define CONSUMER_H
 
-#include "backendcommon.h"
-
 #include "producer.h"
-
-#include "logging.h"
 
 /*
  * Functionality and structures common to all consumers.

@@ -4,6 +4,14 @@
 #include "keyboard.h"
 #include "inputdevice.h"
 #include "sdleventloop.h"
+#include "logging.h"
+
+#include <QDateTime>
+#include <QQmlEngine>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QGuiApplication>
+#include <QWindow>
 
 InputManager::InputManager( QObject *parent )
     : QObject( parent ), Producer(), Controllable(),

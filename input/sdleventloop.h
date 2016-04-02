@@ -1,13 +1,14 @@
 #ifndef SDLEVENTLOOP_H
 #define SDLEVENTLOOP_H
 
-class Joystick;
-
-// The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
 #include <QObject>
 #include <QTimer>
 #include <QMutex>
 #include <QHash>
+
+class Joystick;
+
+// The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
 
 class SDLEventLoop : public QObject {
         Q_OBJECT

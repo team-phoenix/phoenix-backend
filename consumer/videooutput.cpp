@@ -1,5 +1,11 @@
 #include "videooutput.h"
 
+#include <QSGTexture>
+#include <QSGSimpleTextureNode>
+#include <QDateTime>
+#include <QQuickWindow>
+#include <QOpenGLContext>
+
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(), Controllable(),
     framebuffer( nullptr ),
     framebufferSize( 0 ),

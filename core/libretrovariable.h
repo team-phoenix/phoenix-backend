@@ -2,8 +2,11 @@
 #define LIBRETROVARIABLE_H
 
 #include "backendcommon.h"
-
 #include "libretro.h"
+
+#include <string>
+
+#include <QVector>
 
 // Container class for a libretro core variable
 class LibretroVariable {

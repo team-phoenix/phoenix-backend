@@ -83,9 +83,8 @@ ____________________________________________________________________
             util/controlhelper.h \
             util/logging.h \
             util/looper.h \
-            backendplugin.h
-
-        PRECOMPILED_HEADER += backendcommon.h
+            backendplugin.h \
+            backendcommon.h
 
     SOURCES += \
         consumer/audiobuffer.cpp \

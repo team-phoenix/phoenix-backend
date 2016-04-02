@@ -1,5 +1,5 @@
 #include "core.h"
-
+#include "controlhelper.h"
 #include "logging.h"
 
 

@@ -1,4 +1,10 @@
 #include "looper.h"
+#include "logging.h"
+
+#include <QElapsedTimer>
+#include <QCoreApplication>
+#include <QDateTime>
+#include <QThread>
 
 LooperPrivate::LooperPrivate( QObject *parent ): QObject( parent ) {
 }

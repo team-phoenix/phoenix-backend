@@ -5,9 +5,12 @@
 #include "core.h"
 #include "control.h"
 #include "libretrocore.h"
+#include "videooutput.h"
 
 #include "inputmanager.h"
 #include "qmlinputdevice.h"
+
+#include <qqml.h>
 
 void CorePlugin::registerTypes( const char *uri ) {
     qmlRegisterType<VideoOutput>( uri, 1, 0, "VideoOutput" );

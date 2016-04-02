@@ -1,6 +1,10 @@
 #include "corecontrolproxy.h"
+#include "logging.h"
 
 #include <type_traits>
+
+#include <QThread>
+#include <QCoreApplication>
 #include <QQmlApplicationEngine>
 
 CoreControlProxy::CoreControlProxy( QObject *parent ) : QObject( parent ),

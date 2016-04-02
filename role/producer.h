@@ -1,7 +1,9 @@
 #ifndef PRODUCER_H
 #define PRODUCER_H
 
-#include "backendcommon.h"
+#include <QAudioFormat>
+#include <QImage>
+#include <QMutex>
 
 /*
  * Functionality and structures common to all producers.

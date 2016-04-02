@@ -1,5 +1,8 @@
 #include "joystick.h"
 
+#include <QStringBuilder>
+#include <QSettings>
+
 const int Joystick::maxNumOfDevices = 8;
 
 Joystick::Joystick( const int joystickIndex, QObject *parent )

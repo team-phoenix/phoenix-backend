@@ -3,16 +3,8 @@
 
 #ifdef __cplusplus
 
-#include <QtCore>
-#include <QtQml>
-#include <QtQuick>
-#include <QtMultimedia>
-
-#include <atomic>
-#include <memory>
-#include <string>
-
-#include <math.h>
+#include <QObject>
+#include <QMap>
 
 typedef QMap<QString, QString> QStringMap;
 Q_DECLARE_METATYPE( QStringMap )
