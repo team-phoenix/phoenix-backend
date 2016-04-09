@@ -1,9 +1,12 @@
 #ifndef SDLEVENTLOOP_H
 #define SDLEVENTLOOP_H
 
-#include "backendcommon.h"
+#include <QObject>
+#include <QTimer>
+#include <QMutex>
+#include <QHash>
 
-#include "joystick.h"
+class Joystick;
 
 // The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
 

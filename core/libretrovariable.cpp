@@ -1,5 +1,7 @@
 #include "libretrovariable.h"
 
+#include <QDebug>
+
 QDebug operator<<( QDebug debug, const LibretroVariable &var ) {
 
     // join a QVector of std::strings. (Really, C++ ?)

@@ -1,10 +1,9 @@
 #ifndef LOOPER_H
 #define LOOPER_H
 
-#include "backendcommon.h"
-
 #include "controllable.h"
-#include "logging.h"
+
+#include <QObject>
 
 /*
  * An ultra-high precision timer that offers far more granularity than anything Qt has to offer. Tests have shown it to

@@ -3,8 +3,6 @@
 
 #include "backendcommon.h"
 
-#include "logging.h"
-
 #include "controllable.h"
 #include "producer.h"
 #include "consumer.h"

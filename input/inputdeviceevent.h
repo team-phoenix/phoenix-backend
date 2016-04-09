@@ -1,9 +1,9 @@
 #ifndef INPUTDEVICEEVENT_H
 #define INPUTDEVICEEVENT_H
 
-#include "backendcommon.h"
-
 #include "libretro.h"
+
+#include <QObject>
 
 class InputDevice;
 

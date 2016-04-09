@@ -1,5 +1,11 @@
 #include "videooutput.h"
 
+#include <QSGTexture>
+#include <QSGSimpleTextureNode>
+#include <QDateTime>
+#include <QQuickWindow>
+#include <QOpenGLContext>
+
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(), Controllable(),
     framebuffer( nullptr ),
     framebufferSize( 0 ),
@@ -32,6 +38,7 @@ VideoOutput::~VideoOutput() {
 }
 
 void VideoOutput::consumerFormat( ProducerFormat format ) {
+
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
@@ -67,6 +74,9 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
         framebuffer = new uchar[ newSize ]();
         framebufferSize = newSize;
     }
+
+
+    qDebug() << "CONSUMER FORMAT END";
 
     consumerFmt = format;
 }

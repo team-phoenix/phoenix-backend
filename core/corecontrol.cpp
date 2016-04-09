@@ -1,6 +1,28 @@
 #include "corecontrol.h"
 
+#include "controllable.h"
+
+// Timers that drive frame production (controllers)
+#include "looper.h"
+
+// Producers
+#include "producer.h"
+#include "inputmanager.h"
+#include "core.h"
+#include "libretrocore.h"
+
+// Consumers
+#include "consumer.h"
+#include "audiooutput.h"
+#include "videooutput.h"
+
+// Misc
+#include "logging.h"
+
 // Public
+#include <QThread>
+#include <QDateTime>
+#include <memory>
 
 CoreControl::CoreControl( QObject *parent ) : QObject( parent ), Control(),
     threadChildren(),

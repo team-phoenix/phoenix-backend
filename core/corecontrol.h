@@ -2,26 +2,7 @@
 #define CORECONTROL_H
 
 #include "backendcommon.h"
-
 #include "control.h"
-#include "controllable.h"
-
-// Timers that drive frame production (controllers)
-#include "looper.h"
-
-// Producers
-#include "producer.h"
-#include "inputmanager.h"
-#include "core.h"
-#include "libretrocore.h"
-
-// Consumers
-#include "consumer.h"
-#include "audiooutput.h"
-#include "videooutput.h"
-
-// Misc
-#include "logging.h"
 
 /*
  * CoreControl is a control object that manages the execution of an emulation session via an instance of Core.
@@ -52,6 +33,12 @@
  * and methods valid for STOPPED may be called during UNLOADING as these are transitional states.
  *
  */
+
+class VideoOutput;
+class InputManager;
+class AudioOutput;
+class Looper;
+class Core;
 
 class CoreControl : public QObject, public Control {
         Q_OBJECT

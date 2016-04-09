@@ -9,6 +9,8 @@
 
 #include "producer.h"
 
+#include <memory>
+
 // InputDevice represents an abstract controller.
 
 // In normal situations, you only need to

@@ -41,7 +41,7 @@
 #ifndef AUDIOBUFFER_H
 #define AUDIOBUFFER_H
 
-#include "backendcommon.h"
+#include <QIODevice>
 
 class AudioBuffer : public QIODevice {
         Q_OBJECT

@@ -1,10 +1,8 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
-#include "backendcommon.h"
-
 // Helper for QML and printing enum values
-#include "controlhelper.h"
+#include <QObject>
 
 /*
  * Functionality and structures common to all control classes.

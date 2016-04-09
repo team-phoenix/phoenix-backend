@@ -1,10 +1,13 @@
 #include "sdleventloop.h"
-
 #include "logging.h"
+#include "joystick.h"
+
+#include <SDL_gamecontroller.h>
+#include <SDL.h>
 
 #include <QFile>
 #include <QMutexLocker>
-
+#include <QRegularExpression>
 
 SDLEventLoop::SDLEventLoop( QObject *parent )
     : QObject( parent ),

@@ -1,4 +1,8 @@
 #include "libretrocore.h"
+#include "logging.h"
+
+#include <QDateTime>
+#include <QStringBuilder>
 
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // Protected
@@ -254,6 +258,7 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
         }
 
         QMutexLocker locker( mutex );
+        Q_UNUSED( locker );
 
         // Copy incoming input data
         int16_t *newInputStates = ( int16_t * )data;

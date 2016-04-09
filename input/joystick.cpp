@@ -1,5 +1,8 @@
 #include "joystick.h"
 
+#include <QStringBuilder>
+#include <QSettings>
+
 const int Joystick::maxNumOfDevices = 8;
 
 Joystick::Joystick( const int joystickIndex, QObject *parent )
@@ -252,7 +255,7 @@ bool Joystick::loadSDLMapping( SDL_GameController *device ) {
         if( variant.isValid() ) {
             mappingString = variant.toString();
         } else {
-            qCWarning( phxLibrary ) << "Settings for " << name()
+            qCWarning( phxInput ) << "Settings for " << name()
                                     << "are invalid. Not settings were mapped.";
             return false;
         }

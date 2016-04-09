@@ -1,9 +1,8 @@
 #ifndef JOYSTICK_H
 #define JOYSTICK_H
 
-#include "backendcommon.h"
-
 #include "inputdevice.h"
+#include "SDL_gamecontroller.h"
 
 class Joystick : public InputDevice {
 

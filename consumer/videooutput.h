@@ -1,16 +1,18 @@
 #ifndef VIDEOOUTPUT_H
 #define VIDEOOUTPUT_H
 
-#include "backendcommon.h"
-
 #include "controllable.h"
 #include "consumer.h"
 #include "logging.h"
+
+#include <QQuickItem>
 
 /*
  * VideoOutput is a consumer of video data as provided by Core via CoreControl. As it's a QML item, it will always live
  * in the QML thread.
  */
+
+class QSGTexture;
 
 class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         Q_OBJECT
@@ -85,5 +87,7 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
         int greatestCommonDivisor( int m, int n );
 };
+
+Q_DECLARE_METATYPE( VideoOutput * )
 
 #endif // VIDEOOUTPUT_H
