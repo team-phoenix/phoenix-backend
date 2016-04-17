@@ -1,3 +1,4 @@
+#pragma once
 #ifndef LOOPER_H
 #define LOOPER_H
 

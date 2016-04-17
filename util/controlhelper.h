@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CONTROLQMLENUM_H
 #define CONTROLQMLENUM_H
 

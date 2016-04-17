@@ -1,3 +1,4 @@
+#pragma once
 #ifndef LIBRETROSYMBOLS_H
 #define LIBRETROSYMBOLS_H
 

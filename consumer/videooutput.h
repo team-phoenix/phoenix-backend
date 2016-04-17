@@ -1,3 +1,4 @@
+#pragma once
 #ifndef VIDEOOUTPUT_H
 #define VIDEOOUTPUT_H
 

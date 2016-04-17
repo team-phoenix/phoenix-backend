@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CORECONTROL_H
 #define CORECONTROL_H
 

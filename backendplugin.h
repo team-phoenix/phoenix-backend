@@ -1,3 +1,4 @@
+#pragma once
 #ifndef COREPLUGIN_H
 #define COREPLUGIN_H
 

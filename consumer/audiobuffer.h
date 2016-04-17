@@ -37,7 +37,7 @@
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
+#pragma once
 #ifndef AUDIOBUFFER_H
 #define AUDIOBUFFER_H
 

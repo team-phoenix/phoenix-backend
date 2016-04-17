@@ -1,3 +1,4 @@
+#pragma once
 #ifndef INPUTDEVICEEVENT_H
 #define INPUTDEVICEEVENT_H
 

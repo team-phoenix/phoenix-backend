@@ -1,3 +1,4 @@
+#pragma once
 #ifndef LIBRETROCORE_H
 #define LIBRETROCORE_H
 

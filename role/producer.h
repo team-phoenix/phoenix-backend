@@ -1,3 +1,4 @@
+#pragma once
 #ifndef PRODUCER_H
 #define PRODUCER_H
 

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef BACKENDCOMMON_H
 #define BACKENDCOMMON_H
 

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef LIBRETROVARIABLE_H
 #define LIBRETROVARIABLE_H
 

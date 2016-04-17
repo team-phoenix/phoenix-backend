@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CORECONTROLPROXY_H
 #define CORECONTROLPROXY_H
 

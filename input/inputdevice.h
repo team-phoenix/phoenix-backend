@@ -1,3 +1,4 @@
+#pragma once
 #ifndef INPUTDEVICE_H
 #define INPUTDEVICE_H
 
