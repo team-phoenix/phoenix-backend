@@ -1,30 +1,17 @@
 #include "keyboard.h"
+#include "keyboardevent.h"
+#include "logging.h"
+#include "gamepadmanager.h"
 
 #include <QKeySequence>
 #include <QSettings>
 #include <QFile>
 
-Keyboard::Keyboard( QObject *parent )
-    : InputDevice( LibretroType::DigitalGamepad, "Keyboard", parent ) {
-
-    setPort( -1 );
-    connect( this, &Keyboard::resetMappingChanged, this, [ this ] {
-
-        if( resetMapping() ) {
-            mDeviceMapping.clear();
-            loadDefaultMapping();
-        }
-
-    } );
-
-}
-
-Keyboard::~Keyboard() {
-    saveMappings();
-}
+using namespace Input;
 
 void Keyboard::loadDefaultMapping() {
 
+    /*
     mDeviceMapping.insert( Qt::Key_A, InputDeviceEvent::A );
     mDeviceMapping.insert( Qt::Key_D, InputDeviceEvent::B );
     mDeviceMapping.insert( Qt::Key_W, InputDeviceEvent::Y );
@@ -46,26 +33,11 @@ void Keyboard::loadDefaultMapping() {
         auto value = mDeviceMapping.value( key );
         mappingRef().insert( InputDeviceEvent::toString( value ), QKeySequence( key ).toString( QKeySequence::NativeText ) );
     }
-
-
-}
-
-void Keyboard::insert( const int &event, int16_t pressed ) {
-
-    // qDebug() << editMode();
-    if( editMode() ) {
-        emit editModeEvent( event, pressed, InputDeviceEvent::EditEventType::ButtonEvent );
-        return;
-    }
-
-    InputDeviceEvent::Event newEvent = mDeviceMapping.value( event, InputDeviceEvent::Unknown );
-
-    if( newEvent != InputDeviceEvent::Unknown ) {
-        InputDevice::insert( newEvent, pressed );
-    }
+*/
 
 }
 
+/*
 bool Keyboard::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
     Q_UNUSED( type );
 
@@ -102,15 +74,16 @@ bool Keyboard::setMappings( const QVariant key, const QVariant newMapping, const
     return !collision;
 
 }
+*/
+/*
 
 bool Keyboard::loadMapping() {
-
     QSettings settings;
 
     if( QFile::exists( settings.fileName() ) ) {
 
         settings.beginGroup( QStringLiteral( "Input" ) );
-        auto mapping = settings.value( name() );
+        auto mapping = settings.value( mName );
 
         auto splitValues = mapping.toString().split( "," );
 
@@ -124,7 +97,7 @@ bool Keyboard::loadMapping() {
             auto eventString = valueList.at( 0 );
             auto mapping = valueList.at( 1 ).toInt();
 
-            mDeviceMapping.insert( mapping, InputDeviceEvent::toEvent( eventString ) );
+            //mDeviceMapping.insert( mapping, InputDeviceEvent::toEvent( eventString ) );
             mappingRef().insert( eventString, QKeySequence( mapping ).toString( QKeySequence::NativeText ) );
 
         }
@@ -139,6 +112,21 @@ bool Keyboard::loadMapping() {
 
     return true;
 
+    return true;
+
+}
+
+
+
+void Keyboard::insert( const KeyboardEvent &event) {
+    Q_UNUSED( event )
+ if ( mDeviceMapping.value( event.type(), InputDeviceEvent::Unknown ) != InputDeviceEvent::Unknown ) {
+   //     InputDevice::insert( event );
+   // }
+}
+
+void Keyboard::insert( KeyboardEvent &&event ) {
+    insert( event );
 }
 
 void Keyboard::saveMappings() {
@@ -156,7 +144,7 @@ void Keyboard::saveMappings() {
 
 
     for( auto &key : mDeviceMapping.keys() ) {
-        auto value = mDeviceMapping.value( key );
+        //auto value = mDeviceMapping.value( key );
         mappingString += InputDeviceEvent::toString( value ) + QStringLiteral( ":" )
                          + QString::number( key ) + QStringLiteral( "," );
 
@@ -167,3 +155,4 @@ void Keyboard::saveMappings() {
     qDebug() << settings.fileName();
 
 }
+*/

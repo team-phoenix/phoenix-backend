@@ -1,57 +1,39 @@
-#ifndef SDLEVENTLOOP_H
-#define SDLEVENTLOOP_H
+#pragma once
+
+#include "joystickevent.h"
+#include "SDL_gamecontroller.h"
+#include "gamepad.h"
 
 #include <QObject>
-#include <QTimer>
-#include <QMutex>
 #include <QHash>
 
+
+
+class Gamepad;
 class Joystick;
 
 // The SDLEventLoop's job is to poll for button states and to emit signals as devices are connected or disconnected.
 
 class SDLEventLoop : public QObject {
         Q_OBJECT
-
     public:
-        explicit SDLEventLoop( QObject *parent = 0 );
+        explicit SDLEventLoop( QObject *parent = nullptr );
         ~SDLEventLoop();
 
-        bool isInitialized() const;
-
     public slots:
-        void pollEvents();
-
-        // FIXME: Delete, we use external events to drive the loop now
-        void start();
-        void stop();
-
+        void poll( qint64 timeStamp = 0 );
         void onControllerDBFileChanged( QString controllerDBFile );
 
     signals:
-        void deviceConnected( Joystick *joystick );
-        void deviceRemoved( int which );
+        void gamepadAdded( const Gamepad * );
+        void gamepadRemoved( const Gamepad *);
 
     private:
-        void initSDL();
-        void quitSDL();
+
+        QHash<qint32, Gamepad *> m_gamepadsMap;
 
 
-        QTimer sdlPollTimer;
-        int numOfDevices;
-        QMutex sdlEventMutex;
+        void init( const QByteArray &mapData );
+        void deinit();
 
-        bool forceEventsHandling;
-        bool mInitialized;
-
-        // The InputManager is in charge of deleting these devices.
-        // The InputManager gains access to these devices by the
-        // deviceConnected( Joystick * ) signal.
-
-        // Also for this list, make use of the 'which' index, for
-        // proper insertions and retrievals.
-        QList<Joystick *> sdlDeviceList;
-        QHash<int, int> deviceLocationMap;
 };
-
-#endif // SDLEVENTLOOP_H

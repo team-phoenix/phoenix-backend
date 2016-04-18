@@ -1,20 +1,24 @@
 #include "backendplugin.h"
 
-#include "corecontrolproxy.h"
-#include "corecontrol.h"
+#include "gameconsoleproxy.h"
+#include "gameconsole.h"
 #include "core.h"
 #include "control.h"
 #include "libretrocore.h"
 #include "videooutput.h"
 
-#include "inputmanager.h"
-#include "qmlinputdevice.h"
+#include "keyboard.h"
 
-#include <qqml.h>
+#include "gamepadmanager.h"
+#include "inputdevice.h"
+
+#include <QtQml>
+
+using namespace Input;
 
 void CorePlugin::registerTypes( const char *uri ) {
     qmlRegisterType<VideoOutput>( uri, 1, 0, "VideoOutput" );
-    qmlRegisterType<CoreControlProxy>( uri, 1, 0, "CoreControl" );
+    qmlRegisterType<GameConsoleProxy>( uri, 1, 0, "GameConsole" );
     qmlRegisterUncreatableType<ControlHelper>( uri, 1, 0, "Control", "Control or its subclasses cannot be instantiated from QML." );
 
     qRegisterMetaType<Control::State>( "Control::State" );
@@ -24,11 +28,6 @@ void CorePlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<ProducerFormat>( "ProducerFormat");
     qRegisterMetaType<VideoOutput *>( "VideoOutput *");
 
-    qmlRegisterType<InputManager>( uri, 1, 0, "InputManager" );
-    qmlRegisterType<InputDeviceEvent>( uri, 1, 0, "InputDeviceEvent" );
-    qmlRegisterType<QMLInputDevice>( uri, 1, 0, "QMLInputDevice" );
-
-    qRegisterMetaType<InputDevice *>( "InputDevice *" );
 }
 
 

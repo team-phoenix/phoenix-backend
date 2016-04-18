@@ -12,10 +12,6 @@ Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Contr
     volume( 1.0 ) {
 }
 
-Core::~Core() {
-
-}
-
 // Slots
 
 void Core::setPlaybackSpeed( qreal playbackSpeed ) {

@@ -1,20 +1,21 @@
 #include "joystick.h"
 
+/*
 #include <QStringBuilder>
 #include <QSettings>
 
 const int Joystick::maxNumOfDevices = 8;
 
-Joystick::Joystick( const int joystickIndex, QObject *parent )
-    : InputDevice( LibretroType::DigitalGamepad, parent ),
+Joystick::Joystick( int port )
+    : InputDevice( port, GamepadType::Digital ),
       qmlDeadZone( 12000 ),
       qmlAnalogMode( false ),
       mSDLButtonVector( SDL_CONTROLLER_BUTTON_MAX, SDL_CONTROLLER_BUTTON_INVALID ),
-      mSDLAxisVector( SDL_CONTROLLER_AXIS_MAX, SDL_CONTROLLER_BUTTON_INVALID ) {
+      mSDLAxisVector( SDL_CONTROLLER_AXIS_MAX, SDL_CONTROLLER_BUTTON_INVALID )
+{
+    mName = SDL_GameControllerName( device );
 
-    setPort( joystickIndex );
-    device = SDL_GameControllerOpen( joystickIndex );
-    setName( SDL_GameControllerName( device ) );
+    device = SDL_GameControllerOpen( port );
     qmlInstanceID = SDL_JoystickInstanceID( SDL_GameControllerGetJoystick( device ) );
 
     auto *sdlJoystick = SDL_GameControllerGetJoystick( device );
@@ -36,6 +37,7 @@ Joystick::Joystick( const int joystickIndex, QObject *parent )
     // doesn't assign a proper mapping value certain controller buttons.
     // This means that we have to hold the mapping ourselves and do it correctly.
 
+
     connect( this, &Joystick::resetMappingChanged, this, [ this ] {
         if( resetMapping() )
             loadSDLMapping( sdlDevice() );
@@ -50,7 +52,7 @@ Joystick::Joystick( const int joystickIndex, QObject *parent )
 
 
 Joystick::~Joystick() {
-    saveMappings();
+    //saveMappings();
     close();
 }
 
@@ -144,20 +146,14 @@ void Joystick::close() {
     SDL_GameControllerClose( device );
 }
 
-bool Joystick::loadMapping() {
-
-    return false;
-
-
-}
 
 void Joystick::emitEditModeEvent( int event, int state, const InputDeviceEvent::EditEventType type ) {
     emit editModeEvent( event, state, type );
 }
-
 void Joystick::emitInputDeviceEvent( InputDeviceEvent::Event event, int state ) {
     emit inputDeviceEvent( event, state );
 }
+
 
 bool Joystick::hasDigitalTriggers( const QString &guid ) {
 
@@ -188,6 +184,7 @@ void Joystick::fillSDLArrays( const QString &key, const int &numberValue ) {
     }
 }
 
+
 bool Joystick::setMappings( const QVariant key, const QVariant newMapping, const InputDeviceEvent::EditEventType type ) {
     mappingRef().insert( key.toString(), newMapping );
 
@@ -202,6 +199,8 @@ bool Joystick::setMappings( const QVariant key, const QVariant newMapping, const
     return true;
 
 }
+
+
 
 void Joystick::saveMappings() {
 
@@ -286,12 +285,13 @@ bool Joystick::loadSDLMapping( SDL_GameController *device ) {
         auto prefix = value.at( 0 );
         int numberValue = value.remove( prefix ).toInt();
 
-        mappingRef().insert( key, numberValue );
+        //mappingRef().insert( key, numberValue );
 
         fillSDLArrays( key, numberValue );
 
     }
 
-    return !mapping().isEmpty();
+    return false;//!mapping().isEmpty();
 }
 
+*/

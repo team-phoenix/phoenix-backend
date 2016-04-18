@@ -7,6 +7,9 @@
 #include "producer.h"
 #include "consumer.h"
 
+#include <QUrl>
+#include <QDebug>
+
 /*
  * Superclass for all core plugins used by Phoenix. Defines a state machine similar to how a real game console operates
  * and presents an interface to manipulate this state machine. Games are generally loaded by calling setSource() then load().
@@ -28,7 +31,7 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
 
     public:
         explicit Core( QObject *parent = 0 );
-        virtual ~Core();
+        virtual ~Core() = default;
 
     signals:
         PRODUCER_SIGNALS
@@ -51,12 +54,18 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         virtual void setVolume( qreal volume );
         virtual void setSource( QStringMap source );
 
+        virtual void setCoreSrc( QString _core ) = 0;
+
+        virtual void setGameSrc( QString _game ) = 0;
+
         // State changers
         virtual void load();
         virtual void play();
         virtual void pause();
         virtual void reset();
         virtual void stop();
+
+
 
     protected:
         // Property notifier helper

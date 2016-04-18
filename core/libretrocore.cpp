@@ -45,8 +45,9 @@ void LibretroCore::load() {
     Core::setState( Control::LOADING );
 
     // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
-    coreFileInfo.setFile( source[ "core" ] );
-    gameFileInfo.setFile( source[ "game" ] );
+    qDebug() << coreSrc();
+    coreFileInfo.setFile( coreSrc() );
+    gameFileInfo.setFile( gameSrc() );
     systemPathInfo.setFile( source[ "systemPath" ] );
     savePathInfo.setFile( source[ "savePath" ] );
 
@@ -71,10 +72,10 @@ void LibretroCore::load() {
 
     qDebug() << "";
     qCDebug( phxCore ) << "Now loading:";
-    qCDebug( phxCore ) << "Core        :" << source[ "core" ];
-    qCDebug( phxCore ) << "Game        :" << source[ "game" ];
-    qCDebug( phxCore ) << "System path :" << source["systemPath"];
-    qCDebug( phxCore ) << "Save path   :" << source["savePath"];
+    qCDebug( phxCore ) << "Core        :" << coreFileInfo.fileName();
+    qCDebug( phxCore ) << "Game        :" << gameFileInfo.fileName();
+    qCDebug( phxCore ) << "System path :" << systemPath.path();
+    qCDebug( phxCore ) << "Save path   :" << savePath.path();
     qDebug() << "";
 
     // Set defaults that'll get overwritten as the core loads if necessary

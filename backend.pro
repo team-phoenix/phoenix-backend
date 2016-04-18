@@ -57,19 +57,14 @@
     consumer/audiooutput.h \
     consumer/videooutput.h \
     core/core.h \
-    core/corecontrol.h \
-    core/corecontrolproxy.h \
     core/libretro.h \
     core/libretrocore.h \
     core/libretrovariable.h \
     core/libretrosymbols.h \
     input/keyboard.h \
-    input/inputmanager.h \
     input/inputdevice.h \
-    input/inputdeviceevent.h \
     input/joystick.h \
     input/sdleventloop.h \
-    input/qmlinputdevice.h \
     role/consumer.h \
     role/controllable.h \
     role/control.h \
@@ -79,24 +74,28 @@
     util/looper.h \
     backendplugin.h \
     backendcommon.h \
+    input/keyboardevent.h \
+    input/joystickevent.h \
+    libretro_cpp.h \
+    util/iter.h \
+    input/inputmapvalue.h \
+    input/gamepad.h \
+    core/gameconsoleproxy.h \
+    core/gameconsole.h \
+    input/gamepadmanager.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
     consumer/audiooutput.cpp \
     consumer/videooutput.cpp \
     core/core.cpp \
-    core/corecontrol.cpp \
-    core/corecontrolproxy.cpp \
     core/libretrocore.cpp \
     core/libretrovariable.cpp \
     core/libretrosymbols.cpp \
     input/keyboard.cpp \
-    input/inputmanager.cpp \
     input/joystick.cpp \
     input/sdleventloop.cpp \
     input/inputdevice.cpp \
-    input/inputdeviceevent.cpp \
-    input/qmlinputdevice.cpp \
     role/consumer.cpp \
     role/controllable.cpp \
     role/control.cpp \
@@ -104,6 +103,14 @@
     util/logging.cpp \
     util/looper.cpp  \
     backendplugin.cpp \
+    input/keyboardevent.cpp \
+    input/joystickevent.cpp \
+    util/iter.cpp \
+    input/inputmapvalue.cpp \
+    input/gamepad.cpp \
+    core/gameconsoleproxy.cpp \
+    core/gameconsole.cpp \
+    input/gamepadmanager.cpp
 
 ##
 ## Linker settings

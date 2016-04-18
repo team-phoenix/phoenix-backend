@@ -1,154 +1,58 @@
 #include "inputdevice.h"
 
-//
-// Constructors
-//
+/*
 
-bool InputDevice::gamepadControlsFrontend = true;
-
-InputDevice::InputDevice( const InputDevice::LibretroType type, const QString name, QObject *parent )
-    : QObject( parent ),
-      deviceStates( std::unique_ptr<InputStateMap> ( new InputStateMap {
-        { InputDeviceEvent::B, false },
-        { InputDeviceEvent::A, false },
-        { InputDeviceEvent::X, false },
-        { InputDeviceEvent::Y, false },
-        { InputDeviceEvent::Up, false },
-        { InputDeviceEvent::Down, false },
-        { InputDeviceEvent::Right, false },
-        { InputDeviceEvent::Left, false },
-        { InputDeviceEvent::R, false },
-        { InputDeviceEvent::L, false },
-        { InputDeviceEvent::L2, false },
-        { InputDeviceEvent::R2, false },
-        { InputDeviceEvent::R3, false },
-        { InputDeviceEvent::L3, false },
-        { InputDeviceEvent::Start, false },
-        { InputDeviceEvent::Select, false },
-    } ) ),
-    deviceType( type ),
-    deviceName( name ),
-    qmlEditMode( false ),
-    qmlResetMapping( false ),
-    qmlPort( 0 ) {
-    setRetroButtonCount( 15 );
+InputDevice::InputDevice( int port, GamepadType type )
+    : mDigitalStates( static_cast<int>( DigitalButtons::Last ) + 1, 0 ),
+      mAnalogStates( static_cast<int>( AnalogButtons::Last ) + 1, 0 ),
+      mPort( port ),
+      mType( type )
+{
+    Q_ASSERT( mDigitalStates.size() == ( static_cast<int>( DigitalButtons::Last ) + 1 ) );
+    Q_ASSERT( mAnalogStates.size() == ( static_cast<int>( AnalogButtons::Last ) + 1 ) );
 }
 
-InputDevice::~InputDevice() {
-
+void InputDevice::remapInput(int key, const InputMapValue &value) {
+    mInputMap[ key ] = value;
 }
 
-InputDevice::InputDevice( QObject *parent )
-    : InputDevice( DigitalGamepad, parent ) {
-
+void InputDevice::remapInput(int key, InputMapValue &&value) {
+    remapInput( key, value );
 }
 
-InputDevice::InputDevice( const InputDevice::LibretroType type, QObject *parent )
-    : InputDevice( type, "Unknown", parent ) {
-
+void InputDevice::remapInput(const InputDevice::InputMap &map) {
+    mInputMap = map;
 }
 
-//
-// Public
-//
+void InputDevice::remapInput(InputDevice::InputMap &&map) {
+    remapInput( map );
+}
+
+int InputDevice::getDigitalState(int type) {
+    return mDigitalStates.value( type, 0 );
+}
+
+int InputDevice::getAnalogState(int type) {
+    return mAnalogStates.value( type, 0 );
+}
 
 const QString InputDevice::name() const {
-    return deviceName;
-}
-
-bool InputDevice::editMode() const {
-    return qmlEditMode;
-}
-
-int InputDevice::retroButtonCount() const {
-    return qmlRetroButtonCount;
+    return mName;
 }
 
 QString InputDevice::mappingString() const {
     return qmlMappingString;
 }
 
-bool InputDevice::resetMapping() const {
-    return qmlResetMapping;
-}
-
-InputDevice::LibretroType InputDevice::type() const {
-    return deviceType;
-}
-
-InputStateMap *InputDevice::states() {
-    return deviceStates.get();
+GamepadType InputDevice::type() const {
+    return mType;
 }
 
 int InputDevice::port() const {
-    return qmlPort;
+    return mPort;
 }
 
 void InputDevice::setName( const QString name ) {
-    deviceName = name;
-    emit nameChanged();
+    mName = name;
 }
-
-void InputDevice::setEditMode( const bool edit ) {
-    qmlEditMode = edit;
-    emit editModeChanged();
-}
-
-void InputDevice::setResetMapping( const bool reset ) {
-    qmlResetMapping = reset;
-    emit resetMappingChanged();
-}
-
-void InputDevice::setPort(const int port) {
-    qmlPort = port;
-    emit portChanged();
-}
-
-void InputDevice::setType( const InputDevice::LibretroType type ) {
-    deviceType = type;
-}
-
-bool InputDevice::loadMapping() {
-    return false;
-}
-
-void InputDevice::selfDestruct() {
-    delete this;
-}
-
-//
-// Public slots
-//
-
-int16_t InputDevice::value( const InputDeviceEvent::Event &event, const int16_t defaultValue ) {
-    mutex.lock();
-    auto pressed = deviceStates->value( event, defaultValue );
-    mutex.unlock();
-    return pressed;
-}
-
-void InputDevice::insert( const InputDeviceEvent::Event &value, const int16_t &state ) {
-    mutex.lock();
-
-    if( InputDevice::gamepadControlsFrontend ) {
-        emit inputDeviceEvent( value, state );
-    }
-
-    deviceStates->insert( value, state );
-    mutex.unlock();
-}
-
-//
-// Private
-//
-
-void InputDevice::resetStates() {
-    for( auto &key : deviceStates->keys() ) {
-        deviceStates->value( key, false );
-    }
-}
-
-void InputDevice::setRetroButtonCount( const int count ) {
-    qmlRetroButtonCount = count;
-    emit retroButtonCountChanged();
-}
+*/

@@ -27,7 +27,7 @@
  * "systemPath": Absolute path to the system directory (contents of which depend on the core)
  * "savePath": Absolute path to the save directory
  *
- * LibretroCore expects some kind of input producer (such as InputManager) to produce input which LibretroCore will then
+ * LibretroCore expects some kind of input producer (such as GamepadManager) to produce input which LibretroCore will then
  * consume. This input production also drives the production of frames (retro_run()), so time it such that it's as close
  * as possible to the console's native framerate!
  *
@@ -60,6 +60,22 @@ class LibretroCore : public Core {
         void load() override;
         void stop() override;
 
+        QString coreSrc() const {
+            return m_coreSrc;
+        }
+
+        QString gameSrc() const {
+            return m_gameSrc;
+        }
+
+        void setCoreSrc( QString _src ) {
+            m_coreSrc = _src;
+        }
+
+        void setGameSrc( QString _src ) {
+            m_gameSrc = _src;
+        }
+
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
 
@@ -82,6 +98,9 @@ class LibretroCore : public Core {
 
     private:
         // Files and paths
+
+        QString m_gameSrc;
+        QString m_coreSrc;
 
         QLibrary coreFile;
         QFile gameFile;
@@ -148,7 +167,7 @@ class LibretroCore : public Core {
         // Should only be called on load time (consumers expect buffers to be valid while Core is active)
         void allocateBufferPool( retro_system_av_info *avInfo );
 
-        // Consumer data (from producers like InputManager)
+        // Consumer data (from producers like GamepadManager)
 
         ProducerFormat consumerFmt;
         int16_t inputStates[ 16 ];

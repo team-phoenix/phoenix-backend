@@ -1,6 +1,7 @@
 #ifndef JOYSTICK_H
 #define JOYSTICK_H
 
+/*
 #include "inputdevice.h"
 #include "SDL_gamecontroller.h"
 
@@ -10,7 +11,7 @@ class Joystick : public InputDevice {
 
         static const int maxNumOfDevices;
 
-        explicit Joystick( const int joystickIndex, QObject *parent = 0 );
+        explicit Joystick( int joystickIndex );
         ~Joystick();
 
         // Getters
@@ -30,8 +31,6 @@ class Joystick : public InputDevice {
         SDL_Joystick *sdlJoystick() const;
         SDL_JoystickID instanceID() const;
 
-        QVariantMap &sdlMapping();
-
         // This value will be set to 'true' if the
         // core detects a libretro core that
         // can use the analog sticks.
@@ -44,15 +43,14 @@ class Joystick : public InputDevice {
         // calls SDL_GameControllerClose().
         void close();
 
-        bool loadMapping() override;
-        void saveMappings() override;
+        //void saveMappings() override;
 
-        void emitEditModeEvent( int event, int state, const InputDeviceEvent::EditEventType type );
-        void emitInputDeviceEvent( InputDeviceEvent::Event event, int state );
+        //void emitEditModeEvent( int event, int state, const InputDeviceEvent::EditEventType type );
+        //void emitInputDeviceEvent( InputDeviceEvent::Event event, int state );
 
     public slots:
 
-        bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
+       // bool setMappings( const QVariant key, const QVariant mapping, const InputDeviceEvent::EditEventType ) override;
 
     private:
 
@@ -84,5 +82,5 @@ class Joystick : public InputDevice {
         void fillSDLArrays( const QString &key, const int &numberValue );
 
 };
-
+*/
 #endif // JOYSTICK_H
