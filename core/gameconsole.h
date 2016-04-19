@@ -1,11 +1,13 @@
 #pragma once
 
-#include "backendcommon.h"
 #include "control.h"
 #include "producer.h"
 #include "gamepadmanager.h"
 
 #include <QUrl>
+#include <QObject>
+#include <QMap>
+#include <QVariant>
 
 
 /*
@@ -64,22 +66,13 @@ class GameConsole : public QObject, public Control {
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void sourceChanged( QStringMap source );
         void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
         void vsyncChanged( bool vsync );
 
         // Setter forwarders (to Core)
         void setPlaybackSpeedForwarder( qreal playbackSpeed );
-        void setSourceForwarder( QStringMap source );
         void setVolumeForwarder( qreal volume );
-
-        // Method forwarders (to Core)
-        void loadForwarder();
-        void playForwarder();
-        void pauseForwarder();
-        void stopForwarder();
-        void resetForwarder();
 
         // Special
 
@@ -95,13 +88,11 @@ class GameConsole : public QObject, public Control {
         // Use this instead to do all cleanup
         void shutdown();
 
-        void setCoreSrc( QString _core );
-        void setGameSrc( QString _game );
+        void setSrc( QVariant _src );
 
         // Setters (from anywhere)
         void setVideoOutput( VideoOutput *videoOutput );
         void setPlaybackSpeed( qreal playbackSpeed );
-        void setSource( QStringMap source );
         void setVolume( qreal volume );
         void setVsync( bool vsync );
 
@@ -115,6 +106,7 @@ class GameConsole : public QObject, public Control {
     private:
         QString m_coreSrc;
         QString m_gameSrc;
+        QVariant m_src;
 
         // Thread management
 
@@ -163,9 +155,6 @@ class GameConsole : public QObject, public Control {
         // You can also make an ad-hoc lambda slot that disconnects itself on use (single-shot)
         QList<QMetaObject::Connection> connectionList;
         void disconnectConnections();
-
-        // We need to keep track of this to know what type of Core to load
-        QStringMap source;
 
         // Core loaders
 

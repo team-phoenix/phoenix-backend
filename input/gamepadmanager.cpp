@@ -17,11 +17,12 @@ GamepadManager::GamepadManager( QObject *parent )
     : QObject( parent ), Producer(), Controllable(),
       touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
       m_gamepadList( 16 ),
-      m_gamepadStates( 16 ),
       m_keyboardStates( 16 )
 {
     for ( int i=0; i < 16; ++i ) {
-        m_gamepadStates[ i ] = 0;
+        for ( int j=0; j < 16; j++ ) {
+            m_gamepadStates[ i ][ j ] = 0;
+        }
         m_keyboardStates[ i ] = 0;
         m_gamepadList[ i ] = nullptr;
     }
@@ -29,9 +30,9 @@ GamepadManager::GamepadManager( QObject *parent )
     m_keyboardMap = defaultMap();
 
     connect( this, &GamepadManager::controllerDBFileChanged, &m_SDLEventLoop, &SDLEventLoop::onControllerDBFileChanged );
-    connect( &m_SDLEventLoop, &SDLEventLoop::gamepadAdded, this, [this]( const Gamepad *_gamepad ) {
-        m_gamepadList[ _gamepad->id() ] = _gamepad;
-    });
+    connect( &m_SDLEventLoop, &SDLEventLoop::gamepadAdded, this, &GamepadManager::addGamepad );
+    connect( &m_SDLEventLoop, &SDLEventLoop::gamepadRemoved, this, &GamepadManager::gamepadRemoved );
+
 
 }
 
@@ -46,46 +47,33 @@ void GamepadManager::poll( qint64 timeStamp ) {
 
         QMutexLocker locker( &producerMutex );
 
-        m_gamepadStates.clear();
+        memset(m_gamepadStates, 0, sizeof(m_gamepadStates)); //clear buffer
 
         // Fetch input states
         m_SDLEventLoop.poll( timeStamp );
 
-        int gPadIndex = 0;
-        for ( const Gamepad *gPad : m_gamepadList ) {
+        // Copy states from gamepads and the keyboard to a buffer.
+        for ( int i=0; i < 16; ++i ) {
+            auto gPad = m_gamepadList[ i ];
             if( gPad ) {
-                for ( int i=0; i < m_gamepadStates.size(); ++i ) {
-                    m_gamepadStates[ i ] = [&]() -> qint16 {
-                        auto gPadState = gPad->buttonState( static_cast<Gamepad::Button>( i ) );
-                        if ( 0 == gPadIndex ) {
-                            return m_keyboardStates[ i ] | gPadState;
-                        }
-                        return gPadState;
-                    }();
+                for ( int b=0; b < 16; ++i ) {
+                    auto gPadState = gPad->buttonState( static_cast<Gamepad::Button>( b ) );
+                    m_gamepadStates[ i ][ b ] = ( 0 == i )
+                            ? gPadState | m_keyboardStates[ b ] : gPadState;
+
                 }
 
             } else {
-                if ( gPadIndex == 0 ) {
-                    for ( int i=0; i < m_gamepadStates.size(); ++i ) {
-                        m_gamepadStates[ i ] = m_keyboardStates[ i ];
+                if ( 0 == i ) {
+                    for ( int b=0; b < 16; ++b ) {
+                        m_gamepadStates[ i ][ b ] = m_keyboardStates[ b ];
+                        if ( m_gamepadStates[ i ][ b ] == 1 ) {
+                        }
                     }
                 }
             }
-
-            ++gPadIndex;
         }
 
-        emit producerData( QStringLiteral( "input" )
-                           , &producerMutex
-                           , static_cast<void *>( m_gamepadStates.data() )
-                           , static_cast<size_t>( m_gamepadStates.size() )
-                           , timeStamp );
-
-//        for( int i = 0; i < 16; i++ ) {
-//            for( int j = 0; j < 16; j++ ) {
-//                m_inputStates[ i ] |= libretroGetInputStateHelper( i, RETRO_DEVICE_JOYPAD, 0, j ) << j;
-//            }
-//        }
 
         // Set final touch state once per frame
         // The flipflop is needed as the touched state may change several times *during* a frame
@@ -99,6 +87,13 @@ void GamepadManager::poll( qint64 timeStamp ) {
                            , &producerMutex, &touchCoords
                            , ( size_t )touchState
                            , currentTime );
+
+        // Cya later buffer!
+        emit producerData( QStringLiteral( "input" )
+                           , &producerMutex
+                           , static_cast<void *>( &m_gamepadStates )
+                           , static_cast<size_t>( sizeof( m_gamepadStates ) )
+                           , timeStamp );
 
     }
 }
@@ -227,6 +222,11 @@ bool GamepadManager::eventFilter( QObject *object, QEvent *event ) {
         return true;
     }
     return QObject::eventFilter( object, event );
+}
+
+void GamepadManager::addGamepad(const Gamepad *_gamepad) {
+    m_gamepadList.append( _gamepad );
+    emit gamepadAdded( _gamepad );
 }
 
 void GamepadManager::installKeyboardFilter() {

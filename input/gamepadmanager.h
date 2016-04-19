@@ -27,9 +27,12 @@ class GamepadManager : public QObject, public Producer, public Controllable {
 
         bool eventFilter( QObject *object, QEvent *event ) override;
 
+        void addGamepad( const Gamepad *_gamepad );
 
     signals:
         PRODUCER_SIGNALS
+        void gamepadAdded( const Gamepad * );
+        void gamepadRemoved( const Gamepad * );
 
         void controllerDBFileChanged( QString controllerDBFile );
 
@@ -53,7 +56,7 @@ class GamepadManager : public QObject, public Producer, public Controllable {
         QHash<Qt::Key, Gamepad::Button> m_keyboardMap;
 
         QVarLengthArray<const Gamepad *, 16> m_gamepadList;
-        QVarLengthArray<qint16, 16> m_gamepadStates;
+        qint16 m_gamepadStates[ 16 ][ 16];
         QVarLengthArray<qint16, 16> m_keyboardStates;
 
         QString controllerDBFile;
@@ -86,4 +89,3 @@ inline QHash<Qt::Key, Gamepad::Button > defaultMap() {
         { Qt::Key_Shift, Gamepad::Button::L3 },
       };
 }
-

@@ -35,10 +35,13 @@
  * not be called unless you're in the PLAYING state.
  */
 
+
 class LibretroCore : public Core {
         Q_OBJECT
 
     public:
+        using QStringMap = QMap<QString, QString>;
+
         explicit LibretroCore( Core *parent = 0 );
         ~LibretroCore();
 
@@ -60,20 +63,9 @@ class LibretroCore : public Core {
         void load() override;
         void stop() override;
 
-        QString coreSrc() const {
-            return m_coreSrc;
-        }
-
-        QString gameSrc() const {
-            return m_gameSrc;
-        }
-
-        void setCoreSrc( QString _src ) {
-            m_coreSrc = _src;
-        }
-
-        void setGameSrc( QString _src ) {
-            m_gameSrc = _src;
+        void setSrc(QVariant _src) override {
+            qDebug() << Q_FUNC_INFO << _src;
+            m_src = _src;
         }
 
     protected:
@@ -99,6 +91,7 @@ class LibretroCore : public Core {
     private:
         // Files and paths
 
+        QVariant m_src;
         QString m_gameSrc;
         QString m_coreSrc;
 
@@ -170,7 +163,7 @@ class LibretroCore : public Core {
         // Consumer data (from producers like GamepadManager)
 
         ProducerFormat consumerFmt;
-        int16_t inputStates[ 16 ];
+        qint16 inputStates[ 16 ][ 16 ];
         QPointF touchCoords;
         bool touchState;
         bool variablesHaveChanged;
@@ -194,5 +187,7 @@ class LibretroCore : public Core {
         QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
 
 };
+
+Q_DECLARE_METATYPE( LibretroCore::QStringMap )
 
 #endif // LIBRETROCORE_H

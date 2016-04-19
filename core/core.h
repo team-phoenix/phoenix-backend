@@ -41,7 +41,6 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void sourceChanged( QStringMap source );
         void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
 
@@ -52,11 +51,8 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
         virtual void setVolume( qreal volume );
-        virtual void setSource( QStringMap source );
 
-        virtual void setCoreSrc( QString _core ) = 0;
-
-        virtual void setGameSrc( QString _game ) = 0;
+        virtual void setSrc( QVariant _src ) = 0;
 
         // State changers
         virtual void load();
@@ -76,29 +72,29 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
         // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
         // Read-only
-        bool pausable;
+        bool pausable{ false };
 
         // Multiplier of the system's native framerate, if any. If rewindable, it can be any real number. Otherwise, it must
         // be positive and nonzero
         // Read-write
-        qreal playbackSpeed;
+        qreal playbackSpeed{ 1.0 };
 
         // Is this Core instance resettable? If true, this usually means you can "soft reset" instead of fully resetting
         // the state machine by cycling through the deinit then init states
         // Read-only
-        bool resettable;
+        bool resettable{ false };
 
         // Is this Core instance rewindable? If true, playbackSpeed may go to and below 0 to make the game move backwards
         // Read-only
-        bool rewindable;
+        bool rewindable{ false };
 
         // Subclass-defined info specific to this session (ex. Libretro: core, game, system and save paths)
         // Read-write
-        QStringMap source;
+
 
         // Range: [0.0, 1.0]
         // Read-write
-        qreal volume;
+        qreal volume{ 1.0 };
 
         // Setters
         virtual void setPausable( bool pausable );

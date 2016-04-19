@@ -45,11 +45,13 @@ void LibretroCore::load() {
     Core::setState( Control::LOADING );
 
     // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
-    qDebug() << coreSrc();
-    coreFileInfo.setFile( coreSrc() );
-    gameFileInfo.setFile( gameSrc() );
-    systemPathInfo.setFile( source[ "systemPath" ] );
-    savePathInfo.setFile( source[ "savePath" ] );
+    auto srcMap = m_src.toMap();
+    Q_ASSERT( !srcMap.isEmpty() );
+
+    coreFileInfo.setFile( srcMap[ QStringLiteral( "core" ) ].toString() );
+    gameFileInfo.setFile( srcMap[ QStringLiteral( "game" ) ].toString() );
+    systemPathInfo.setFile( srcMap[ QStringLiteral( "systemPath" ) ].toString() );
+    savePathInfo.setFile( srcMap[ QStringLiteral( "savePath" ) ].toString() );
 
     coreFile.setFileName( coreFileInfo.absoluteFilePath() );
     gameFile.setFileName( gameFileInfo.absoluteFilePath() );
@@ -262,11 +264,14 @@ void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t
         Q_UNUSED( locker );
 
         // Copy incoming input data
-        int16_t *newInputStates = ( int16_t * )data;
-
+        auto newInputStates = static_cast<qint16 *>( data );
         for( int i = 0; i < 16; i++ ) {
-            inputStates[ i ] = newInputStates[ i ];
+            for ( int j = 0; j < 16; j++ ) {
+                inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
+            }
         }
+
+
 
         // Run the emulator for a frame if we're supposed to
         if( currentState == Control::PLAYING ) {
@@ -909,7 +914,7 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
         return 0;
     }
 
-    int16_t value = ( ( core->inputStates[ port ] >> id ) & 0x01 );
+    qint16 value = core->inputStates[ port ][ id ];
 
     if( port == 0 ) {
         //qCDebug( phxCore ) << "Valid input request" << port << device << index << id << "Value:" << value << "Raw:" << core->inputStates[ port ];

@@ -49,14 +49,9 @@ void GameConsole::shutdown() {
     QThread::currentThread()->quit();
 }
 
-void GameConsole::setCoreSrc( QString _core) {
-    m_coreSrc = _core;
-    QMetaObject::invokeMethod( core, "setCoreSrc", Q_ARG( QString, _core ) );
-}
-
-void GameConsole::setGameSrc( QString _game) {
-    m_gameSrc = _game;
-    QMetaObject::invokeMethod( core, "setGameSrc", Q_ARG( QString, _game ));
+void GameConsole::setSrc(QVariant _src) {
+    m_src = _src;
+    QMetaObject::invokeMethod( (QObject *)core, "setSrc", Q_ARG( QVariant, _src) );
 }
 
 void GameConsole::setVideoOutput( VideoOutput *videoOutput ) {
@@ -67,11 +62,6 @@ void GameConsole::setVideoOutput( VideoOutput *videoOutput ) {
 
 void GameConsole::setPlaybackSpeed( qreal playbackSpeed ) {
     emit setPlaybackSpeedForwarder( playbackSpeed );
-}
-
-void GameConsole::setSource( QStringMap source ) {
-    // Store this, we'll pass it to Core once it's time to load (also Core doesn't exist yet)
-    this->source = source;
 }
 
 void GameConsole::setVolume( qreal volume ) {
@@ -92,9 +82,7 @@ void GameConsole::load() {
     initLibretroCore();
     qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
 
-    Q_ASSERT( core != nullptr );
-    setCoreSrc( m_coreSrc );
-    setGameSrc( m_gameSrc );
+    setSrc( m_src );
     QMetaObject::invokeMethod( core, "load" );
 
     // Determine Core type, instantiate appropiate type
@@ -112,19 +100,19 @@ void GameConsole::load() {
 }
 
 void GameConsole::play() {
-    emit playForwarder();
+    QMetaObject::invokeMethod( core, "play" );
 }
 
 void GameConsole::pause() {
-    emit pauseForwarder();
+    QMetaObject::invokeMethod( core, "pause" );
 }
 
 void GameConsole::stop() {
-    emit stopForwarder();
+    QMetaObject::invokeMethod( core, "stop" );
 }
 
 void GameConsole::reset() {
-    emit resetForwarder();
+    QMetaObject::invokeMethod( core, "reset" );
 }
 
 // Private
@@ -195,21 +183,15 @@ void GameConsole::connectCoreForwarder() {
     connectionList << connect( core, &Core::playbackSpeedChanged, this, &GameConsole::playbackSpeedChanged );
     connectionList << connect( core, &Core::resettableChanged, this, &GameConsole::resettableChanged );
     connectionList << connect( core, &Core::rewindableChanged, this, &GameConsole::rewindableChanged );
-    connectionList << connect( core, &Core::sourceChanged, this, &GameConsole::sourceChanged );
+    //connectionList << connect( core, &Core::sourceChanged, this, &GameConsole::sourceChanged );
     connectionList << connect( core, &Core::stateChanged, this, &GameConsole::stateChanged );
     connectionList << connect( core, &Core::volumeChanged, this, &GameConsole::volumeChanged );
 
     // Forward these setter signals we receive to Core
     connectionList << connect( this, &GameConsole::setPlaybackSpeedForwarder, core, &Core::setPlaybackSpeed );
-    connectionList << connect( this, &GameConsole::setSourceForwarder, core, &Core::setSource );
+    //connectionList << connect( this, &GameConsole::setSourceForwarder, core, &Core::setSource );
     connectionList << connect( this, &GameConsole::setVolumeForwarder, core, &Core::setVolume );
 
-    // Forward these method signals we receive to Core
-    connectionList << connect( this, &GameConsole::loadForwarder, core, &Core::load );
-    connectionList << connect( this, &GameConsole::playForwarder, core, &Core::play );
-    connectionList << connect( this, &GameConsole::pauseForwarder, core, &Core::pause );
-    connectionList << connect( this, &GameConsole::stopForwarder, core, &Core::stop );
-    connectionList << connect( this, &GameConsole::resetForwarder, core, &Core::reset );
 }
 
 void GameConsole::trackCoreStateChanges() {
@@ -335,6 +317,9 @@ void GameConsole::initLibretroCore() {
          //Connect Looper to GamepadManager (drive input polling)
         if( !vsync ) {
             connectionList << connect( looper, &Looper::timeout, &m_gamepadManager, &GamepadManager::poll );
+            connectionList << connect( this, &GameConsole::gamepadAdded, &m_gamepadManager, &GamepadManager::gamepadAdded );
+            connectionList << connect( this, &GameConsole::gamepadRemoved, &m_gamepadManager, &GamepadManager::gamepadRemoved);
+
         }
     }
 

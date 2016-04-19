@@ -24,9 +24,10 @@ void CorePlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<Control::State>( "Control::State" );
     qRegisterMetaType<ControlHelper::State>( "ControlHelper::State" );
     qRegisterMetaType<size_t>( "size_t" );
-    qRegisterMetaType<QStringMap>();
+    qRegisterMetaType<LibretroCore::QStringMap>( "QStringMap" );
     qRegisterMetaType<ProducerFormat>( "ProducerFormat");
     qRegisterMetaType<VideoOutput *>( "VideoOutput *");
+
 
 }
 

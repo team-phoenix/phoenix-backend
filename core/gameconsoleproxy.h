@@ -55,7 +55,7 @@
 #include <QQuickItem>
 #include <QQmlParserStatus>
 
-
+class QCoreApplication;
 class GameConsole;
 class QThread;
 
@@ -71,17 +71,22 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_PROPERTY( VideoOutput *videoOutput READ getVideoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
 
         // Proxy
-        Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
-        Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
-        Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
-        Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
+        Q_PROPERTY( QVariant src READ src WRITE setSrc NOTIFY srcChanged)
+
         Q_PROPERTY( ControlHelper::State state READ getState NOTIFY stateChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
-        Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
+        Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
 
-        Q_PROPERTY( QString coreSrc READ coreSrc WRITE setCoreSrc NOTIFY coreSrcChanged)
-        Q_PROPERTY( QString gameSrc READ gameSrc WRITE setGameSrc NOTIFY gameSrcChanged)
+        Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
+        Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
+        Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
+        Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
+
+        Q_PROPERTY( QList<const Gamepad *> gamepadsConnected READ gamepadsConnected NOTIFY gamepadsConnectedChanged)
+        Q_PROPERTY( const Gamepad * gamepadAdded READ gamepadAdded NOTIFY gamepadAddedChanged)
+
+
 
     public:
         explicit GameConsoleProxy( QObject *parent = 0 );
@@ -95,35 +100,27 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_INVOKABLE void reset();
 
         void componentComplete() override;
-        void classBegin() {
+        void classBegin() override;
 
-        }
+        QVariant src() const;
 
-        QString coreSrc() const
+        void setSrc( QVariant _src );
+
+
+        QList<const Gamepad *> gamepadsConnected() const
         {
-            return m_coreSrc;
+            return m_gamepadsConnected;
         }
 
-        QString gameSrc() const
+        const Gamepad *gamepadAdded() const
         {
-            return m_gameSrc;
-        }
-
-        void setGameSrc( QString _game ) {
-            m_gameSrc = _game;
-            QMetaObject::invokeMethod( (QObject *)m_gameConsole, "setGameSrc", Q_ARG( QString, _game ) );
-            emit gameSrcChanged();
-        }
-
-        void setCoreSrc( QString _core ) {
-            m_coreSrc = _core;
-            QMetaObject::invokeMethod( (QObject *)m_gameConsole , "setCoreSrc", Q_ARG( QString, _core ) );
-            emit coreSrcChanged();
+            return m_gamepadAdded;
         }
 
     signals:
-        void coreSrcChanged();
-        void gameSrcChanged();
+        void gamepadsConnectedChanged();
+        void srcChanged( QVariant );
+        void gamepadAddedChanged();
 
         // Tell GameConsole to clean up
         void shutdown();
@@ -144,16 +141,8 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         // These tell GameConsole to change its state
         void videoOutputChangedProxy( VideoOutput *videoOutput );
         void playbackSpeedChangedProxy( qreal playbackSpeed );
-        void sourceChangedProxy( QStringMap source );
         void volumeChangedProxy( qreal volume );
         void vsyncChangedProxy( bool vsync );
-
-        // GameConsole method forwarder
-        void loadForwarder();
-        void playForwarder();
-        void pauseForwarder();
-        void stopForwarder();
-        void resetForwarder();
 
     private slots:
         // GameConsole property proxy (Step 1: from anywhere)
@@ -171,29 +160,33 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         void setPlaybackSpeedProxy( qreal playbackSpeed );
         void setResettableProxy( bool resettable );
         void setRewindableProxy( bool rewindable );
-        void setSourceProxy( QStringMap sourceQStringMap );
         void setStateProxy( Control::State state );
         void setVolumeProxy( qreal volume );
         void setVsyncProxy( bool vsync );
 
     private:
+        Gamepad *m_gamepadAdded;
+        QList<const Gamepad *> m_gamepadsConnected;
         GameConsole *m_gameConsole;
         QThread *gameThread;
-        QString m_gameSrc;
-        QString m_coreSrc;
 
         // GameConsole property proxy
         void notifyAllProperties();
         void connectGameConsoleProxy();
         VideoOutput *videoOutput;
-        bool pausable;
-        qreal playbackSpeed;
-        bool resettable;
-        bool rewindable;
-        QStringMap source;
-        ControlHelper::State state;
-        qreal volume;
-        bool vsync;
+
+        QVariant m_src;
+
+        ControlHelper::State state{ ControlHelper::STOPPED };
+
+        qreal playbackSpeed{ 1.0 };
+        qreal volume{ 1.0 };
+
+        bool vsync{ false };
+        bool resettable{ false };
+        bool rewindable{ false };
+        bool pausable{ false };
+
 
         VideoOutput *getVideoOutput() const;
         bool getPausable() const;
@@ -205,3 +198,6 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         qreal getVolume() const;
         bool getVsync() const;
 };
+
+Q_DECLARE_METATYPE( QList<const Gamepad *> )
+Q_DECLARE_METATYPE( const Gamepad * )

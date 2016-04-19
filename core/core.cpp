@@ -3,13 +3,9 @@
 #include "logging.h"
 
 
-Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable(),
-    pausable( false ),
-    playbackSpeed( 1.0 ),
-    resettable( false ),
-    rewindable( false ),
-    source(),
-    volume( 1.0 ) {
+Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable()
+{
+
 }
 
 // Slots
@@ -17,11 +13,6 @@ Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Contr
 void Core::setPlaybackSpeed( qreal playbackSpeed ) {
     this->playbackSpeed = playbackSpeed;
     emit playbackSpeedChanged( playbackSpeed );
-}
-
-void Core::setSource( QStringMap source ) {
-    this->source = source;
-    emit sourceChanged( source );
 }
 
 void Core::setVolume( qreal volume ) {
@@ -57,7 +48,6 @@ void Core::allPropertiesChanged() {
     emit playbackSpeedChanged( playbackSpeed );
     emit resettableChanged( resettable );
     emit rewindableChanged( rewindable );
-    emit sourceChanged( source );
     emit stateChanged( currentState );
     emit volumeChanged( volume );
 }
