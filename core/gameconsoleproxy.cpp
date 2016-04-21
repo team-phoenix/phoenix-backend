@@ -15,6 +15,8 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
     gameThread( new QThread )
 {
 
+    connectInterface( this, m_gameConsole );
+
     // Set up GameConsole
     m_gameConsole->setObjectName( "GameConsole" );
     m_gameConsole->moveToThread( gameThread );
@@ -50,31 +52,37 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
 // Safe to call from QML
 
 void GameConsoleProxy::load() {
-    QMetaObject::invokeMethod( m_gameConsole, "load" );
+    emitDataOut( PipelineNode::State_Changed_To_Loading_bool, nullptr, 0, 0);
+    setNodeState( PipelineNode::State_Changed_To_Loading_bool );
+
 }
 
 void GameConsoleProxy::play() {
-    QMetaObject::invokeMethod( m_gameConsole, "play" );
+    emitDataOut( PipelineNode::State_Changed_To_Playing_bool, nullptr, 0, 0);
+    setNodeState( PipelineNode::State_Changed_To_Playing_bool );
 }
 
 void GameConsoleProxy::pause() {
-    QMetaObject::invokeMethod( m_gameConsole, "pause" );
+    emitDataOut( PipelineNode::State_Changed_To_Paused_bool, nullptr, 0, 0);
+    setNodeState( PipelineNode::State_Changed_To_Paused_bool );
 }
 
 void GameConsoleProxy::stop() {
-    QMetaObject::invokeMethod( m_gameConsole, "stop" );
+    emitDataOut( PipelineNode::State_Changed_To_Stopped_bool, nullptr, 0, 0);
+    setNodeState( PipelineNode::State_Changed_To_Stopped_bool );
 }
 
 void GameConsoleProxy::reset() {
-    QMetaObject::invokeMethod( m_gameConsole, "reset" );
+    //emitDataOut( PipelineNode::State_Changed_To_Stopped_bool, nullptr, 0, 0);
 }
 
 void GameConsoleProxy::componentComplete() {
 
-    auto srcMap = src().toMap();
-    if ( srcMap.contains( QStringLiteral( "--libretro") ) ) {
-        const QString core = srcMap[ QStringLiteral( "-c" ) ].toString() ;
-        const QString game = srcMap[ QStringLiteral( "-g" ) ].toString();
+    emitDataOut(PipelineNode::Set_QML_Loaded_nullptr, nullptr, 0, 0 );
+
+    if ( m_src.contains( QStringLiteral( "--libretro") ) ) {
+        const QString core = m_src[ QStringLiteral( "-c" ) ].toString() ;
+        const QString game = m_src[ QStringLiteral( "-g" ) ].toString();
         if ( !core.isEmpty()
              && !game.isEmpty()
              && QFile::exists( core )
@@ -85,16 +93,21 @@ void GameConsoleProxy::componentComplete() {
                         { QStringLiteral( "core" ), core },
                         { QStringLiteral( "game" ), game },
                     } );
+            emitDataOut( PipelineNode::Set_Source_QVariantMap, &m_src, 0, 0  );
             load();
+            play();
         }
 
     }
 
     else {
-        if ( !srcMap.isEmpty() ) {
+        if ( !m_src.isEmpty() ) {
             load();
         }
     }
+
+
+
 }
 
 void GameConsoleProxy::classBegin() {
@@ -109,16 +122,22 @@ void GameConsoleProxy::classBegin() {
 //    emit vsyncChanged( vsync );
 }
 
-QVariant GameConsoleProxy::src() const
+QVariantMap GameConsoleProxy::src() const
 {
     return m_src;
 }
 
-void GameConsoleProxy::setSrc(QVariant _src) {
-    if ( _src != m_src ) {
-        m_src = _src;
-        emit srcChanged( _src );
+void GameConsoleProxy::setSrc(QVariantMap t_src) {
+    if ( t_src != m_src ) {
+        m_src = t_src;
+        emit srcChanged( t_src );
     }
+}
+
+void GameConsoleProxy::dataIn(PipelineNode::DataReason t_reason, QMutex *, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp);
+
 }
 
 // Private slots, cannot be called from QML. Use the respective properties instead

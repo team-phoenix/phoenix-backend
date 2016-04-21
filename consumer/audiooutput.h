@@ -4,6 +4,7 @@
 #include "consumer.h"
 #include "controllable.h"
 #include "audiobuffer.h"
+#include "pipelinenode.h"
 
 #include <samplerate.h>
 
@@ -22,7 +23,7 @@
 
 class AudioOutput : public QObject, public Consumer, public Controllable {
         Q_OBJECT
-
+        PHX_PIPELINE_INTERFACE( AudioOutput )
     public:
         explicit AudioOutput( QObject *parent = 0 );
         ~AudioOutput();
@@ -41,6 +42,12 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
     private slots:
         void handleStateChanged( QAudio::State currentState );
         void handleUnderflow();
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp );
 
     private:
         // Respond to the core running or not by keeping audio output active or not

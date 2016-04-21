@@ -1,7 +1,7 @@
 #pragma once
 
 #include "backendcommon.h"
-
+#include "pipelinenode.h"
 #include "controlhelper.h"
 
 /*
@@ -61,6 +61,7 @@ class QThread;
 
 class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_OBJECT
+        PHX_PIPELINE_INTERFACE( GameConsoleProxy )
         Q_INTERFACES( QQmlParserStatus)
 
         // Settings
@@ -71,8 +72,7 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_PROPERTY( VideoOutput *videoOutput READ getVideoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
 
         // Proxy
-        Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
-        Q_PROPERTY( QVariant src READ src WRITE setSrc NOTIFY srcChanged)
+        Q_PROPERTY( QVariantMap src READ src WRITE setSrc NOTIFY srcChanged)
 
         Q_PROPERTY( ControlHelper::State state READ getState NOTIFY stateChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
@@ -102,9 +102,9 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         void componentComplete() override;
         void classBegin() override;
 
-        QVariant src() const;
+        QVariantMap src() const;
 
-        void setSrc( QVariant _src );
+        void setSrc( QVariantMap t_src );
 
 
         QList<const Gamepad *> gamepadsConnected() const
@@ -116,6 +116,13 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         {
             return m_gamepadAdded;
         }
+
+    public slots:
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp );
 
     signals:
         void gamepadsConnectedChanged();
@@ -149,7 +156,6 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         // These change GameConsole's state ...once it gets around to it
         void setVideoOutput( VideoOutput *videoOutput );
         void setPlaybackSpeed( qreal playbackSpeed );
-        void setSource( QVariantMap sourceQVariantMap );
         void setVolume( qreal volume );
         void setVsync( bool vsync );
 
@@ -175,7 +181,7 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         void connectGameConsoleProxy();
         VideoOutput *videoOutput;
 
-        QVariant m_src;
+        QVariantMap m_src;
 
         ControlHelper::State state{ ControlHelper::STOPPED };
 

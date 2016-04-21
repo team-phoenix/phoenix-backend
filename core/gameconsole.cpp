@@ -33,6 +33,25 @@ GameConsole::GameConsole( QObject *parent )
 
 }
 
+void GameConsole::dataIn(PipelineNode::DataReason t_reason, QMutex *, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
+
+    switch( t_reason ) {
+        case PipelineNode::Set_QML_Loaded_nullptr:
+            initLibretroCore();
+            break;
+        case PipelineNode::State_Changed_To_Loading_bool:
+            //load();
+            break;
+        default:
+            break;
+    }
+
+
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
+
+}
+
 // Public slots
 
 void GameConsole::shutdown() {
@@ -61,6 +80,7 @@ void GameConsole::setVideoOutput( VideoOutput *videoOutput ) {
 }
 
 void GameConsole::setPlaybackSpeed( qreal playbackSpeed ) {
+
     emit setPlaybackSpeedForwarder( playbackSpeed );
 }
 
@@ -79,11 +99,12 @@ void GameConsole::load() {
         stop();
     }
 
-    initLibretroCore();
+
+    //setSrc( m_src );
+
     qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
 
-    setSrc( m_src );
-    QMetaObject::invokeMethod( core, "load" );
+    //QMetaObject::invokeMethod( core, "load" );
 
     // Determine Core type, instantiate appropiate type
 //    if( source[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
@@ -235,9 +256,9 @@ void GameConsole::initLibretroCore() {
      */
 
     // Make sure the last run properly cleaned up
-    Q_ASSERT( !connectionList.size() );
-    Q_ASSERT( !threadChildren.size() );
-    Q_ASSERT( !gameThreadChildren.size() );
+    Q_ASSERT( connectionList.isEmpty() );
+    Q_ASSERT( threadChildren.isEmpty() );
+    Q_ASSERT( gameThreadChildren.isEmpty() );
 
     // Create threads
     audioOutputThread = new QThread;
@@ -268,9 +289,15 @@ void GameConsole::initLibretroCore() {
 
         trackCoreStateChanges();
 
+
+
+
+
+
         // Forward LibretroCore control signals as our own
         connectionList << connect( dynamic_cast<QObject *>( libretroCore ), SIGNAL( stateChanged( Control::State ) ),
                                    dynamic_cast<QObject *>( this ), SIGNAL( setState( Control::State ) ) );
+
 
         // Connect LibretroCore to the forwarder system
         connectCoreForwarder();
@@ -302,6 +329,7 @@ void GameConsole::initLibretroCore() {
         // Connect control and framerate assigning signals to Looper
         if( !vsync ) {
             CLIST_CONNECT_CONTROL_CONTROLLABLE( this, looper );
+
             connectionList << connect( this, &GameConsole::libretroSetFramerate, looper, &Looper::libretroSetFramerate );
         }
     }
@@ -310,15 +338,15 @@ void GameConsole::initLibretroCore() {
     {
 
          //Connect GamepadManager to LibretroCore (produces input data which also drives frame production in LibretroCore)
-         CLIST_CONNECT_PRODUCER_CONSUMER( &m_gamepadManager, libretroCore );
+//         CLIST_CONNECT_PRODUCER_CONSUMER( &m_gamepadManager, libretroCore );
 
-         CLIST_CONNECT_CONTROL_CONTROLLABLE( this, &m_gamepadManager );
+//         CLIST_CONNECT_CONTROL_CONTROLLABLE( this, &m_gamepadManager );
 
          //Connect Looper to GamepadManager (drive input polling)
         if( !vsync ) {
-            connectionList << connect( looper, &Looper::timeout, &m_gamepadManager, &GamepadManager::poll );
-            connectionList << connect( this, &GameConsole::gamepadAdded, &m_gamepadManager, &GamepadManager::gamepadAdded );
-            connectionList << connect( this, &GameConsole::gamepadRemoved, &m_gamepadManager, &GamepadManager::gamepadRemoved);
+            //connectionList << connect( looper, &Looper::timeout, &m_gamepadManager, &GamepadManager::poll );
+            connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadAdded, this, &GameConsole::gamepadAdded );
+            connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadRemoved, this, &GameConsole::gamepadRemoved );
 
         }
     }
@@ -336,12 +364,12 @@ void GameConsole::initLibretroCore() {
         Q_ASSERT( videoOutput );
 
         // Connect LibretroCore to the consumers (AV output)
-        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
-        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
+//        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
+//        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
 
         // Connect control signals to consumers
-        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
-        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
+//        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
+//        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
 
         // Connect framerate assigning signal to AudioOutput
         connectionList << connect( this, &GameConsole::libretroSetFramerate, audioOutput, &AudioOutput::libretroSetFramerate );
@@ -349,8 +377,8 @@ void GameConsole::initLibretroCore() {
         // Connect VideoOutput, this to GamepadManager (drive input polling)
         // TODO: Don't hook window updates, instead create a VSynced timer object and hook that
         if( vsync ) {
-            connectionList << connect( videoOutput, &VideoOutput::windowUpdate, &m_gamepadManager, &GamepadManager::poll );
-            connectionList << connect( this, &GameConsole::libretroCoreDoFrame, &m_gamepadManager, &GamepadManager::poll );
+            //connectionList << connect( videoOutput, &VideoOutput::windowUpdate, &m_gamepadManager, &GamepadManager::poll );
+           // connectionList << connect( this, &GameConsole::libretroCoreDoFrame, &m_gamepadManager, &GamepadManager::poll );
         }
 
         // Force a frame if we're playing and vsync mode is on (this starts a chain reaction in VideoOutput)
@@ -360,6 +388,9 @@ void GameConsole::initLibretroCore() {
                     emit libretroCoreDoFrame( QDateTime::currentMSecsSinceEpoch() );
                 }
             }
+
+
+
         } );
     }
 
@@ -376,6 +407,13 @@ void GameConsole::initLibretroCore() {
         } );
     }
 
+    connectionList << connectInterface( this, looper );
+    connectionList << connectInterface( looper, &m_gamepadManager );
+    connectionList << connectInterface( &m_gamepadManager, libretroCore );
+    connectionList << connectInterface( libretroCore, audioOutput );
+    connectionList << connectInterface( libretroCore, videoOutput );
+
+
     // Print all children and their threads
     for( auto childList : threadChildren ) {
         for( auto child : childList ) {
@@ -387,10 +425,10 @@ void GameConsole::initLibretroCore() {
         qCDebug( phxControl ) << child << child->thread();
     }
 
-    qCDebug( phxControl ) << &m_gamepadManager << m_gamepadManager.thread();
-    qCDebug( phxControl ) << videoOutput << videoOutput->thread();
-    qCDebug( phxControl ) << this << this->thread();
-    qCDebug( phxControl ) << "Executing from:" << QThread::currentThread();
+//    qCDebug( phxControl ) << &m_gamepadManager << m_gamepadManager.thread();
+//    qCDebug( phxControl ) << videoOutput << videoOutput->thread();
+//    qCDebug( phxControl ) << this << this->thread();
+//    qCDebug( phxControl ) << "Executing from:" << QThread::currentThread();
 
     // Start threads
     audioOutputThread->start();

@@ -45,13 +45,12 @@ void LibretroCore::load() {
     Core::setState( Control::LOADING );
 
     // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
-    auto srcMap = m_src.toMap();
-    Q_ASSERT( !srcMap.isEmpty() );
+    Q_ASSERT( ! m_src.isEmpty() );
 
-    coreFileInfo.setFile( srcMap[ QStringLiteral( "core" ) ].toString() );
-    gameFileInfo.setFile( srcMap[ QStringLiteral( "game" ) ].toString() );
-    systemPathInfo.setFile( srcMap[ QStringLiteral( "systemPath" ) ].toString() );
-    savePathInfo.setFile( srcMap[ QStringLiteral( "savePath" ) ].toString() );
+    coreFileInfo.setFile(  m_src[ QStringLiteral( "core" ) ].toString() );
+    gameFileInfo.setFile(  m_src[ QStringLiteral( "game" ) ].toString() );
+    systemPathInfo.setFile(  m_src[ QStringLiteral( "systemPath" ) ].toString() );
+    savePathInfo.setFile(  m_src[ QStringLiteral( "savePath" ) ].toString() );
 
     coreFile.setFileName( coreFileInfo.absoluteFilePath() );
     gameFile.setFileName( gameFileInfo.absoluteFilePath() );
@@ -235,6 +234,87 @@ void LibretroCore::stop() {
     Core::setState( Control::STOPPED );
 }
 
+void LibretroCore::dataIn(PipelineNode::DataReason t_reason
+                          , QMutex *t_mutex
+                          , void *t_data
+                          , size_t t_bytes
+                          , qint64 t_timeStamp) {
+
+    switch( t_reason )  {
+    case PipelineNode::Set_Source_QVariantMap: {
+        m_src = *static_cast<QVariantMap *>( t_data );
+        qDebug() << Q_FUNC_INFO << "got map! " << m_src;
+
+        break;
+    }
+
+    case PipelineNode::Create_Frame_any: {
+        // Discard data that's too far from the past to matter anymore
+
+        //qDebug() << QDateTime::currentMSecsSinceEpoch();
+        //if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
+            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+        //    break;
+        //}
+
+       // Q_ASSERT( false );
+
+
+        QMutexLocker locker( t_mutex );
+        Q_UNUSED( locker );
+
+        // Copy incoming input data
+        auto newInputStates = static_cast<qint16 *>( t_data );
+        for( int i = 0; i < 16; i++ ) {
+            for ( int j = 0; j < 16; j++ ) {
+                inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
+            }
+        }
+
+        // Run the emulator for a frame if we're supposed to
+        if ( m_interfaceState == PipelineNode::State_Changed_To_Playing_bool ) {
+            // printFPSStatistics();
+            symbols.retro_run();
+
+        }
+
+        break;
+    }
+
+    case PipelineNode::Format_Changed_ProducerFormat: {
+        qCDebug( phxCore ) << Q_FUNC_INFO;
+        consumerFmt = *static_cast<ProducerFormat *>( t_data );
+
+        // Update all consumers if the audio ratio changes
+        if( producerFmt.audioRatio != consumerFmt.videoFramerate / producerFmt.videoFramerate ) {
+            // hostFPS / coreFPS
+            producerFmt.audioRatio = consumerFmt.videoFramerate / producerFmt.videoFramerate;
+            // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << producerFmt.firstFrame << ")";
+            //emit producerFormat( producerFmt );
+        }
+
+        break;
+    }
+
+    case PipelineNode::State_Changed_To_Unloading_bool:
+    case PipelineNode::State_Changed_To_Paused_bool:
+    case PipelineNode::State_Changed_To_Playing_bool:
+    case PipelineNode::State_Changed_To_Loading_bool:
+    case PipelineNode::State_Changed_To_Stopped_bool:
+        if ( t_reason == PipelineNode::State_Changed_To_Loading_bool ) {
+            load();
+        } else if ( t_reason == PipelineNode::State_Changed_To_Stopped_bool ) {
+            stop();
+        }
+        setNodeState(  t_reason );
+        break;
+    default:
+        break;
+    }
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp);
+}
+
 void LibretroCore::consumerFormat( ProducerFormat format ) {
     qCDebug( phxCore ) << Q_FUNC_INFO;
     consumerFmt = format;
@@ -306,7 +386,8 @@ void LibretroCore::setVolume( qreal volume ) {
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( PipelineNode::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    //emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
@@ -322,11 +403,17 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         producerFmt.videoSize.setWidth( width );
         producerFmt.videoSize.setHeight( height );
 
-        emit producerFormat( producerFmt );
+        emitDataOut( PipelineNode::Format_Changed_ProducerFormat
+                     , static_cast<void *>( &producerFmt )
+                     , 0
+                     , 0 );
+
+        //emit producerFormat( producerFmt );
 
     }
 
-    emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( PipelineNode::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    //emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 
 }
 
@@ -929,9 +1016,9 @@ void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsig
     // Current frame exists, send it on its way
     if( data ) {
 
-        core->producerMutex.lock();
+        core->lock();
         memcpy( core->videoBufferPool[ core->videoPoolCurrentBuffer ], data, height * pitch );
-        core->producerMutex.unlock();
+        core->unlock();
 
         core->emitVideoData( core->videoBufferPool[ core->videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
         core->videoPoolCurrentBuffer = ( core->videoPoolCurrentBuffer + 1 ) % POOL_SIZE;

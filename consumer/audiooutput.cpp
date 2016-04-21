@@ -157,6 +157,74 @@ void AudioOutput::handleUnderflow() {
     }
 }
 
+void AudioOutput::dataIn(PipelineNode::DataReason t_reason
+                         , QMutex *
+                         , void *t_data
+                         , size_t t_bytes
+                         , qint64 t_timeStamp) {
+
+    switch( t_reason ) {
+        case PipelineNode::State_Changed_To_Unloading_bool: {
+            if ( nodeState() != t_reason ) {
+                setAudioActive( false );
+                shutdown();
+            }
+            setNodeState( t_reason );
+            break;
+        }
+        case PipelineNode::State_Changed_To_Paused_bool: {
+            if ( nodeState() != t_reason ) {
+                setAudioActive( false );
+            }
+            setNodeState( t_reason );
+            break;
+        }
+        case PipelineNode::State_Changed_To_Playing_bool: {
+            if ( nodeState() != t_reason ) {
+                setAudioActive( true );
+            }
+            setNodeState( t_reason );
+            break;
+        }
+
+        case PipelineNode::Format_Changed_ProducerFormat: {
+            consumerFormat( *static_cast<ProducerFormat *>( t_data ) );
+            break;
+        }
+
+        case PipelineNode::Create_Frame_any: {
+            if ( nodeState() != PipelineNode::State_Changed_To_Playing_bool ) {
+                qint64 _currentTime = QDateTime::currentMSecsSinceEpoch();
+                // Discard data that's too far from the past to matter anymore
+                if( _currentTime - t_timeStamp > 500 ) {
+                    static qint64 _lastMessage = 0;
+
+                    if( _currentTime - _lastMessage > 1000 ) {
+                        _lastMessage = _currentTime;
+                        // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
+                        //                           currentTime - timestamp << "ms ago";
+                    }
+                    break;
+                }
+
+                // Make a copy so the data won't be changed later
+                memcpy( inputDataShort, t_data, t_bytes );
+                audioData( inputDataShort, t_bytes );
+            }
+            break;
+        }
+        case PipelineNode::Set_Volume_Level_qreal: {
+            if( outputAudioInterface ) {
+                outputAudioInterface->setVolume( *static_cast<qreal *>( t_data ) );
+            }
+        }
+        default:
+            break;
+    }
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
+}
+
 // Private
 
 void AudioOutput::audioData( int16_t *inputDataShort, int inputBytes ) {

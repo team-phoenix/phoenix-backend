@@ -3,6 +3,7 @@
 
 #include "backendcommon.h"
 
+#include "pipelinenode.h"
 #include "core.h"
 #include "libretro.h"
 #include "libretrosymbols.h"
@@ -38,7 +39,7 @@
 
 class LibretroCore : public Core {
         Q_OBJECT
-
+        PHX_PIPELINE_INTERFACE( LibretroCore )
     public:
         using QStringMap = QMap<QString, QString>;
 
@@ -63,10 +64,16 @@ class LibretroCore : public Core {
         void load() override;
         void stop() override;
 
-        void setSrc(QVariant _src) override {
+        void setSrc(QVariantMap _src) override {
             qDebug() << Q_FUNC_INFO << _src;
             m_src = _src;
         }
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *t_mutex
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp );
 
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
@@ -91,7 +98,7 @@ class LibretroCore : public Core {
     private:
         // Files and paths
 
-        QVariant m_src;
+        QVariantMap m_src;
         QString m_gameSrc;
         QString m_coreSrc;
 

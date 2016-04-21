@@ -3,6 +3,7 @@
 #include "control.h"
 #include "producer.h"
 #include "gamepadmanager.h"
+#include "pipelinenode.h"
 
 #include <QUrl>
 #include <QObject>
@@ -49,6 +50,7 @@ class Core;
 
 class GameConsole : public QObject, public Control {
         Q_OBJECT
+        PHX_PIPELINE_INTERFACE( GameConsole )
 
     public:
         explicit GameConsole( QObject *parent = 0 );
@@ -86,6 +88,13 @@ class GameConsole : public QObject, public Control {
     public slots:
         // We cannot use the destructor to clean up, we can't emit signals to anything anymore
         // Use this instead to do all cleanup
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *t_mutex
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp );
+
         void shutdown();
 
         void setSrc( QVariant _src );
@@ -97,11 +106,11 @@ class GameConsole : public QObject, public Control {
         void setVsync( bool vsync );
 
         // State changers
-        void load() override;
-        void play() override;
-        void pause() override;
-        void stop() override;
-        void reset() override;
+        void load();
+        void play();
+        void pause();
+        void stop();
+        void reset();
 
     private:
         QString m_coreSrc;

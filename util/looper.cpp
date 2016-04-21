@@ -6,6 +6,8 @@
 #include <QDateTime>
 #include <QThread>
 
+#include <QVariantMap>
+
 LooperPrivate::LooperPrivate( QObject *parent ): QObject( parent ) {
 }
 
@@ -88,16 +90,26 @@ Looper::Looper( QObject *parent ) : QObject( parent ),
     looper( new LooperPrivate ),
     looperThread( new QThread ) {
 
+
     connect( this, &Looper::beginLoop, looper, &LooperPrivate::beginLoop );
     connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
-    connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
+    //connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
+    connect( looper, &LooperPrivate::timeout, this, [this]( qint16 t_timeStamp ) {
+        qDebug() << t_timeStamp;
+        emitDataOut( PipelineNode::Create_Frame_any, nullptr, 0, t_timeStamp );
+    });
+
+    connect( &m_timer, &QTimer::timeout, this, [this] {
+        emitDataOut( PipelineNode::Poll_Input_nullptr, nullptr, 0, 0 );
+    });
 
     looper->moveToThread( looperThread );
     looper->setObjectName( "Looper (internal)" );
-    looper->setParent( looperThread );
     qDebug() << looper->objectName() << " parent: " << looper->parent();
     looperThread->setObjectName( "Looper thread (internal)" );
     looperThread->start();
+    m_timer.setInterval( 16 );
+    m_timer.start();
 
 }
 
@@ -109,19 +121,53 @@ Looper::~Looper() {
     }
 }
 
+void Looper::dataIn(PipelineNode::DataReason t_reason
+                    , QMutex *
+                    , void *t_data
+                    , size_t t_size
+                    , qint64 t_timeStamp ) {
+
+    switch( t_reason ) {
+
+        case PipelineNode::State_Changed_To_Loading_bool:
+        case PipelineNode::State_Changed_To_Unloading_bool:
+        case PipelineNode::State_Changed_To_Stopped_bool:
+        case PipelineNode::State_Changed_To_Paused_bool:
+        case PipelineNode::State_Changed_To_Playing_bool: {
+
+            if( nodeState() == PipelineNode::State_Changed_To_Playing_bool ) {
+                m_timer.stop();
+                emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
+            } else {
+                emit endLoop();
+                m_timer.start();
+            }
+
+            setNodeState( t_reason );
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    emitDataOut( t_reason, t_data, t_size, t_timeStamp );
+
+}
+
 void Looper::setState( Control::State state ) {
 
     // We only care about the transition to or away from PLAYING
-    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
-        ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
-        if( state == Control::PLAYING ) {
-            emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
-        } else {
-            emit endLoop();
-        }
-    }
+//    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
+//            ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
+//        if( state == Control::PLAYING ) {
+//            emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
+//        } else {
+//            emit endLoop();
+//        }
+//    }
 
-    this->currentState = state;
+//    this->currentState = state;
 
 }
 

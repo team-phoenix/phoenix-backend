@@ -2,8 +2,10 @@
 #define LOOPER_H
 
 #include "controllable.h"
+#include "pipelinenode.h"
 
 #include <QObject>
+#include <QTimer>
 
 /*
  * An ultra-high precision timer that offers far more granularity than anything Qt has to offer. Tests have shown it to
@@ -32,12 +34,19 @@ class LooperPrivate : public QObject {
 
 class Looper : public QObject, public Controllable {
         Q_OBJECT
-
+        PHX_PIPELINE_INTERFACE( Looper )
     public:
         explicit Looper( QObject *parent = 0 );
         ~Looper();
 
     public slots:
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *t_mutex
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timestamp );
+
         // Control
         void setState( Control::State currentState ) override;
 
@@ -53,6 +62,8 @@ class Looper : public QObject, public Controllable {
         LooperPrivate *looper;
         QThread *looperThread;
         qreal hostFPS;
+
+        QTimer m_timer;
 
 };
 

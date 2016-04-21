@@ -228,3 +228,44 @@ int VideoOutput::greatestCommonDivisor( int m, int n ) {
     return n;
 }
 
+void VideoOutput::updateFrame(QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timestamp) {
+    // Copy framebuffer to our own buffer for later drawing
+    // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
+    // QMutexLocker locker( t_mutex );
+    Q_UNUSED( t_mutex );
+
+    qint64 _currentTime = QDateTime::currentMSecsSinceEpoch();
+
+    // Discard data that's too far from the past to matter anymore
+    if( _currentTime - t_timestamp > 500 ) {
+        static qint64 _static_lastMessage = 0;
+
+        if( _currentTime - _static_lastMessage > 1000 ) {
+            _static_lastMessage = _currentTime;
+            // qCWarning( phxVideo ) << "Discarding" << bytes << "bytes of old video data from" <<
+            //                           currentTime - timestamp << "ms ago";
+        }
+
+        return;
+    }
+
+    const uchar *newFramebuffer = ( const uchar * )t_data;
+
+    // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
+    for( int i = 0; i < consumerFmt.videoSize.height(); i++ ) {
+        // Don't read past the end of the given buffer
+        Q_ASSERT( i * consumerFmt.videoBytesPerLine < t_bytes );
+
+        // Don't write past the end of our framebuffer
+        Q_ASSERT( i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel < framebufferSize );
+
+        memcpy( framebuffer + i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel,
+                newFramebuffer + i * consumerFmt.videoBytesPerLine,
+                consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel
+                );
+    }
+
+    // Schedule a call to updatePaintNode() for this Item
+    update();
+}
+

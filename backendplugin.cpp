@@ -27,6 +27,7 @@ void CorePlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<LibretroCore::QStringMap>( "QStringMap" );
     qRegisterMetaType<ProducerFormat>( "ProducerFormat");
     qRegisterMetaType<VideoOutput *>( "VideoOutput *");
+    qRegisterMetaType<PipelineNode::DataReason>();
 
 
 }

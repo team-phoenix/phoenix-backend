@@ -26,6 +26,11 @@
     connectionList << connect( dynamic_cast<QObject *>( control ), SIGNAL( setState( Control::State ) ),\
              dynamic_cast<QObject *>( controllable ), SLOT( setState( Control::State ) ) );
 
+template< typename Control, typename Controllable >
+void appendConnection( Control *t_control, Controllable *t_controllabe ) {
+
+}
+
 class Control {
     public:
         Control();

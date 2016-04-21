@@ -1,8 +1,8 @@
 #pragma once
 
+#include "pipelinenode.h"
 #include "controllable.h"
 #include "producer.h"
-
 #include "sdleventloop.h"
 
 /*
@@ -12,15 +12,20 @@
 
 class GamepadManager : public QObject, public Producer, public Controllable {
         Q_OBJECT
+        PHX_PIPELINE_INTERFACE( GamepadManager )
         Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
 
     public:
         explicit GamepadManager( QObject *parent = nullptr );
+        ~GamepadManager();
 
     public slots:
         void setState( Control::State currentState ) override;
 
-        void poll( qint64 timestamp );
+        void poll( QMutex *t_mutex
+                   , void *t_data
+                   , size_t &t_bytes
+                   , qint64 &t_timeStamp );
 
         // Update touch state
         void updateTouchState( QPointF point, bool pressed );
@@ -28,6 +33,25 @@ class GamepadManager : public QObject, public Producer, public Controllable {
         bool eventFilter( QObject *object, QEvent *event ) override;
 
         void addGamepad( const Gamepad *_gamepad );
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *t_mutex
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp ) {
+
+            switch ( t_reason ) {
+            case PipelineNode::Poll_Input_nullptr:
+                m_SDLEventLoop.poll();
+                break;
+            case PipelineNode::Create_Frame_any:
+                poll( t_mutex, t_data, t_bytes, t_timeStamp );
+            default:
+                break;
+            }
+
+            emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
+        }
 
     signals:
         PRODUCER_SIGNALS

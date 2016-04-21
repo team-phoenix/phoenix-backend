@@ -21,7 +21,7 @@ class SDLEventLoop : public QObject {
         ~SDLEventLoop();
 
     public slots:
-        void poll( qint64 timeStamp = 0 );
+        void poll();
         void onControllerDBFileChanged( QString controllerDBFile );
 
     signals:
@@ -29,7 +29,6 @@ class SDLEventLoop : public QObject {
         void gamepadRemoved( const Gamepad *);
 
     private:
-
         QHash<qint32, Gamepad *> m_gamepadsMap;
 
 

@@ -1,6 +1,7 @@
 #ifndef VIDEOOUTPUT_H
 #define VIDEOOUTPUT_H
 
+#include "pipelinenode.h"
 #include "controllable.h"
 #include "consumer.h"
 #include "logging.h"
@@ -16,6 +17,7 @@ class QSGTexture;
 
 class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         Q_OBJECT
+        PHX_PIPELINE_INTERFACE( VideoOutput )
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool linearFiltering MEMBER linearFiltering NOTIFY linearFilteringChanged )
@@ -43,6 +45,38 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         void consumerFormat( ProducerFormat consumerFmt ) override;
         void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
         CONTROLLABLE_SLOT_SETSTATE_DEFAULT
+
+        void dataIn( PipelineNode::DataReason t_reason
+                     , QMutex *t_mutex
+                     , void *t_data
+                     , size_t t_bytes
+                     , qint64 t_timeStamp ) {
+            switch( t_reason ) {
+                case PipelineNode::State_Changed_To_Loading_bool:
+                case PipelineNode::State_Changed_To_Paused_bool:
+                case PipelineNode::State_Changed_To_Playing_bool:
+                case PipelineNode::State_Changed_To_Stopped_bool:
+                case PipelineNode::State_Changed_To_Unloading_bool:
+                    setNodeState( t_reason );
+                    break;
+
+                case PipelineNode::Format_Changed_ProducerFormat: {
+                    consumerFormat( *static_cast<ProducerFormat *>( t_data ) );
+                    break;
+                }
+                case PipelineNode::Create_Frame_any: {
+
+                    if ( nodeState() == PipelineNode::State_Changed_To_Playing_bool ) {
+                        updateFrame( t_mutex, t_data, t_bytes, t_timeStamp );
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
+        }
 
     private:
         // The framebuffer that holds the latest frame from Core
@@ -86,6 +120,8 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Helper for printing aspect ratios as fractions
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
         int greatestCommonDivisor( int m, int n );
+
+        void updateFrame( QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timestamp );
 };
 
 Q_DECLARE_METATYPE( VideoOutput * )

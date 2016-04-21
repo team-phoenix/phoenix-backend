@@ -19,6 +19,7 @@ GamepadManager::GamepadManager( QObject *parent )
       m_gamepadList( 16 ),
       m_keyboardStates( 16 )
 {
+
     for ( int i=0; i < 16; ++i ) {
         for ( int j=0; j < 16; j++ ) {
             m_gamepadStates[ i ][ j ] = 0;
@@ -33,13 +34,18 @@ GamepadManager::GamepadManager( QObject *parent )
     connect( &m_SDLEventLoop, &SDLEventLoop::gamepadAdded, this, &GamepadManager::addGamepad );
     connect( &m_SDLEventLoop, &SDLEventLoop::gamepadRemoved, this, &GamepadManager::gamepadRemoved );
 
-
 }
 
-void GamepadManager::poll( qint64 timeStamp ) {
+GamepadManager::~GamepadManager() {
+}
+
+void GamepadManager::poll( QMutex *t_mutex
+                           , void *t_data
+                           , size_t &t_bytes
+                           , qint64 &t_timeStamp ) {
     qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
-    if( currentTime - timeStamp > 64 ) {
+    if( currentTime - t_timeStamp > 64 ) {
         return;
     }
 
@@ -50,29 +56,30 @@ void GamepadManager::poll( qint64 timeStamp ) {
         memset(m_gamepadStates, 0, sizeof(m_gamepadStates)); //clear buffer
 
         // Fetch input states
-        m_SDLEventLoop.poll( timeStamp );
+        m_SDLEventLoop.poll();
 
         // Copy states from gamepads and the keyboard to a buffer.
         for ( int i=0; i < 16; ++i ) {
-            auto gPad = m_gamepadList[ i ];
+            auto *gPad = m_gamepadList[ i ];
             if( gPad ) {
-                for ( int b=0; b < 16; ++i ) {
+                for ( int b=0; b < 16; ++b ) {
                     auto gPadState = gPad->buttonState( static_cast<Gamepad::Button>( b ) );
                     m_gamepadStates[ i ][ b ] = ( 0 == i )
                             ? gPadState | m_keyboardStates[ b ] : gPadState;
-
                 }
 
             } else {
                 if ( 0 == i ) {
                     for ( int b=0; b < 16; ++b ) {
                         m_gamepadStates[ i ][ b ] = m_keyboardStates[ b ];
-                        if ( m_gamepadStates[ i ][ b ] == 1 ) {
-                        }
                     }
                 }
             }
         }
+
+
+        t_data = static_cast<void *>( m_gamepadStates );
+        t_bytes = sizeof( m_gamepadStates );
 
 
         // Set final touch state once per frame
@@ -82,18 +89,19 @@ void GamepadManager::poll( qint64 timeStamp ) {
         // Games I've tried don't like it only going for one then off the next
         updateTouchLatch();
 
+
         // Touch input must be done before regular input as that drives frame production
-        emit producerData( QStringLiteral( "touchinput" )
-                           , &producerMutex, &touchCoords
-                           , ( size_t )touchState
-                           , currentTime );
+//        emit producerData( QStringLiteral( "touchinput" )
+//                           , &producerMutex, &touchCoords
+//                           , ( size_t )touchState
+//                           , currentTime );
 
         // Cya later buffer!
-        emit producerData( QStringLiteral( "input" )
-                           , &producerMutex
-                           , static_cast<void *>( &m_gamepadStates )
-                           , static_cast<size_t>( sizeof( m_gamepadStates ) )
-                           , timeStamp );
+//        emit producerData( QStringLiteral( "input" )
+//                           , &producerMutex
+//                           , static_cast<void *>( &m_gamepadStates )
+//                           , static_cast<size_t>( sizeof( m_gamepadStates ) )
+//                           , timeStamp );
 
     }
 }
@@ -225,7 +233,8 @@ bool GamepadManager::eventFilter( QObject *object, QEvent *event ) {
 }
 
 void GamepadManager::addGamepad(const Gamepad *_gamepad) {
-    m_gamepadList.append( _gamepad );
+    Q_ASSERT( _gamepad->id() < 16 );
+    m_gamepadList[ _gamepad->id() ] =  _gamepad;
     emit gamepadAdded( _gamepad );
 }
 

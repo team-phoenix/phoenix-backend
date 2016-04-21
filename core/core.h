@@ -52,7 +52,7 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         virtual void setPlaybackSpeed( qreal playbackSpeed );
         virtual void setVolume( qreal volume );
 
-        virtual void setSrc( QVariant _src ) = 0;
+        virtual void setSrc( QVariantMap t_src ) = 0;
 
         // State changers
         virtual void load();

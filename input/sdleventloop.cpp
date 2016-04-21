@@ -31,8 +31,7 @@ SDLEventLoop::~SDLEventLoop() {
     deinit();
 }
 
-void SDLEventLoop::poll( qint64 timestamp ) {
-    Q_UNUSED( timestamp );
+void SDLEventLoop::poll() {
     SDL_GameControllerUpdate();
     auto numOfJoysticks = SDL_NumJoysticks();
 
@@ -41,7 +40,7 @@ void SDLEventLoop::poll( qint64 timestamp ) {
         for ( int i=0; i < numOfJoysticks; ++i ) {
             if ( SDL_IsGameController( i ) ) {
                 auto *gamepad = new Gamepad( i );
-                qCDebug( phxInput, "Retropad(%d) added", gamepad->id() );
+                qCDebug( phxInput, "Gamepad(%d) added", gamepad->id() );
                 m_gamepadsMap[ gamepad->id() ] = gamepad;
                 emit gamepadAdded( gamepad );
             }
@@ -52,7 +51,7 @@ void SDLEventLoop::poll( qint64 timestamp ) {
         for ( auto id : m_gamepadsMap.keys() ) {
             auto *gamepad = m_gamepadsMap[ id ];
             if ( !gamepad->isOpen() ) {
-                qCDebug( phxInput, "Retropad(%d) removed", gamepad->id() );
+                qCDebug( phxInput, "Gamepad(%d) removed", gamepad->id() );
                 emit gamepadRemoved( gamepad );
                 gamepad->deleteLater();
                 m_gamepadsMap.remove( id );
@@ -202,6 +201,7 @@ void SDLEventLoop::onControllerDBFileChanged( QString controllerDBFile ) {
 }
 
 void SDLEventLoop::init( const QByteArray &mapData ) {
+
     SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mapData.constData() );
     if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER ) < 0 ) {
         qFatal( "Fatal: Unable to initialize SDL2: %s", SDL_GetError() );

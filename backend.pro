@@ -82,7 +82,8 @@
     input/gamepad.h \
     core/gameconsoleproxy.h \
     core/gameconsole.h \
-    input/gamepadmanager.h
+    input/gamepadmanager.h \
+    pipelinenode.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -110,7 +111,8 @@
     input/gamepad.cpp \
     core/gameconsoleproxy.cpp \
     core/gameconsole.cpp \
-    input/gamepadmanager.cpp
+    input/gamepadmanager.cpp \
+    pipelinenode.cpp
 
 ##
 ## Linker settings

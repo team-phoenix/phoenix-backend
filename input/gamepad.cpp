@@ -26,24 +26,27 @@ Gamepad::~Gamepad() {
 
 void Gamepad::update() {
 
-    // Update Buttons
+    // Update button states
     for ( int button=0; button < SDL_CONTROLLER_BUTTON_MAX; ++button ) {
-        auto state = SDL_JoystickGetButton( m_SDLJoystick, button );
-        auto gButton = toGamepadButton( button );
-        if ( state != buttonState( gButton ) ) {
-            updateButtonState( gButton, state );
-        }
+        auto state = SDL_GameControllerGetButton( m_SDLGamepad
+                                                  , static_cast<SDL_GameControllerButton>( button ) );
+        updateButtonState( toGamepadButton( button ), state );
+
     }
 
-    // Update Axes
+    // Update axis states
     for( int axis=0; axis < SDL_CONTROLLER_AXIS_MAX; ++axis ) {
-        auto state = SDL_JoystickGetAxis( m_SDLJoystick, axis );
+        auto state = SDL_JoystickGetAxis( m_SDLJoystick, static_cast<SDL_GameControllerAxis>( axis ) );
         auto gAxis = toGamepadAxis( axis );
         if ( state != axisState( gAxis ) ) {
             updateAxisState( gAxis, state );
         }
     }
 
+}
+
+QString Gamepad::mapping() const {
+    return SDL_GameControllerMapping( m_SDLGamepad );
 }
 
 qint32 Gamepad::id() const
@@ -56,16 +59,37 @@ bool Gamepad::isOpen() const
     return SDL_GameControllerOpen( id() );
 }
 
-qint16 Gamepad::buttonState(Gamepad::Button button) const {
-    return m_buttonStates[ static_cast<int>( button ) ];
+qint16 Gamepad::buttonState(Gamepad::Button t_button) const {
+    return m_buttonStates[ static_cast<int>( t_button ) ];
 }
 
-qint16 Gamepad::axisState(Gamepad::Axis axis) const {
-    return m_axisStates[ static_cast<int>( axis ) ];
+qint16 Gamepad::axisState(Gamepad::Axis t_axis) const {
+    return m_axisStates[ static_cast<int>( t_axis ) ];
 }
 
-void Gamepad::updateButtonState(Gamepad::Button button, qint16 state) {
-    m_buttonStates[ static_cast<int>( button ) ] = state;
+void Gamepad::updateButtonState(Gamepad::Button t_button, qint16 state) {
+    auto _button = static_cast<int>( t_button );
+    if ( _button != m_buttonStates[ _button ] ) {
+        switch( t_button ) {
+        case Gamepad::Button::A:
+            setA( state );
+            break;
+        case Gamepad::Button::B:
+            setB( state );
+            break;
+        case Gamepad::Button::X:
+            setX( state );
+            break;
+        case Gamepad::Button::Y:
+            setY( state );
+            break;
+        default:
+            //Q_UNREACHABLE();
+            break;
+        }
+    }
+    m_buttonStates[ _button ] = state;
+
 }
 
 void Gamepad::updateAxisState(Gamepad::Axis axis, qint16 state) {
@@ -103,13 +127,13 @@ Gamepad::Button toGamepadButton( int button ) {
         case SDL_CONTROLLER_BUTTON_INVALID:
             return Gamepad::Button::Invalid;
         case SDL_CONTROLLER_BUTTON_A:
-            return Gamepad::Button::A;
-        case SDL_CONTROLLER_BUTTON_B:
             return Gamepad::Button::B;
+        case SDL_CONTROLLER_BUTTON_B:
+            return Gamepad::Button::A;
         case SDL_CONTROLLER_BUTTON_X:
-            return Gamepad::Button::X;
-        case SDL_CONTROLLER_BUTTON_Y:
             return Gamepad::Button::Y;
+        case SDL_CONTROLLER_BUTTON_Y:
+            return Gamepad::Button::X;
         case SDL_CONTROLLER_BUTTON_BACK:
             return Gamepad::Button::Select;
         case SDL_CONTROLLER_BUTTON_GUIDE:
