@@ -21,13 +21,15 @@ void CorePlugin::registerTypes( const char *uri ) {
     qmlRegisterType<GameConsoleProxy>( uri, 1, 0, "GameConsole" );
     qmlRegisterUncreatableType<ControlHelper>( uri, 1, 0, "Control", "Control or its subclasses cannot be instantiated from QML." );
 
-    qRegisterMetaType<Control::State>( "Control::State" );
+    qRegisterMetaType<GameConsoleProxy::PlaybackState>( "GameConsole::PlaybackState" );
     qRegisterMetaType<ControlHelper::State>( "ControlHelper::State" );
     qRegisterMetaType<size_t>( "size_t" );
-    qRegisterMetaType<LibretroCore::QStringMap>( "QStringMap" );
-    qRegisterMetaType<ProducerFormat>( "ProducerFormat");
+    qRegisterMetaType<AVFormat>();
     qRegisterMetaType<VideoOutput *>( "VideoOutput *");
-    qRegisterMetaType<PipelineNode::DataReason>();
+
+    qRegisterMetaType<DataReason>();
+    qRegisterMetaType<Command>();
+    qRegisterMetaType<PipeState>();
 
 
 }

@@ -26,6 +26,38 @@
 
 // In order to properly declare the slots in your abstract subclass of Consumer, simply use this macro under "public slots:"
 // Documented below
+
+struct ConsumerFormat {
+    ConsumerFormat() = default;
+    ~ConsumerFormat() = default;
+
+    // Control
+
+    // "libretro", etc.
+    QString producerType;
+
+    // Audio
+
+    QAudioFormat audioFormat;
+
+    // If audio data is sent at a regular rate, but the amount is too much/insufficient to keep the buffer from
+    // over/underflowing, stretch the incoming audio data by this factor to compensate
+    // In Libretro cores, this factor compensates for the emulation rate differing from the console's native framerate
+    // if using VSync, for example
+    // The ratio is hostFPS / coreFPS
+    qreal audioRatio{ 1.0 };
+
+    // Video
+
+    qreal videoAspectRatio{ 1.0 };
+    size_t videoBytesPerLine{ 0 };
+    size_t videoBytesPerPixel{ 0 };
+    qreal videoFramerate{ 60.0 };
+    VideoRendererType videoMode{ SOFTWARERENDER };
+    QImage::Format videoPixelFormat{ QImage::Format_RGB16 };
+    QSize videoSize{ 720, 480 };
+};
+
 #define CONSUMER_SLOTS_ABSTRACT \
     virtual void consumerFormat( ProducerFormat consumerFmt ) override = 0; \
     virtual void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override = 0;

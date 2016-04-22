@@ -6,15 +6,8 @@
 #include <QQuickWindow>
 #include <QOpenGLContext>
 
-VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(), Controllable(),
-    framebuffer( nullptr ),
-    framebufferSize( 0 ),
-    texture( nullptr ),
-    aspectRatio( 1.0 ),
-    linearFiltering( false ),
-    television( false ),
-    ntsc( true ),
-    widescreen( false ) {
+VideoOutput::VideoOutput( QQuickItem *parent )
+    : QQuickItem( parent ) {
 
     // Mandatory for our own drawing code to do anything
     setFlag( QQuickItem::ItemHasContents, true );
@@ -25,7 +18,10 @@ VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(
     emit ntscChanged( ntsc );
     emit widescreenChanged( widescreen );
 
-    size_t newSize = consumerFmt.videoSize.width() * consumerFmt.videoSize.height() * consumerFmt.videoBytesPerPixel;
+    size_t newSize = m_avFormat.videoSize.width()
+                     * m_avFormat.videoSize.height()
+                     * m_avFormat.videoBytesPerPixel;
+
     framebuffer = new uchar[ newSize ]();
     framebufferSize = newSize;
 
@@ -37,15 +33,56 @@ VideoOutput::~VideoOutput() {
     }
 }
 
-void VideoOutput::consumerFormat( ProducerFormat format ) {
+void VideoOutput::controlIn(Command t_cmd, QVariant t_data) {
 
+    switch( t_cmd ) {
+    case Command::UpdateAVFormat: {
+        Q_ASSERT( t_data.canConvert<AVFormat>() );
+        consumerFormat( qvariant_cast<AVFormat>( t_data ) );
+        return;
+    }
+    default:
+        break;
+    }
+}
+
+void VideoOutput::dataIn(DataReason t_reason, QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
+
+    switch( t_reason ) {
+
+    case DataReason::Create_Frame_any: {
+
+        if ( t_bytes < 3000 ) {
+
+
+            int a;
+
+        }
+        qDebug() << Q_FUNC_INFO << "bytes:" << t_bytes << "format: " << m_avFormat.videoBytesPerLine;
+        if ( pipeState() == PipeState::Playing ) {
+            updateFrame( t_mutex, t_data, t_bytes, t_timeStamp );
+        }
+
+        break;
+    }
+    default:
+        break;
+    }
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
+}
+
+void VideoOutput::consumerFormat( AVFormat format ) {
+
+    qCDebug( phxVideo ) << "Setting video format";
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
-    if( aspectRatio != newRatio || format.videoSize.width() != consumerFmt.videoSize.width() || format.videoSize.height() != consumerFmt.videoSize.height() ) {
+    if( aspectRatio != newRatio || format.videoSize.width() != m_avFormat.videoSize.width()
+            || format.videoSize.height() != m_avFormat.videoSize.height() ) {
         // Pretty-print the old and new aspect ratio (ex. "4:3")
-        int oldAspectRatioX = consumerFmt.videoSize.height() * aspectRatio;
-        int oldAspectRatioY = consumerFmt.videoSize.width() / aspectRatio;
+        int oldAspectRatioX = m_avFormat.videoSize.height() * aspectRatio;
+        int oldAspectRatioY = m_avFormat.videoSize.width() / aspectRatio;
         int newAspectRatioX = format.videoSize.height() * newRatio;
         int newAspectRatioY = format.videoSize.width() / newRatio;
         int oldGCD = greatestCommonDivisor( oldAspectRatioX, oldAspectRatioY );
@@ -75,57 +112,54 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
         framebufferSize = newSize;
     }
 
-
-    qDebug() << "CONSUMER FORMAT END";
-
-    consumerFmt = format;
+    m_avFormat = format;
 }
 
-void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-    Q_UNUSED( mutex )
-    Q_UNUSED( bytes )
-    Q_UNUSED( timestamp )
+//void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+//    Q_UNUSED( mutex )
+//    Q_UNUSED( bytes )
+//    Q_UNUSED( timestamp )
 
-    // Copy framebuffer to our own buffer for later drawing
-    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
-        // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
-        // QMutexLocker locker( mutex );
+//    // Copy framebuffer to our own buffer for later drawing
+//    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
+//        // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
+//        // QMutexLocker locker( mutex );
 
-        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+//        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
-        // Discard data that's too far from the past to matter anymore
-        if( currentTime - timestamp > 500 ) {
-            static qint64 lastMessage = 0;
+//        // Discard data that's too far from the past to matter anymore
+//        if( currentTime - timestamp > 500 ) {
+//            static qint64 lastMessage = 0;
 
-            if( currentTime - lastMessage > 1000 ) {
-                lastMessage = currentTime;
-                // qCWarning( phxVideo ) << "Discarding" << bytes << "bytes of old video data from" <<
-                //                           currentTime - timestamp << "ms ago";
-            }
+//            if( currentTime - lastMessage > 1000 ) {
+//                lastMessage = currentTime;
+//                // qCWarning( phxVideo ) << "Discarding" << bytes << "bytes of old video data from" <<
+//                //                           currentTime - timestamp << "ms ago";
+//            }
 
-            return;
-        }
+//            return;
+//        }
 
-        const uchar *newFramebuffer = ( const uchar * )data;
+//        const uchar *newFramebuffer = ( const uchar * )data;
 
-        // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-        for( int i = 0; i < consumerFmt.videoSize.height(); i++ ) {
-            // Don't read past the end of the given buffer
-            Q_ASSERT( i * consumerFmt.videoBytesPerLine < bytes );
+//        // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
+//        for( int i = 0; i < m_avFormat.videoSize.height(); i++ ) {
+//            // Don't read past the end of the given buffer
+//            Q_ASSERT( i * m_avFormat.videoBytesPerLine < bytes );
 
-            // Don't write past the end of our framebuffer
-            Q_ASSERT( i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel < framebufferSize );
+//            // Don't write past the end of our framebuffer
+//            Q_ASSERT( i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel < framebufferSize );
 
-            memcpy( framebuffer + i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel,
-                    newFramebuffer + i * consumerFmt.videoBytesPerLine,
-                    consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel
-                  );
-        }
+//            memcpy( framebuffer + i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel,
+//                    newFramebuffer + i * m_avFormat.videoBytesPerLine,
+//                    m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel
+//                  );
+//        }
 
-        // Schedule a call to updatePaintNode() for this Item
-        update();
-    }
-}
+//        // Schedule a call to updatePaintNode() for this Item
+//        update();
+//    }
+//}
 
 QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
@@ -135,8 +169,9 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     emit windowUpdate( QDateTime::currentMSecsSinceEpoch() );
 
     // Don't draw unless emulation is active
-    if( currentState != Control::PLAYING && currentState != Control::PAUSED ) {
-        return 0;
+    if( pipeState() != PipeState::Playing
+            && pipeState() != PipeState::Paused ) {
+        return nullptr;
     }
 
     // Create a new texture node for the renderer if one does not already exist
@@ -153,8 +188,8 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     }
 
     // Create new Image that holds a reference to our framebuffer
-    QImage image( ( const uchar * )framebuffer, consumerFmt.videoSize.width(), consumerFmt.videoSize.height(),
-                  consumerFmt.videoPixelFormat );
+    QImage image( ( const uchar * )framebuffer, m_avFormat.videoSize.width(), m_avFormat.videoSize.height(),
+                  m_avFormat.videoPixelFormat );
 
     // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
     texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
@@ -173,7 +208,7 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     return storedTextureNode;
 }
 
-qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
+qreal VideoOutput::calculateAspectRatio( AVFormat format ) {
     qreal newRatio = format.videoAspectRatio;
 
     if( widescreen ) {
@@ -186,21 +221,21 @@ qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
 void VideoOutput::setTelevision( bool television ) {
     if( this->television != television ) {
         this->television = television;
-        consumerFormat( consumerFmt );
+        consumerFormat( m_avFormat );
     }
 }
 
 void VideoOutput::setNtsc( bool ntsc ) {
     if( this->ntsc != ntsc ) {
         this->ntsc = ntsc;
-        consumerFormat( consumerFmt );
+        consumerFormat( m_avFormat );
     }
 }
 
 void VideoOutput::setWidescreen( bool widescreen ) {
     if( this->widescreen != widescreen ) {
         this->widescreen = widescreen;
-        consumerFormat( consumerFmt );
+        consumerFormat( m_avFormat );
     }
 }
 
@@ -252,16 +287,17 @@ void VideoOutput::updateFrame(QMutex *t_mutex, void *t_data, size_t t_bytes, qin
     const uchar *newFramebuffer = ( const uchar * )t_data;
 
     // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-    for( int i = 0; i < consumerFmt.videoSize.height(); i++ ) {
+    for( int i = 0; i < m_avFormat.videoSize.height(); i++ ) {
         // Don't read past the end of the given buffer
-        Q_ASSERT( i * consumerFmt.videoBytesPerLine < t_bytes );
+        qDebug() << i * m_avFormat.videoBytesPerLine << t_bytes;
+        Q_ASSERT( i * m_avFormat.videoBytesPerLine < t_bytes );
 
         // Don't write past the end of our framebuffer
-        Q_ASSERT( i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel < framebufferSize );
+        Q_ASSERT( i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel < framebufferSize );
 
-        memcpy( framebuffer + i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel,
-                newFramebuffer + i * consumerFmt.videoBytesPerLine,
-                consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel
+        memcpy( framebuffer + i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel,
+                newFramebuffer + i * m_avFormat.videoBytesPerLine,
+                m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel
                 );
     }
 

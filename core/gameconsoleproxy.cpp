@@ -15,15 +15,10 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
     gameThread( new QThread )
 {
 
-    connectInterface( this, m_gameConsole );
-
     // Set up GameConsole
     m_gameConsole->setObjectName( "GameConsole" );
     m_gameConsole->moveToThread( gameThread );
     connect( gameThread, &QThread::finished,  m_gameConsole, &QObject::deleteLater );
-    connect( this, &GameConsoleProxy::shutdown,  m_gameConsole, &GameConsole::shutdown );
-
-    connectGameConsoleProxy();
 
     gameThread->setObjectName( "Game thread" );
     gameThread->start( QThread::HighestPriority );
@@ -34,7 +29,8 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
         qDebug() << "";
 
         // Shut down gameConsole (calls gameThread->exit() too)
-        emit shutdown();
+
+        QMetaObject::invokeMethod( m_gameConsole, "shutdown" );
 
         // Shut down thread, block until it finishes
         gameThread->wait( 30 * 1000 );
@@ -52,33 +48,28 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
 // Safe to call from QML
 
 void GameConsoleProxy::load() {
-    emitDataOut( PipelineNode::State_Changed_To_Loading_bool, nullptr, 0, 0);
-    setNodeState( PipelineNode::State_Changed_To_Loading_bool );
-
+    setPlaybackState( PlaybackState::Loading );
 }
 
 void GameConsoleProxy::play() {
-    emitDataOut( PipelineNode::State_Changed_To_Playing_bool, nullptr, 0, 0);
-    setNodeState( PipelineNode::State_Changed_To_Playing_bool );
+    setPlaybackState( PlaybackState::Playing );
 }
 
 void GameConsoleProxy::pause() {
-    emitDataOut( PipelineNode::State_Changed_To_Paused_bool, nullptr, 0, 0);
-    setNodeState( PipelineNode::State_Changed_To_Paused_bool );
+    setPlaybackState( PlaybackState::Paused );
 }
 
 void GameConsoleProxy::stop() {
-    emitDataOut( PipelineNode::State_Changed_To_Stopped_bool, nullptr, 0, 0);
-    setNodeState( PipelineNode::State_Changed_To_Stopped_bool );
+    setPlaybackState( PlaybackState::Stopped );
 }
 
 void GameConsoleProxy::reset() {
-    //emitDataOut( PipelineNode::State_Changed_To_Stopped_bool, nullptr, 0, 0);
+    setPlaybackState( PlaybackState::Resetting );
 }
 
 void GameConsoleProxy::componentComplete() {
 
-    emitDataOut(PipelineNode::Set_QML_Loaded_nullptr, nullptr, 0, 0 );
+    QMetaObject::invokeMethod( m_gameConsole, "componentComplete" );
 
     if ( m_src.contains( QStringLiteral( "--libretro") ) ) {
         const QString core = m_src[ QStringLiteral( "-c" ) ].toString() ;
@@ -87,13 +78,12 @@ void GameConsoleProxy::componentComplete() {
              && !game.isEmpty()
              && QFile::exists( core )
              && QFile::exists( game ) ) {
-            qDebug() << "is valid";
 
             setSrc( QVariantMap{
                         { QStringLiteral( "core" ), core },
                         { QStringLiteral( "game" ), game },
                     } );
-            emitDataOut( PipelineNode::Set_Source_QVariantMap, &m_src, 0, 0  );
+
             load();
             play();
         }
@@ -103,6 +93,7 @@ void GameConsoleProxy::componentComplete() {
     else {
         if ( !m_src.isEmpty() ) {
             load();
+            play();
         }
     }
 
@@ -111,15 +102,17 @@ void GameConsoleProxy::componentComplete() {
 }
 
 void GameConsoleProxy::classBegin() {
-//    emit videoOutputChanged( videoOutput );
-//    emit pausableChanged( pausable );
-//    emit playbackSpeedChanged( playbackSpeed );
-//    emit resettableChanged( resettable );
-//    emit rewindableChanged( rewindable );
-//    emit sourceChanged( getSource() );
-//    emit stateChanged( state );
-//    emit volumeChanged( volume );
-//    emit vsyncChanged( vsync );
+
+    // Tell QML that our signals have changed.
+    emit srcChanged();
+    emit videoOutputChanged();
+    emit pausableChanged();
+    emit playbackSpeedChanged();
+    emit resettableChanged();
+    emit rewindableChanged();
+    emit sourceChanged();
+    emit volumeChanged();
+    emit vsyncChanged();
 }
 
 QVariantMap GameConsoleProxy::src() const
@@ -130,143 +123,108 @@ QVariantMap GameConsoleProxy::src() const
 void GameConsoleProxy::setSrc(QVariantMap t_src) {
     if ( t_src != m_src ) {
         m_src = t_src;
-        emit srcChanged( t_src );
+        QMetaObject::invokeMethod( m_gameConsole, "setSrc", Q_ARG( QVariantMap, t_src ) );
+        emit srcChanged();
     }
 }
 
-void GameConsoleProxy::dataIn(PipelineNode::DataReason t_reason, QMutex *, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
-
-    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp);
-
+void GameConsoleProxy::setVideoOutput( VideoOutput *t_output ) {
+    QMetaObject::invokeMethod( m_gameConsole, "setVideoOutput", Q_ARG( VideoOutput *, t_output ) );
+    m_videoOutput = t_output;
+    emit videoOutputChanged();
 }
 
-// Private slots, cannot be called from QML. Use the respective properties instead
-
-void GameConsoleProxy::setVideoOutput( VideoOutput *videoOutput ) {
-    emit videoOutputChangedProxy( videoOutput );
+void GameConsoleProxy::setPlaybackSpeed( qreal t_speed ) {
+    QMetaObject::invokeMethod( m_gameConsole, "setPlaybackSpeed", Q_ARG( qreal, t_speed ) );
+    m_playbackSpeed = t_speed;
+    emit playbackSpeedChanged();
 }
 
-void GameConsoleProxy::setPlaybackSpeed( qreal playbackSpeed ) {
-    emit playbackSpeedChangedProxy( playbackSpeed );
+void GameConsoleProxy::setVolume( qreal t_volume ) {
+    QMetaObject::invokeMethod( m_gameConsole, "setVolume", Q_ARG( qreal, t_volume ) );
+    m_volume = t_volume;
+    emit volumeChanged();
 }
 
-void GameConsoleProxy::setVolume( qreal volume ) {
-    QMetaObject::invokeMethod( m_gameConsole, "setVolume", Q_ARG( qreal, volume ) );
-    //emit volumeChangedProxy( volume );
+void GameConsoleProxy::setVsync( bool t_vsync ) {
+    QMetaObject::invokeMethod( m_gameConsole, "setVsync", Q_ARG( bool, t_vsync ) );
+    m_vsync = t_vsync;
+    emit vsyncChanged();
 }
 
-void GameConsoleProxy::setVsync( bool vsync ) {
-    QMetaObject::invokeMethod( m_gameConsole, "setVsync", Q_ARG( bool, vsync ) );
-    //emit vsyncChangedProxy( vsync );
+void GameConsoleProxy::setRewindable(bool t_rewindable) {
+    m_rewindable = t_rewindable;
+    emit rewindableChanged();
 }
 
-void GameConsoleProxy::setVideoOutputProxy( VideoOutput *videoOutput ) {
-    this->videoOutput = videoOutput;
-    emit videoOutputChanged( videoOutput );
+void GameConsoleProxy::setResettable(bool t_resettable) {
+    m_resettable = t_resettable;
+    emit resettableChanged();
 }
 
-void GameConsoleProxy::setPausableProxy( bool pausable ) {
-    this->pausable = pausable;
-    emit pausableChanged( pausable );
+void GameConsoleProxy::setPausable(bool t_pausable) {
+    m_pausable = t_pausable;
+    emit pausableChanged();
 }
 
-void GameConsoleProxy::setPlaybackSpeedProxy( qreal playbackSpeed ) {
-    this->playbackSpeed = playbackSpeed;
-    emit playbackSpeedChanged( playbackSpeed );
+void GameConsoleProxy::setPlaybackState(GameConsoleProxy::PlaybackState t_state) {
+    m_playbackState = t_state;
+    switch( t_state ) {
+        case PlaybackState::Loading:
+            QMetaObject::invokeMethod( m_gameConsole, "load" );
+            break;
+        case PlaybackState::Unloading:
+            //QMetaObject::invokeMethod( m_gameConsole, "load" );
+            break;
+        case PlaybackState::Stopped:
+            QMetaObject::invokeMethod( m_gameConsole, "stop" );
+            break;
+        case PlaybackState::Playing:
+            QMetaObject::invokeMethod( m_gameConsole, "play" );
+            break;
+        case PlaybackState::Paused:
+            QMetaObject::invokeMethod( m_gameConsole, "pause" );
+            break;
+        case PlaybackState::Resetting:
+            QMetaObject::invokeMethod( m_gameConsole, "reset" );
+            break;
+        default:
+            Q_UNREACHABLE();
+            break;
+    }
+
+    emit playbackStateChanged();
 }
 
-void GameConsoleProxy::setResettableProxy( bool resettable ) {
-    this->resettable = resettable;
-    emit resettableChanged( resettable );
+VideoOutput *GameConsoleProxy::videoOutput() const {
+    return m_videoOutput;
 }
 
-void GameConsoleProxy::setRewindableProxy( bool rewindable ) {
-    this->rewindable = rewindable;
-    emit rewindableChanged( rewindable );
+bool GameConsoleProxy::pausable() const {
+    return m_pausable;
 }
 
-void GameConsoleProxy::setStateProxy( Control::State state ) {
-    this->state = ( ControlHelper::State )state;
-    emit stateChanged( ( ControlHelper::State )state );
+qreal GameConsoleProxy::playbackSpeed() const {
+    return m_playbackSpeed;
 }
 
-void GameConsoleProxy::setVolumeProxy( qreal volume ) {
-    this->volume = volume;
-    emit volumeChanged( volume );
+bool GameConsoleProxy::resettable() const {
+    return m_resettable;
 }
 
-void GameConsoleProxy::setVsyncProxy( bool vsync ) {
-    this->vsync = vsync;
-    emit vsyncChanged( vsync );
+bool GameConsoleProxy::rewindable() const {
+    return m_rewindable;
 }
 
-void GameConsoleProxy::connectGameConsoleProxy() {
-
-    // Step 2 (our proxy to GameConsole's setter)
-    connect( this, &GameConsoleProxy::videoOutputChangedProxy, m_gameConsole, &GameConsole::setVideoOutput );
-    connect( this, &GameConsoleProxy::playbackSpeedChangedProxy, m_gameConsole, &GameConsole::setPlaybackSpeed );
-    connect( this, &GameConsoleProxy::volumeChangedProxy, m_gameConsole, &GameConsole::setVolume );
-    connect( this, &GameConsoleProxy::vsyncChangedProxy, m_gameConsole, &GameConsole::setVsync );
-
-    connect( this, &GameConsoleProxy::srcChanged, m_gameConsole, &GameConsole::setSrc );
-    // Step 3 (GameConsole change notifier to our proxy)
-    connect( m_gameConsole, &GameConsole::videoOutputChanged, this, &GameConsoleProxy::setVideoOutputProxy );
-    connect( m_gameConsole, &GameConsole::pausableChanged, this, &GameConsoleProxy::setPausableProxy );
-    connect( m_gameConsole, &GameConsole::playbackSpeedChanged, this, &GameConsoleProxy::setPlaybackSpeedProxy );
-    connect( m_gameConsole, &GameConsole::resettableChanged, this, &GameConsoleProxy::setResettableProxy );
-    connect( m_gameConsole, &GameConsole::rewindableChanged, this, &GameConsoleProxy::setRewindableProxy );
-    //connect( m_gameConsole, &GameConsole::sourceChanged, this, &GameConsoleProxy::setSourceProxy );
-    connect( m_gameConsole, &GameConsole::volumeChanged, this, &GameConsoleProxy::setVolumeProxy );
-    connect( m_gameConsole, &GameConsole::stateChanged, this, &GameConsoleProxy::setStateProxy );
-    connect( m_gameConsole, &GameConsole::vsyncChanged, this, &GameConsoleProxy::setVsyncProxy );
-
-    connect( m_gameConsole, &GameConsole::gamepadAdded, this, [this]( const Gamepad *t_gamepad ) {
-        m_gamepadsConnected.append( t_gamepad );
-        emit gamepadsConnectedChanged();
-    });
-    connect( m_gameConsole, &GameConsole::gamepadRemoved, this, [this]( const Gamepad *t_gamepad ) {
-        int i = 0;
-        for ( const auto *gPad : m_gamepadsConnected ) {
-            if ( gPad == t_gamepad ) {
-                m_gamepadsConnected.removeAt( i );
-                emit gamepadsConnectedChanged();
-                break;
-            }
-            ++i;
-        }
-    });
-
+qreal GameConsoleProxy::volume() const {
+    return m_volume;
 }
 
-VideoOutput *GameConsoleProxy::getVideoOutput() const {
-    return videoOutput;
+bool GameConsoleProxy::vsync() const {
+    return m_vsync;
 }
 
-bool GameConsoleProxy::getPausable() const {
-    return pausable;
-}
-
-qreal GameConsoleProxy::getPlaybackSpeed() const {
-    return playbackSpeed;
-}
-
-bool GameConsoleProxy::getResettable() const {
-    return resettable;
-}
-
-bool GameConsoleProxy::getRewindable() const {
-    return rewindable;
-}
-
-ControlHelper::State GameConsoleProxy::getState() const {
-    return ( ControlHelper::State )state;
-}
-
-qreal GameConsoleProxy::getVolume() const {
-    return volume;
-}
-
-bool GameConsoleProxy::getVsync() const {
-    return vsync;
+GameConsoleProxy::PlaybackState GameConsoleProxy::playbackState() const {
+    return m_playbackState;
 }
 

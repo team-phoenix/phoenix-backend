@@ -3,7 +3,7 @@
 
 #include "pipelinenode.h"
 #include "controllable.h"
-#include "consumer.h"
+#include "avformat.h"
 #include "logging.h"
 
 #include <QQuickItem>
@@ -15,7 +15,7 @@
 
 class QSGTexture;
 
-class VideoOutput : public QQuickItem, public Consumer, public Controllable {
+class VideoOutput : public QQuickItem {
         Q_OBJECT
         PHX_PIPELINE_INTERFACE( VideoOutput )
 
@@ -30,6 +30,18 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         ~VideoOutput();
 
     signals:
+
+        void dataOut( DataReason reason
+                     , QMutex *producerMutex
+                     , void *data
+                     , size_t bytes
+                     , qint64 timeStamp );
+
+        void controlOut( Command t_cmd
+                        , QVariant data );
+
+        void stateOut( PipeState t_state );
+
         // Properties
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
@@ -42,49 +54,31 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         void windowUpdate( qint64 timestamp );
 
     public slots:
-        void consumerFormat( ProducerFormat consumerFmt ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
-        CONTROLLABLE_SLOT_SETSTATE_DEFAULT
+        void consumerFormat( AVFormat _avFormat );
+        //void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
 
-        void dataIn( PipelineNode::DataReason t_reason
+        void stateIn( PipeState t_state ) {
+            setPipeState( t_state );
+        }
+
+        void controlIn( Command t_cmd, QVariant t_data );
+
+        void dataIn( DataReason t_reason
                      , QMutex *t_mutex
                      , void *t_data
                      , size_t t_bytes
-                     , qint64 t_timeStamp ) {
-            switch( t_reason ) {
-                case PipelineNode::State_Changed_To_Loading_bool:
-                case PipelineNode::State_Changed_To_Paused_bool:
-                case PipelineNode::State_Changed_To_Playing_bool:
-                case PipelineNode::State_Changed_To_Stopped_bool:
-                case PipelineNode::State_Changed_To_Unloading_bool:
-                    setNodeState( t_reason );
-                    break;
-
-                case PipelineNode::Format_Changed_ProducerFormat: {
-                    consumerFormat( *static_cast<ProducerFormat *>( t_data ) );
-                    break;
-                }
-                case PipelineNode::Create_Frame_any: {
-
-                    if ( nodeState() == PipelineNode::State_Changed_To_Playing_bool ) {
-                        updateFrame( t_mutex, t_data, t_bytes, t_timeStamp );
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
-        }
+                     , qint64 t_timeStamp );
 
     private:
+
+        AVFormat m_avFormat;
+
         // The framebuffer that holds the latest frame from Core
-        uchar *framebuffer;
-        size_t framebufferSize;
+        uchar *framebuffer{ nullptr };
+        size_t framebufferSize{ 0 };
 
         // Holds a pointer to the framebuffer via its underlying QImage, used by renderer to upload framebuffer to GPU
-        QSGTexture *texture;
+        QSGTexture *texture{ nullptr };
 
         // Called by render thread whenever it's time to render and needs an update from us
         // We'll assign the current texture to the stored node given to us, creating this stored node if it does not
@@ -94,23 +88,23 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData *paintData ) override;
 
         // The correct aspect ratio to display this picture in
-        qreal aspectRatio;
-        qreal calculateAspectRatio( ProducerFormat format );
+        qreal aspectRatio{ 1.0 };
+        qreal calculateAspectRatio( AVFormat format );
 
         // Linear vs nearest-neighbor filtering
-        bool linearFiltering;
+        bool linearFiltering{ false };
 
         // Controls whether to use analog television mode or not (false = digital TV or handheld games, etc... anything
         // with a square PAR)
-        bool television;
+        bool television{ false };
 
         // Do we expect 480 vertical lines (NTSC, true) or 576 vertical lines (PAL, false)?
         // Ignored if television is false
-        bool ntsc;
+        bool ntsc{ true };
 
         // Is this standard 4:3 (false) or is the image anamorphic widescreen (16:9 packed into a 4:3 frame, true)?
         // Ignored if television is false
-        bool widescreen;
+        bool widescreen{ false };
 
         // Setters for the above 3 properties, will force a recheck of the aspect ratio if any are called
         void setTelevision( bool television );

@@ -8,17 +8,9 @@
 const auto samplesPerFrame = 2;
 // const auto framesPerSample = 0.5;
 
-AudioOutput::AudioOutput( QObject *parent ): QObject( parent ), Consumer(), Controllable(),
-    resamplerState( nullptr ),
-    sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
-    inputDataShort( nullptr ), inputDataFloat( nullptr ),
-    outputDataFloat( nullptr ), outputDataShort( nullptr ),
-    coreIsRunning( false ),
-    outputAudioInterface( nullptr ),
-    outputCurrentByte( 0 ),
-    outputBuffer( this ),
-    outputLengthMs( 200 ), outputTargetMs( 40 ), maxDeviation( 0.005 ) {
-
+AudioOutput::AudioOutput( QObject *parent )
+    : QObject( parent )
+{
     outputBuffer.start();
 }
 
@@ -30,13 +22,13 @@ AudioOutput::~AudioOutput() {
 
 // Public slots
 
-void AudioOutput::consumerFormat( ProducerFormat format ) {
+void AudioOutput::consumerFormat( AVFormat format ) {
     // Currently, we assume that the audio format will only be set once per session, during loading
-    if( currentState == Control::LOADING ) {
-        this->consumerFmt = format;
+    if( pipeState() == PipeState::Playing ) {
+        m_avFormat = format;
 
-        this->sampleRate = consumerFmt.audioFormat.sampleRate();
-        this->coreFPS = consumerFmt.videoFramerate;
+        this->sampleRate = m_avFormat.audioFormat.sampleRate();
+        this->coreFPS = m_avFormat.videoFramerate;
         this->hostFPS = coreFPS;
 
         qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
@@ -75,60 +67,90 @@ void AudioOutput::consumerFormat( ProducerFormat format ) {
     }
 }
 
-void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-    Q_UNUSED( mutex );
-    Q_UNUSED( timestamp );
+//void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+//    Q_UNUSED( mutex );
+//    Q_UNUSED( timestamp );
 
-    if( type == QStringLiteral( "audio" ) && currentState == Control::PLAYING ) {
-        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+//    if( type == QStringLiteral( "audio" ) && currentState == Control::PLAYING ) {
+//        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
-        // Discard data that's too far from the past to matter anymore
-        if( currentTime - timestamp > 500 ) {
-            static qint64 lastMessage = 0;
+//        // Discard data that's too far from the past to matter anymore
+//        if( currentTime - timestamp > 500 ) {
+//            static qint64 lastMessage = 0;
 
-            if( currentTime - lastMessage > 1000 ) {
-                lastMessage = currentTime;
-                // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
-                //                           currentTime - timestamp << "ms ago";
-            }
+//            if( currentTime - lastMessage > 1000 ) {
+//                lastMessage = currentTime;
+//                // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
+//                //                           currentTime - timestamp << "ms ago";
+//            }
 
-            return;
-        }
+//            return;
+//        }
 
-        // Make a copy so the data won't be changed later
-        memcpy( inputDataShort, data, bytes );
+//        // Make a copy so the data won't be changed later
+//        memcpy( inputDataShort, data, bytes );
 
-        audioData( inputDataShort, bytes );
-    }
+//        audioData( inputDataShort, bytes );
+//    }
 
-    else if( type == QStringLiteral( "audiovolume" ) ) {
-        if( outputAudioInterface ) {
-            outputAudioInterface->setVolume( *( qreal * )data );
-        }
-    }
-}
-
-void AudioOutput::setState( Control::State state ) {
-    // We only care about the transition to PLAYING, PAUSED or UNLOADING
-    if( this->currentState != Control::PLAYING && state == Control::PLAYING ) {
-        setAudioActive( true );
-    }
-
-    if( this->currentState != Control::PAUSED && state == Control::PAUSED ) {
-        setAudioActive( false );
-    }
-
-    if( this->currentState != Control::UNLOADING && state == Control::UNLOADING ) {
-        setAudioActive( false );
-        shutdown();
-    }
-
-    this->currentState = state;
-}
+//    else if( type == QStringLiteral( "audiovolume" ) ) {
+//        if( outputAudioInterface ) {
+//            outputAudioInterface->setVolume( *( qreal * )data );
+//        }
+//    }
+//}
 
 void AudioOutput::libretroSetFramerate( qreal hostFPS ) {
     qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
     this->hostFPS = hostFPS;
+}
+
+void AudioOutput::stateIn(PipeState t_state) {
+    switch( t_state ) {
+    case PipeState::Playing:
+    case PipeState::Paused:
+    case PipeState::Stopped:
+    case PipeState::Loading:
+    case PipeState::Unloading: {
+        if ( pipeState() != t_state ) {
+            if ( t_state == PipeState::Unloading ) {
+                setAudioActive( false );
+                shutdown();
+            } else if ( t_state == PipeState::Paused ) {
+                setAudioActive( false );
+            } else if ( t_state == PipeState::Playing ) {
+                setAudioActive( true );
+            }
+        }
+
+        setPipeState( t_state);
+        break;
+    }
+    default:
+        break;
+    }
+
+}
+
+void AudioOutput::controlIn( Command t_cmd, QVariant t_data)
+{
+    switch( t_cmd ) {
+    case Command::Set_Volume_Level_qreal: {
+        if( outputAudioInterface ) {
+            outputAudioInterface->setVolume( t_data.toReal() );
+        }
+    }
+
+    case Command::UpdateAVFormat: {
+        Q_ASSERT( t_data.canConvert<AVFormat>() );
+        const AVFormat _fmt = qvariant_cast<AVFormat>( t_data );
+        consumerFormat( _fmt );
+        break;
+    }
+
+    default:
+        break;
+    }
 }
 
 // Private slots
@@ -157,43 +179,16 @@ void AudioOutput::handleUnderflow() {
     }
 }
 
-void AudioOutput::dataIn(PipelineNode::DataReason t_reason
+void AudioOutput::dataIn(DataReason t_reason
                          , QMutex *
                          , void *t_data
                          , size_t t_bytes
                          , qint64 t_timeStamp) {
 
     switch( t_reason ) {
-        case PipelineNode::State_Changed_To_Unloading_bool: {
-            if ( nodeState() != t_reason ) {
-                setAudioActive( false );
-                shutdown();
-            }
-            setNodeState( t_reason );
-            break;
-        }
-        case PipelineNode::State_Changed_To_Paused_bool: {
-            if ( nodeState() != t_reason ) {
-                setAudioActive( false );
-            }
-            setNodeState( t_reason );
-            break;
-        }
-        case PipelineNode::State_Changed_To_Playing_bool: {
-            if ( nodeState() != t_reason ) {
-                setAudioActive( true );
-            }
-            setNodeState( t_reason );
-            break;
-        }
 
-        case PipelineNode::Format_Changed_ProducerFormat: {
-            consumerFormat( *static_cast<ProducerFormat *>( t_data ) );
-            break;
-        }
-
-        case PipelineNode::Create_Frame_any: {
-            if ( nodeState() != PipelineNode::State_Changed_To_Playing_bool ) {
+        case DataReason::Create_Frame_any: {
+            if ( pipeState() != PipeState::Playing ) {
                 qint64 _currentTime = QDateTime::currentMSecsSinceEpoch();
                 // Discard data that's too far from the past to matter anymore
                 if( _currentTime - t_timeStamp > 500 ) {
@@ -213,11 +208,7 @@ void AudioOutput::dataIn(PipelineNode::DataReason t_reason
             }
             break;
         }
-        case PipelineNode::Set_Volume_Level_qreal: {
-            if( outputAudioInterface ) {
-                outputAudioInterface->setVolume( *static_cast<qreal *>( t_data ) );
-            }
-        }
+
         default:
             break;
     }

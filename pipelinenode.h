@@ -3,6 +3,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QList>
+#include <QVariant>
 
 #include <QDebug>
 
@@ -17,12 +18,7 @@
 // knows.
 
 #define PHX_PIPELINE_INTERFACE( DerivedClass )          \
-    Q_SIGNALS:                                          \
-        void dataOut( PipelineNode::DataReason reason   \
-                     , QMutex *producerMutex            \
-                     , void *data                       \
-                     , size_t bytes                     \
-                     , qint64 timeStamp );              \
+                                                        \
                                                         \
     public:                                             \
                                                         \
@@ -32,6 +28,16 @@
                         , &PipelineNode::dataOut        \
                         , this                          \
                         , &DerivedClass::dataIn );      \
+                                                        \
+                connect( &m_interface                   \
+                        , &PipelineNode::controlOut     \
+                        , this                          \
+                        , &DerivedClass::controlIn );   \
+                                                        \
+                connect( &m_interface                   \
+                        , &PipelineNode::stateOut       \
+                        , this                          \
+                        , &DerivedClass::stateIn );     \
                                                         \
                 m_selfConnectionMade = true;            \
             }                                           \
@@ -47,7 +53,11 @@
             m_interfaceMutex.unlock();                  \
         }                                               \
                                                         \
-        void emitDataOut( PipelineNode::DataReason t_reason         \
+        QMutex &interfaceMutex() {                \
+            return m_interfaceMutex;                    \
+        }                                               \
+                                                        \
+        void emitDataOut( DataReason t_reason           \
                          , void *t_data                             \
                          , size_t t_bytes                           \
                          , qint64 t_timeStamp ) {                   \
@@ -59,18 +69,19 @@
                          , t_timeStamp);                            \
         }                                                           \
                                                                     \
-        void setNodeState( PipelineNode::DataReason t_reason ) {    \
-            m_interfaceState = t_reason;                            \
+        void setPipeState( PipeState t_state ) {                    \
+            m_state = t_state;                                      \
+            emit stateOut( t_state );                               \
         }                                                           \
                                                                     \
-        PipelineNode::DataReason nodeState() const {                \
-            return m_interfaceState;                                \
+        PipeState pipeState() const {                                       \
+            return m_state;                                         \
         }                                                           \
                                                                     \
     protected:                                                      \
         PipelineNode m_interface;                                   \
         mutable QMutex m_interfaceMutex;                            \
-        PipelineNode::DataReason m_interfaceState{ PipelineNode::State_Changed_To_Stopped_bool }; \
+        PipeState m_state{ PipeState::Stopped }; \
                                                                     \
     private:                                                        \
         bool m_selfConnectionMade{ false };
@@ -87,54 +98,66 @@
 // QObjects only allow single inheritance, this the way that we get around that,
 // while keeping common QObject signals and slots.
 
+enum class Command {
+    First = 0,
+
+    Format_Changed_ProducerFormat,
+    Set_Vsync_bool,
+    Set_Playback_Speed_qreal,
+    Set_Volume_Level_qreal,
+    Set_FrameRate_qreal,
+    Set_Source_QVariantMap,
+    Set_QML_Loaded_nullptr,
+
+    UpdateAVFormat,
+
+    Last,
+};
+
+enum class PipeState {
+    Playing,
+    Paused,
+    Stopped,
+    Loading,
+    Unloading,
+};
+
+enum class DataReason {
+
+    Update_Video,
+    Update_Audio,
+    Update_Input,
+
+    Poll_Input_nullptr,
+    Create_Frame_any,
+
+};
+
 class PipelineNode : public QObject
 {
     Q_OBJECT
 public:
-    explicit PipelineNode( QObject *parent = 0 )
+    explicit PipelineNode( QObject *parent = nullptr )
         : QObject( parent ) {
     }
     ~PipelineNode() = default;
 
+
     // The DataReason enum is used as a flag to specifiy the types of
     // dataIn() signals you want to handle. All additional reasons to the enum.
-    enum DataReason {
-        First,  // Only used for iterating
 
-        Update_Video,
-        Update_Audio,
-        Update_Input,
-
-        Poll_Input_nullptr,
-        Create_Frame_any,
-
-        Format_Changed_ProducerFormat,
-
-        State_Changed_To_Playing_bool,
-        State_Changed_To_Paused_bool,
-        State_Changed_To_Stopped_bool,
-        State_Changed_To_Loading_bool,
-        State_Changed_To_Unloading_bool,
-
-
-        Set_Vsync_bool,
-        Set_Playback_Speed_qreal,
-        Set_Volume_Level_qreal,
-        Set_FrameRate_qreal,
-        Set_Source_QVariantMap,
-        Set_QML_Loaded_nullptr,
-
-
-        Last,   // Only used for iterating
-    };
-    Q_ENUM( DataReason )
 
 signals:
-    void dataOut( PipelineNode::DataReason
+    void dataOut( DataReason
                   , QMutex *
                   , void *
                   , size_t
                   , qint64 );
+
+    void controlOut( Command
+                     , QVariant );
+
+    void stateOut( PipeState );
 
 };
 
@@ -143,15 +166,23 @@ signals:
 // aka, classes defined by the INTERFACES macro
 
 template<typename Parent, typename Child>
-QMetaObject::Connection connectInterface( Parent *t_parent, Child *t_child ) {
+QList<QMetaObject::Connection> connectInterface( Parent *t_parent, Child *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
-    return QObject::connect( t_parent, &Parent::dataOut
-                             , &t_child->interface(), &PipelineNode::dataOut );
+
+    return {
+        QObject::connect( t_parent, &Parent::dataOut
+                                     , &t_child->interface(), &PipelineNode::dataOut )
+        , QObject::connect( t_parent, &Parent::controlOut
+                            , &t_child->interface(), &PipelineNode::controlOut )
+
+        , QObject::connect( t_parent, &Parent::stateOut
+                            , &t_child->interface(), &PipelineNode::stateOut )
+    };
 }
 
 template<typename Parent, typename Child>
-QMetaObject::Connection connectInterface( Parent &t_parent, Child &t_child ) {
+QList<QMetaObject::Connection> connectInterface( Parent &t_parent, Child &t_child ) {
     return connectInterface( &t_parent, &t_child );
 }
 
@@ -162,11 +193,19 @@ template<typename Parent, typename Child>
 bool disconnectInterface( Parent *t_parent, Child *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
-    return QObject::disconnect( t_parent, &Parent::dataOut
-                                , &t_child->interface(), &PipelineNode::dataOut );
+    return ( QObject::disconnect( t_parent, &Parent::dataOut
+                                , &t_child->interface(), &PipelineNode::dataOut )
+             && QObject::disconnect( t_parent, &Parent::controlOut
+                                 , &t_child->interface(), &PipelineNode::controlOut )
+             && QObject::disconnect( t_parent, &Parent::stateOut
+                                  , &t_child->interface(), &PipelineNode::stateOut ) );
 }
 
 template<typename Parent, typename Child>
 bool disconnectInterface( Parent &t_parent, Child &t_child ) {
     return disconnectFrom( &t_parent, &t_child );
 }
+
+Q_DECLARE_METATYPE( PipeState )
+Q_DECLARE_METATYPE( Command )
+Q_DECLARE_METATYPE( DataReason )

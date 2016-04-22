@@ -21,14 +21,13 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     inputDescriptors(),
     audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
     videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
-    consumerFmt(), inputStates{ 0 }, touchCoords(), touchState( false ), variablesHaveChanged( false ),
+    m_avFormat(), inputStates{ 0 }, touchCoords(), touchState( false ), variablesHaveChanged( false ),
     variables() {
     core = this;
 
     // All Libretro cores are pausable, just stop calling retro_run()
     pausable = true;
 
-    currentState = Control::STOPPED;
     allPropertiesChanged();
 }
 
@@ -42,7 +41,6 @@ LibretroCore::~LibretroCore() {
 // Slots
 
 void LibretroCore::load() {
-    Core::setState( Control::LOADING );
 
     // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
     Q_ASSERT( ! m_src.isEmpty() );
@@ -83,7 +81,7 @@ void LibretroCore::load() {
     {
         // Pixel format is set to QImage::Format_RGB16 by default by the struct ProducerFormat constructor
         // However, for Libretro the default is RGB1555 aka QImage::Format_RGB555
-        producerFmt.videoPixelFormat = QImage::Format_RGB555;
+        m_avFormat.videoPixelFormat = QImage::Format_RGB555;
     }
 
     // Load core
@@ -204,13 +202,12 @@ void LibretroCore::load() {
         variablesHaveChanged = true;
     }
 
-    Core::setPausable( true );
+    //Core::setPausable( true );
 
-    Core::setState( Control::PAUSED );
 }
 
 void LibretroCore::stop() {
-    Core::setState( Control::UNLOADING );
+    //Core::setState( Control::UNLOADING );
 
     // Write SRAM
 
@@ -231,34 +228,67 @@ void LibretroCore::stop() {
         qCCritical( phxCore ) << "stop() called on an unloaded core!";
     }
 
-    Core::setState( Control::STOPPED );
+    //Core::setState( Control::STOPPED );
 }
 
-void LibretroCore::dataIn(PipelineNode::DataReason t_reason
-                          , QMutex *t_mutex
-                          , void *t_data
-                          , size_t t_bytes
-                          , qint64 t_timeStamp) {
+void LibretroCore::setSrc(QVariantMap _src) {
+    m_src = _src;
+}
+
+void LibretroCore::stateIn(PipeState t_state) {
+    setPipeState( t_state );
+    if ( t_state == PipeState::Loading ) {
+        load();
+    } else if ( t_state == PipeState::Stopped ) {
+        stop();
+    }
+}
+
+void LibretroCore::controlIn(Command t_cmd, QVariant t_data) {
+    switch( t_cmd ) {
+        case Command::Set_Source_QVariantMap: {
+            m_src = t_data.toMap();
+            qDebug() << Q_FUNC_INFO << "got map! " << m_src;
+
+            break;
+        }
+        case Command::Format_Changed_ProducerFormat: {
+            qCDebug( phxCore ) << Q_FUNC_INFO;
+            Q_ASSERT( t_data.canConvert<AVFormat>() );
+            m_avFormat = qvariant_cast<AVFormat>( t_data );
+
+            // Update all consumers if the audio ratio changes
+            if( m_avFormat.audioRatio != m_avFormat.videoFramerate / m_avFormat.videoFramerate ) {
+                // hostFPS / coreFPS
+                m_avFormat.audioRatio = m_avFormat.videoFramerate / m_avFormat.videoFramerate;
+                // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << m_avFormat.firstFrame << ")";
+                //emit producerFormat( m_avFormat );
+            }
+
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+void LibretroCore::dataIn( DataReason t_reason
+                           , QMutex *t_mutex
+                           , void *t_data
+                           , size_t t_bytes
+                           , qint64 t_timeStamp) {
 
     switch( t_reason )  {
-    case PipelineNode::Set_Source_QVariantMap: {
-        m_src = *static_cast<QVariantMap *>( t_data );
-        qDebug() << Q_FUNC_INFO << "got map! " << m_src;
 
-        break;
-    }
 
-    case PipelineNode::Create_Frame_any: {
+    case DataReason::Create_Frame_any: {
         // Discard data that's too far from the past to matter anymore
 
-        //qDebug() << QDateTime::currentMSecsSinceEpoch();
-        //if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
-            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
-        //    break;
-        //}
-
-       // Q_ASSERT( false );
-
+        if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
+             qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+            break;
+        }
 
         QMutexLocker locker( t_mutex );
         Q_UNUSED( locker );
@@ -272,42 +302,13 @@ void LibretroCore::dataIn(PipelineNode::DataReason t_reason
         }
 
         // Run the emulator for a frame if we're supposed to
-        if ( m_interfaceState == PipelineNode::State_Changed_To_Playing_bool ) {
+        if ( pipeState() == PipeState::Playing ) {
             // printFPSStatistics();
             symbols.retro_run();
 
         }
-
-        break;
+        return;
     }
-
-    case PipelineNode::Format_Changed_ProducerFormat: {
-        qCDebug( phxCore ) << Q_FUNC_INFO;
-        consumerFmt = *static_cast<ProducerFormat *>( t_data );
-
-        // Update all consumers if the audio ratio changes
-        if( producerFmt.audioRatio != consumerFmt.videoFramerate / producerFmt.videoFramerate ) {
-            // hostFPS / coreFPS
-            producerFmt.audioRatio = consumerFmt.videoFramerate / producerFmt.videoFramerate;
-            // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << producerFmt.firstFrame << ")";
-            //emit producerFormat( producerFmt );
-        }
-
-        break;
-    }
-
-    case PipelineNode::State_Changed_To_Unloading_bool:
-    case PipelineNode::State_Changed_To_Paused_bool:
-    case PipelineNode::State_Changed_To_Playing_bool:
-    case PipelineNode::State_Changed_To_Loading_bool:
-    case PipelineNode::State_Changed_To_Stopped_bool:
-        if ( t_reason == PipelineNode::State_Changed_To_Loading_bool ) {
-            load();
-        } else if ( t_reason == PipelineNode::State_Changed_To_Stopped_bool ) {
-            stop();
-        }
-        setNodeState(  t_reason );
-        break;
     default:
         break;
     }
@@ -315,62 +316,61 @@ void LibretroCore::dataIn(PipelineNode::DataReason t_reason
     emitDataOut( t_reason, t_data, t_bytes, t_timeStamp);
 }
 
-void LibretroCore::consumerFormat( ProducerFormat format ) {
+void LibretroCore::consumerFormat( AVFormat format ) {
     qCDebug( phxCore ) << Q_FUNC_INFO;
-    consumerFmt = format;
+    m_avFormat = format;
 
     // Update all consumers if the audio ratio changes
-    if( producerFmt.audioRatio != consumerFmt.videoFramerate / producerFmt.videoFramerate ) {
+    if( m_avFormat.audioRatio != m_avFormat.videoFramerate / m_avFormat.videoFramerate ) {
         // hostFPS / coreFPS
-        producerFmt.audioRatio = consumerFmt.videoFramerate / producerFmt.videoFramerate;
-        // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << producerFmt.firstFrame << ")";
-        emit producerFormat( producerFmt );
+        m_avFormat.audioRatio = m_avFormat.videoFramerate / m_avFormat.videoFramerate;
+        // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << m_avFormat.firstFrame << ")";
     }
 }
 
-void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) {
-    Q_UNUSED( data )
-    Q_UNUSED( bytes )
+//void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) {
+//    Q_UNUSED( data )
+//    Q_UNUSED( bytes )
 
-    if( type == QStringLiteral( "input" ) ) {
+//    if( type == QStringLiteral( "input" ) ) {
 
-        // Discard data that's too far from the past to matter anymore
-        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 100 ) {
-            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
-            return;
-        }
+//        // Discard data that's too far from the past to matter anymore
+//        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 100 ) {
+//            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+//            return;
+//        }
 
-        QMutexLocker locker( mutex );
-        Q_UNUSED( locker );
+//        QMutexLocker locker( mutex );
+//        Q_UNUSED( locker );
 
-        // Copy incoming input data
-        auto newInputStates = static_cast<qint16 *>( data );
-        for( int i = 0; i < 16; i++ ) {
-            for ( int j = 0; j < 16; j++ ) {
-                inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
-            }
-        }
+//        // Copy incoming input data
+//        auto newInputStates = static_cast<qint16 *>( data );
+//        for( int i = 0; i < 16; i++ ) {
+//            for ( int j = 0; j < 16; j++ ) {
+//                inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
+//            }
+//        }
 
 
 
-        // Run the emulator for a frame if we're supposed to
-        if( currentState == Control::PLAYING ) {
-            // printFPSStatistics();
-            symbols.retro_run();
-        }
+//        // Run the emulator for a frame if we're supposed to
+//        if( pipeState() == PipeState::Playing) {
+//            // printFPSStatistics();
+//            symbols.retro_run();
+//        }
 
-    }
+//    }
 
-    if( type == QStringLiteral( "touchinput" ) ) {
-        QMutexLocker locker( mutex );
-        touchCoords = *( QPointF * )data;
-        touchState = ( bool )bytes;
-    }
-}
+//    if( type == QStringLiteral( "touchinput" ) ) {
+//        QMutexLocker locker( mutex );
+//        touchCoords = *( QPointF * )data;
+//        touchState = ( bool )bytes;
+//    }
+//}
 
 void LibretroCore::testDoFrame() {
     // Run the emulator for a frame if we're supposed to
-    if( currentState == Control::PLAYING ) {
+    if( pipeState() == PipeState::Playing ) {
         // printFPSStatistics();
         symbols.retro_run();
     }
@@ -378,7 +378,7 @@ void LibretroCore::testDoFrame() {
 
 void LibretroCore::setVolume( qreal volume ) {
     Core::setVolume( volume );
-    emit producerData( QStringLiteral( "audiovolume" ), &producerMutex, &( this->volume ), sizeof( qreal ), QDateTime::currentMSecsSinceEpoch() );
+    //emit producerData( QStringLiteral( "audiovolume" ), &producerMutex, &( this->volume ), sizeof( qreal ), QDateTime::currentMSecsSinceEpoch() );
 }
 
 // Protected
@@ -386,33 +386,29 @@ void LibretroCore::setVolume( qreal volume ) {
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emitDataOut( PipelineNode::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataReason::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
-void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
+void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t t_bytes ) {
 
     // Cores can change the size of the video they output (within the bounds they set on load) at any time
-    if( producerFmt.videoSize != QSize( width, height ) || producerFmt.videoBytesPerLine != pitch ) {
+    if( m_avFormat.videoSize != QSize( width, height ) || m_avFormat.videoBytesPerLine != pitch ) {
 
         qCDebug( phxCore ) << "Video resized!";
-        qCDebug( phxCore ) << "Old video size:" << producerFmt.videoSize;
+        qCDebug( phxCore ) << "Old video size:" << m_avFormat.videoSize;
         qCDebug( phxCore ) << "New video size:" << QSize( width, height );
 
-        producerFmt.videoBytesPerLine = pitch;
-        producerFmt.videoSize.setWidth( width );
-        producerFmt.videoSize.setHeight( height );
+        m_avFormat.videoBytesPerLine = pitch;
+        m_avFormat.videoSize.setWidth( width );
+        m_avFormat.videoSize.setHeight( height );
 
-        emitDataOut( PipelineNode::Format_Changed_ProducerFormat
-                     , static_cast<void *>( &producerFmt )
-                     , 0
-                     , 0 );
-
-        //emit producerFormat( producerFmt );
-
+        QVariant _variant;
+        _variant.setValue( m_avFormat );
+        emit controlOut( Command::UpdateAVFormat, _variant );
     }
 
-    emitDataOut( PipelineNode::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataReason::Create_Frame_any, data, t_bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 
 }
@@ -441,14 +437,21 @@ void LibretroCore::LibretroCore::loadSaveData() {
 }
 
 void LibretroCore::LibretroCore::storeSaveData() {
-    QString localFile = savePathInfo.absolutePath() % QStringLiteral( "/" ) % gameFileInfo.baseName() % QStringLiteral( ".sav" );
-
-    qCDebug( phxCore ).nospace() << "Saving: " << localFile;
 
     if( saveDataBuf == nullptr ) {
         qCDebug( phxCore ).nospace() << "Skipping, the core has done the save by itself";
         return;
     }
+
+    QString localFile;
+    if ( savePathInfo.absolutePath().isEmpty() ) {
+        localFile = gameFileInfo.baseName() % QStringLiteral( ".sav" );
+    } else {
+        localFile = savePathInfo.absolutePath() % QStringLiteral( "/" )
+                    % gameFileInfo.baseName() % QStringLiteral( ".sav" );
+    }
+
+    qCDebug( phxCore ).nospace() << "Saving: " << localFile;
 
     QFile file( localFile );
 
@@ -470,35 +473,35 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     // The Libretro API only support 16-bit stereo PCM
     // Not sure, but I think that Libretro uses the host's native byte order for audio,
     // which for x86_64 is little endian
-    producerFmt.audioFormat.setSampleSize( 16 );
-    producerFmt.audioFormat.setSampleRate( avInfo->timing.sample_rate );
-    producerFmt.audioFormat.setChannelCount( 2 );
-    producerFmt.audioFormat.setSampleType( QAudioFormat::SignedInt );
-    producerFmt.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
-    producerFmt.audioFormat.setCodec( "audio/pcm" );
+    m_avFormat.audioFormat.setSampleSize( 16 );
+    m_avFormat.audioFormat.setSampleRate( avInfo->timing.sample_rate );
+    m_avFormat.audioFormat.setChannelCount( 2 );
+    m_avFormat.audioFormat.setSampleType( QAudioFormat::SignedInt );
+    m_avFormat.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
+    m_avFormat.audioFormat.setCodec( "audio/pcm" );
 
     // inputFormat may or may not be set at this point, either way is fine
     // By default retro_run() is expected to be called at 60Hz
-    producerFmt.audioRatio = consumerFmt.videoFramerate / avInfo->timing.fps;
+    m_avFormat.audioRatio = m_avFormat.videoFramerate / avInfo->timing.fps;
 
     // Video
 
-    producerFmt.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
+    m_avFormat.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
                                    ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
                                    avInfo->geometry.aspect_ratio;
-    producerFmt.videoBytesPerPixel = QImage().toPixelFormat( producerFmt.videoPixelFormat ).bitsPerPixel() / 8;
-    producerFmt.videoBytesPerLine = avInfo->geometry.base_width * producerFmt.videoBytesPerPixel;
-    producerFmt.videoFramerate = avInfo->timing.fps;
+    m_avFormat.videoBytesPerPixel = QImage().toPixelFormat( m_avFormat.videoPixelFormat ).bitsPerPixel() / 8;
+    m_avFormat.videoBytesPerLine = avInfo->geometry.base_width * m_avFormat.videoBytesPerPixel;
+    m_avFormat.videoFramerate = avInfo->timing.fps;
 
-    producerFmt.videoSize.setWidth( avInfo->geometry.base_width );
-    producerFmt.videoSize.setHeight( avInfo->geometry.base_height );
+    m_avFormat.videoSize.setWidth( avInfo->geometry.base_width );
+    m_avFormat.videoSize.setHeight( avInfo->geometry.base_height );
 
     qCDebug( phxCore ) << "Core claims an aspect ratio of:" << avInfo->geometry.aspect_ratio;
-    qCDebug( phxCore ) << "Using aspect ratio:" << producerFmt.videoAspectRatio;
+    qCDebug( phxCore ) << "Using aspect ratio:" << m_avFormat.videoAspectRatio;
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
-    emit producerFormat( producerFmt );
+    //emit producerFormat( m_avFormat );
 }
 
 void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
@@ -514,10 +517,10 @@ void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
 void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     LibretroCore *core = LibretroCore::core;
 
-    QMutexLocker locker( &core->producerMutex );
+    QMutexLocker locker( &core->interfaceMutex() );
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->m_avFormat.audioFormat.sampleRate() * 5,
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
@@ -528,7 +531,7 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     core->audioBufferCurrentByte += 4;
 
     // Flush if we have more than 1/2 of a frame's worth of data
-    if( core->audioBufferCurrentByte > core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+    if( core->audioBufferCurrentByte > core->m_avFormat.audioFormat.sampleRate() * 4 / core->m_avFormat.videoFramerate / 2 ) {
         core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
         core->audioBufferCurrentByte = 0;
         core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
@@ -539,12 +542,12 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     LibretroCore *core = LibretroCore::core;
 
     // qCDebug( phxCore ) << frames;
-    // qCDebug( phxCore ) << ( double )( core->producerFmt.audioFormat.durationForFrames( frames ) ) / 1000.0;
+    // qCDebug( phxCore ) << ( double )( core->m_avFormat.audioFormat.durationForFrames( frames ) ) / 1000.0;
 
-    QMutexLocker locker( &core->producerMutex );
+    QMutexLocker locker( &core->interfaceMutex() );
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->m_avFormat.audioFormat.sampleRate() * 5,
                 "audio batch callback",
                 QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
@@ -559,7 +562,7 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     core->audioBufferCurrentByte += frames * 4;
 
     // Flush if we have 1/2 of a frame's worth of data or more
-    if( core->audioBufferCurrentByte >= core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+    if( core->audioBufferCurrentByte >= core->m_avFormat.audioFormat.sampleRate() * 4 / core->m_avFormat.videoFramerate / 2 ) {
         core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
         core->audioBufferCurrentByte = 0;
         core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
@@ -613,17 +616,17 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    core->producerFmt.videoPixelFormat = QImage::Format_RGB555;
+                    core->m_avFormat.videoPixelFormat = QImage::Format_RGB555;
                     qCDebug( phxCore ) << "\t\tPixel format: 0RGB1555 aka QImage::Format_RGB555";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    core->producerFmt.videoPixelFormat = QImage::Format_RGB16;
+                    core->m_avFormat.videoPixelFormat = QImage::Format_RGB16;
                     qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    core->producerFmt.videoPixelFormat = QImage::Format_RGB32;
+                    core->m_avFormat.videoPixelFormat = QImage::Format_RGB32;
                     qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
 
@@ -661,7 +664,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_SET_HW_RENDER: // 14
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
-            core->producerFmt.videoMode = HARDWARERENDER;
+            core->m_avFormat.videoMode = AVFormat::HardwareRenderer;
 
             core->openGLContext = *( retro_hw_render_callback * )data;
 
@@ -1026,6 +1029,7 @@ void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsig
 
     // Current frame is a dupe, send the last actual frame again
     else {
+        qDebug() << "Frame is dupe";
         core->emitVideoData( core->videoBufferPool[ core->videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
     }
 

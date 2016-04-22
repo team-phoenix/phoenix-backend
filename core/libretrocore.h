@@ -1,10 +1,10 @@
-#ifndef LIBRETROCORE_H
-#define LIBRETROCORE_H
+#pragma once
 
 #include "backendcommon.h"
 
 #include "pipelinenode.h"
 #include "core.h"
+#include "avformat.h"
 #include "libretro.h"
 #include "libretrosymbols.h"
 #include "libretrovariable.h"
@@ -41,18 +41,27 @@ class LibretroCore : public Core {
         Q_OBJECT
         PHX_PIPELINE_INTERFACE( LibretroCore )
     public:
-        using QStringMap = QMap<QString, QString>;
-
-        explicit LibretroCore( Core *parent = 0 );
+        explicit LibretroCore( Core *parent = nullptr );
         ~LibretroCore();
 
     signals:
         void libretroCoreNativeFramerate( qreal framerate );
         void libretroCoreNTSC( bool NTSC );
 
+        void dataOut( DataReason reason
+                     , QMutex *producerMutex
+                     , void *data
+                     , size_t bytes
+                     , qint64 timeStamp );
+
+        void controlOut( Command t_cmd
+                        , QVariant data );
+
+        void stateOut( PipeState t_state );
+
     public slots:
-        void consumerFormat( ProducerFormat consumerFmt ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
+        void consumerFormat( AVFormat t_avFormat );
+        //void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
 
         // FIXME: For testing only. Delete once InputManagerProxy is working
         void testDoFrame();
@@ -61,15 +70,16 @@ class LibretroCore : public Core {
         void setVolume( qreal volume ) override;
 
         // State changers
-        void load() override;
-        void stop() override;
+        void load();
+        void stop();
 
-        void setSrc(QVariantMap _src) override {
-            qDebug() << Q_FUNC_INFO << _src;
-            m_src = _src;
-        }
+        void setSrc(QVariantMap _src) override;
 
-        void dataIn( PipelineNode::DataReason t_reason
+        void stateIn( PipeState t_state );
+
+        void controlIn( Command t_cmd, QVariant t_data );
+
+        void dataIn( DataReason t_reason
                      , QMutex *t_mutex
                      , void *t_data
                      , size_t t_bytes
@@ -169,7 +179,7 @@ class LibretroCore : public Core {
 
         // Consumer data (from producers like GamepadManager)
 
-        ProducerFormat consumerFmt;
+        AVFormat m_avFormat;
         qint16 inputStates[ 16 ][ 16 ];
         QPointF touchCoords;
         bool touchState;
@@ -194,7 +204,3 @@ class LibretroCore : public Core {
         QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
 
 };
-
-Q_DECLARE_METATYPE( LibretroCore::QStringMap )
-
-#endif // LIBRETROCORE_H

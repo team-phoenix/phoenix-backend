@@ -3,7 +3,7 @@
 #include "logging.h"
 
 
-Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable()
+Core::Core( QObject *parent ) : QObject( parent )
 {
 
 }
@@ -20,26 +20,26 @@ void Core::setVolume( qreal volume ) {
     emit volumeChanged( volume );
 }
 
-void Core::load() {
-    setState( Control::LOADING );
-    setState( Control::PAUSED );
-}
+//void Core::load() {
+//    setState( Control::LOADING );
+//    setState( Control::PAUSED );
+//}
 
-void Core::play() {
-    setState( Control::PLAYING );
-}
+//void Core::play() {
+//    setState( Control::PLAYING );
+//}
 
-void Core::pause() {
-    setState( Control::PAUSED );
-}
+//void Core::pause() {
+//    setState( Control::PAUSED );
+//}
 
-void Core::reset() {
-}
+//void Core::reset() {
+//}
 
-void Core::stop() {
-    setState( Control::UNLOADING );
-    setState( Control::STOPPED );
-}
+//void Core::stop() {
+//    setState( Control::UNLOADING );
+//    setState( Control::STOPPED );
+//}
 
 // Protected
 
@@ -48,7 +48,6 @@ void Core::allPropertiesChanged() {
     emit playbackSpeedChanged( playbackSpeed );
     emit resettableChanged( resettable );
     emit rewindableChanged( rewindable );
-    emit stateChanged( currentState );
     emit volumeChanged( volume );
 }
 
@@ -67,8 +66,3 @@ void Core::setRewindable( bool rewindable ) {
     emit rewindableChanged( rewindable );
 }
 
-void Core::setState( Control::State state ) {
-    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << ( ControlHelper::State )state;
-    this->currentState = state;
-    emit stateChanged( state );
-}

@@ -3,10 +3,6 @@
 
 #include "backendcommon.h"
 
-#include "controllable.h"
-#include "producer.h"
-#include "consumer.h"
-
 #include <QUrl>
 #include <QDebug>
 
@@ -26,7 +22,7 @@
  * Core is also a consumer of input data.
  */
 
-class Core : public QObject, public Producer, public Consumer, public Controllable {
+class Core : public QObject {
         Q_OBJECT
 
     public:
@@ -34,34 +30,21 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         virtual ~Core() = default;
 
     signals:
-        PRODUCER_SIGNALS
 
         // Notifiers
         void pausableChanged( bool pausable );
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
 
     public slots:
-        CONSUMER_SLOTS_ABSTRACT
-        virtual void setState( Control::State state ) override;
 
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
         virtual void setVolume( qreal volume );
 
         virtual void setSrc( QVariantMap t_src ) = 0;
-
-        // State changers
-        virtual void load();
-        virtual void play();
-        virtual void pause();
-        virtual void reset();
-        virtual void stop();
-
-
 
     protected:
         // Property notifier helper

@@ -3,7 +3,6 @@
 #include "control.h"
 #include "producer.h"
 #include "gamepadmanager.h"
-#include "pipelinenode.h"
 
 #include <QUrl>
 #include <QObject>
@@ -48,27 +47,23 @@ class Gamepad;
 class Looper;
 class Core;
 
-class GameConsole : public QObject, public Control {
+class GameConsole : public QObject {
         Q_OBJECT
-        PHX_PIPELINE_INTERFACE( GameConsole )
 
     public:
         explicit GameConsole( QObject *parent = 0 );
         ~GameConsole() = default;
 
     signals:
-        CONTROL_SIGNALS
 
         // Notifiers
         void gamepadAdded( const Gamepad * );
         void gamepadRemoved( const Gamepad * );
 
-        void videoOutputChanged( VideoOutput *videoOutput );
         void pausableChanged( bool pausable );
         void playbackSpeedChanged( qreal playbackSpeed );
         void resettableChanged( bool resettable );
         void rewindableChanged( bool rewindable );
-        void stateChanged( Control::State currentState );
         void volumeChanged( qreal volume );
         void vsyncChanged( bool vsync );
 
@@ -89,15 +84,11 @@ class GameConsole : public QObject, public Control {
         // We cannot use the destructor to clean up, we can't emit signals to anything anymore
         // Use this instead to do all cleanup
 
-        void dataIn( PipelineNode::DataReason t_reason
-                     , QMutex *t_mutex
-                     , void *t_data
-                     , size_t t_bytes
-                     , qint64 t_timeStamp );
+        void componentComplete();
 
         void shutdown();
 
-        void setSrc( QVariant _src );
+        void setSrc( QVariantMap _src );
 
         // Setters (from anywhere)
         void setVideoOutput( VideoOutput *videoOutput );
@@ -113,9 +104,6 @@ class GameConsole : public QObject, public Control {
         void reset();
 
     private:
-        QString m_coreSrc;
-        QString m_gameSrc;
-        QVariant m_src;
 
         // Thread management
 
@@ -140,23 +128,22 @@ class GameConsole : public QObject, public Control {
 
         // Controllers
 
-        Looper *looper{ nullptr };
+        Looper *m_looper{ nullptr };
 
         // Producers
         GamepadManager m_gamepadManager;
 
         // Core (and core loaders)
 
-        Core *core{ nullptr };
+        Core *m_core{ nullptr };
         void connectCoreForwarder();
-        void trackCoreStateChanges();
 
         // Consumers
 
-        AudioOutput *audioOutput{ nullptr };
-        QThread *audioOutputThread{ nullptr };
-        VideoOutput *videoOutput{ nullptr };
-        bool vsync{ false };
+        AudioOutput *m_audioOutput{ nullptr };
+        QThread *m_audioOutputThread{ nullptr };
+        VideoOutput *m_videoOutput{ nullptr };
+        bool m_vsync{ false };
 
         // Misc
 

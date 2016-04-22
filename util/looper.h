@@ -32,7 +32,7 @@ class LooperPrivate : public QObject {
 
 };
 
-class Looper : public QObject, public Controllable {
+class Looper : public QObject {
         Q_OBJECT
         PHX_PIPELINE_INTERFACE( Looper )
     public:
@@ -41,19 +41,35 @@ class Looper : public QObject, public Controllable {
 
     public slots:
 
-        void dataIn( PipelineNode::DataReason t_reason
+        void stateIn( PipeState t_state );
+
+        void controlIn( Command t_cmd
+                        , QVariant t_data );
+
+        void dataIn( DataReason t_reason
                      , QMutex *t_mutex
                      , void *t_data
                      , size_t t_bytes
                      , qint64 t_timestamp );
 
         // Control
-        void setState( Control::State currentState ) override;
 
         // If Looper is used with a LibretroCore, it's meant to drive the core at its native framerate. This will set it.
         void libretroSetFramerate( qreal hostFPS );
 
     signals:
+
+        void dataOut( DataReason reason
+                     , QMutex *producerMutex
+                     , void *data
+                     , size_t bytes
+                     , qint64 timeStamp );
+
+        void controlOut( Command t_cmd
+                        , QVariant data );
+
+        void stateOut( PipeState t_state );
+
         void beginLoop( double interval );
         void endLoop();
         void timeout( qint64 timestamp );

@@ -14,8 +14,7 @@ using namespace Input;
 // unless changed by the user.
 
 GamepadManager::GamepadManager( QObject *parent )
-    : QObject( parent ), Producer(), Controllable(),
-      touchCoords(), touchState( false ), touchLatchState( 0 ), touchSet( false ), touchReset( false ),
+    : QObject( parent ),
       m_gamepadList( 16 ),
       m_keyboardStates( 16 )
 {
@@ -36,102 +35,71 @@ GamepadManager::GamepadManager( QObject *parent )
 
 }
 
-GamepadManager::~GamepadManager() {
-}
+void GamepadManager::poll(QMutex *t_mutex, qint64 t_timeStamp ) {
 
-void GamepadManager::poll( QMutex *t_mutex
-                           , void *t_data
-                           , size_t &t_bytes
-                           , qint64 &t_timeStamp ) {
-    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-
-    if( currentTime - t_timeStamp > 64 ) {
+    if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 64 ) {
+        //qDebug() << QDateTime::currentMSecsSinceEpoch() - t_timeStamp;
         return;
     }
 
-    if( currentState == Control::PLAYING ) {
 
-        QMutexLocker locker( &producerMutex );
+    QMutexLocker locker( &interfaceMutex() );
 
-        memset(m_gamepadStates, 0, sizeof(m_gamepadStates)); //clear buffer
+    memset(m_gamepadStates, 0, sizeof(m_gamepadStates)); //clear buffer
 
-        // Fetch input states
-        m_SDLEventLoop.poll();
+    // Fetch input states
+    m_SDLEventLoop.poll();
 
-        // Copy states from gamepads and the keyboard to a buffer.
-        for ( int i=0; i < 16; ++i ) {
-            auto *gPad = m_gamepadList[ i ];
-            if( gPad ) {
+    // Copy states from gamepads and the keyboard to a buffer.
+    for ( int i=0; i < 16; ++i ) {
+        auto *gPad = m_gamepadList[ i ];
+        if( gPad ) {
+            for ( int b=0; b < 16; ++b ) {
+                auto gPadState = gPad->buttonState( static_cast<Gamepad::Button>( b ) );
+                m_gamepadStates[ i ][ b ] = ( 0 == i )
+                        ? gPadState | m_keyboardStates[ b ] : gPadState;
+            }
+
+        } else {
+            if ( 0 == i ) {
                 for ( int b=0; b < 16; ++b ) {
-                    auto gPadState = gPad->buttonState( static_cast<Gamepad::Button>( b ) );
-                    m_gamepadStates[ i ][ b ] = ( 0 == i )
-                            ? gPadState | m_keyboardStates[ b ] : gPadState;
-                }
-
-            } else {
-                if ( 0 == i ) {
-                    for ( int b=0; b < 16; ++b ) {
-                        m_gamepadStates[ i ][ b ] = m_keyboardStates[ b ];
-                    }
+                    m_gamepadStates[ i ][ b ] = m_keyboardStates[ b ];
                 }
             }
         }
+    }
+
+    emit dataOut( DataReason::Create_Frame_any
+                 , t_mutex
+                 , static_cast<void *>( &m_gamepadStates )
+                 , sizeof( m_gamepadStates )
+                 , t_timeStamp);
+
+    // Set final touch state once per frame
+    // The flipflop is needed as the touched state may change several times *during* a frame
+    // This ensures it'll get touch input for one frame if at any point during said frame it gets a touch input
+    // Currently configured to keep touched state latched for 2 frames, releasing on 3rd
+    // Games I've tried don't like it only going for one then off the next
+    updateTouchLatch();
 
 
-        t_data = static_cast<void *>( m_gamepadStates );
-        t_bytes = sizeof( m_gamepadStates );
-
-
-        // Set final touch state once per frame
-        // The flipflop is needed as the touched state may change several times *during* a frame
-        // This ensures it'll get touch input for one frame if at any point during said frame it gets a touch input
-        // Currently configured to keep touched state latched for 2 frames, releasing on 3rd
-        // Games I've tried don't like it only going for one then off the next
-        updateTouchLatch();
-
-
-        // Touch input must be done before regular input as that drives frame production
+    // Touch input must be done before regular input as that drives frame production
 //        emit producerData( QStringLiteral( "touchinput" )
 //                           , &producerMutex, &touchCoords
 //                           , ( size_t )touchState
 //                           , currentTime );
 
-        // Cya later buffer!
+    // Cya later buffer!
 //        emit producerData( QStringLiteral( "input" )
 //                           , &producerMutex
 //                           , static_cast<void *>( &m_gamepadStates )
 //                           , static_cast<size_t>( sizeof( m_gamepadStates ) )
 //                           , timeStamp );
 
-    }
-}
-
-void GamepadManager::setState( Control::State state ) {
-
-    // We only care about the transition to or away from PLAYING
-    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
-        ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
-        bool run = ( state == Control::PLAYING );
-
-        //setGamepadControlsFrontend( !run );
-
-        if( run ) {
-            qCDebug( phxInput ) << "Reading game input from keyboard";
-            installKeyboardFilter();
-        }
-
-        else {
-            qCDebug( phxInput ) << "No longer reading keyboard input";
-            removeKeyboardFilter();
-        }
-    }
-
-    this->currentState = state;
-
 }
 
 void GamepadManager::updateTouchState( QPointF point, bool pressed ) {
-    if( currentState == Control::PLAYING ) {
+    if( pipeState() == PipeState::Playing ) {
         touchCoords = point;
 
         if( pressed ) {
@@ -139,7 +107,6 @@ void GamepadManager::updateTouchState( QPointF point, bool pressed ) {
         } else {
             touchReset = true;
         }
-
     }
 }
 
@@ -236,6 +203,51 @@ void GamepadManager::addGamepad(const Gamepad *_gamepad) {
     Q_ASSERT( _gamepad->id() < 16 );
     m_gamepadList[ _gamepad->id() ] =  _gamepad;
     emit gamepadAdded( _gamepad );
+}
+
+void GamepadManager::stateIn(PipeState t_state) {
+    setPipeState( t_state );
+
+    if( ( pipeState() == PipeState::Playing && t_state != PipeState::Playing ) ||
+        ( pipeState() != PipeState::Playing && t_state == PipeState::Playing ) ) {
+
+        bool run = ( t_state == PipeState::Playing );
+
+        //setGamepadControlsFrontend( !run );
+
+        if( run ) {
+            qCDebug( phxInput ) << "Reading game input from keyboard";
+            installKeyboardFilter();
+        }
+
+        else {
+            qCDebug( phxInput ) << "No longer reading keyboard input";
+            removeKeyboardFilter();
+        }
+    }
+}
+
+void GamepadManager::controlIn( Command t_cmd, QVariant t_data ) {
+    emit controlOut( t_cmd, t_data );
+}
+
+void GamepadManager::dataIn(DataReason t_reason, QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
+
+    switch ( t_reason ) {
+    case DataReason::Poll_Input_nullptr:
+        m_SDLEventLoop.poll();
+        break;
+    case DataReason::Create_Frame_any:
+        if ( pipeState() == PipeState::Playing ) {
+            poll( t_mutex, t_timeStamp );
+        }
+        return;
+
+    default:
+        break;
+    }
+
+    emitDataOut( t_reason, t_data, t_bytes, t_timeStamp );
 }
 
 void GamepadManager::installKeyboardFilter() {

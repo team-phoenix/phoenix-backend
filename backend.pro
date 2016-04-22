@@ -83,7 +83,8 @@
     core/gameconsoleproxy.h \
     core/gameconsole.h \
     input/gamepadmanager.h \
-    pipelinenode.h
+    pipelinenode.h \
+    consumer/avformat.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
