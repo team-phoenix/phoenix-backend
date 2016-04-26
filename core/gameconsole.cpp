@@ -1,17 +1,14 @@
 #include "gameconsole.h"
 
-#include "controllable.h"
 
 // Timers that drive frame production (controllers)
 #include "looper.h"
 
 // Producers
-#include "producer.h"
 #include "core.h"
 #include "libretrocore.h"
 
 // Consumers
-#include "consumer.h"
 #include "audiooutput.h"
 #include "videooutput.h"
 #include "gamepad.h"
@@ -252,7 +249,6 @@ void GameConsole::initLibretroCore() {
     auto *libretroCore = new LibretroCore;
     {
         m_core = libretroCore;
-        m_core->moveToThread( m_videoOutput->thread() );
 
         pointersToClear << ( QObject ** )&m_core;
         libretroCore->setObjectName( "LibretroCore" );
@@ -317,8 +313,7 @@ void GameConsole::initLibretroCore() {
          //Connect Looper to GamepadManager (drive input polling)
         if( !m_vsync ) {
             //connectionList << connect( looper, &Looper::timeout, &m_gamepadManager, &GamepadManager::poll );
-            connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadAdded, this, &GameConsole::gamepadAdded );
-            connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadRemoved, this, &GameConsole::gamepadRemoved );
+
 
         }
     }
@@ -367,6 +362,9 @@ void GameConsole::initLibretroCore() {
 //            }
 //        } );
     }
+
+    connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadAdded, this, &GameConsole::gamepadAdded );
+    connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadRemoved, this, &GameConsole::gamepadRemoved );
 
     connectionList << connectInterface( m_looper, &m_gamepadManager );
     connectionList << connectInterface( &m_gamepadManager, libretroCore );

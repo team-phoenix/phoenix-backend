@@ -2,7 +2,6 @@
 #define VIDEOOUTPUT_H
 
 #include "pipelinenode.h"
-#include "controllable.h"
 #include "avformat.h"
 #include "logging.h"
 
@@ -30,18 +29,6 @@ class VideoOutput : public QQuickItem {
         ~VideoOutput();
 
     signals:
-
-        void dataOut( DataReason reason
-                     , QMutex *producerMutex
-                     , void *data
-                     , size_t bytes
-                     , qint64 timeStamp );
-
-        void controlOut( Command t_cmd
-                        , QVariant data );
-
-        void stateOut( PipeState t_state );
-
         // Properties
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
@@ -55,7 +42,6 @@ class VideoOutput : public QQuickItem {
 
     public slots:
         void consumerFormat( AVFormat _avFormat );
-        //void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
 
         void stateIn( PipeState t_state ) {
             setPipeState( t_state );

@@ -131,6 +131,8 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
 
     signals:
         void srcChanged();
+        void gamepadAdded( const Gamepad *gamepad );
+        void gamepadRemoved( const Gamepad *gamepad );
 
         // GameConsole property proxy (Step 4: to anywhere)
         // These acknowledge that GameConsole's state has been changed

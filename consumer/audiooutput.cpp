@@ -24,7 +24,7 @@ AudioOutput::~AudioOutput() {
 
 void AudioOutput::consumerFormat( AVFormat format ) {
     // Currently, we assume that the audio format will only be set once per session, during loading
-    if( pipeState() == PipeState::Playing ) {
+    if( pipeState() == PipeState::Loading ) {
         m_avFormat = format;
 
         this->sampleRate = m_avFormat.audioFormat.sampleRate();
@@ -66,39 +66,6 @@ void AudioOutput::consumerFormat( AVFormat format ) {
         outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
     }
 }
-
-//void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-//    Q_UNUSED( mutex );
-//    Q_UNUSED( timestamp );
-
-//    if( type == QStringLiteral( "audio" ) && currentState == Control::PLAYING ) {
-//        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-
-//        // Discard data that's too far from the past to matter anymore
-//        if( currentTime - timestamp > 500 ) {
-//            static qint64 lastMessage = 0;
-
-//            if( currentTime - lastMessage > 1000 ) {
-//                lastMessage = currentTime;
-//                // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
-//                //                           currentTime - timestamp << "ms ago";
-//            }
-
-//            return;
-//        }
-
-//        // Make a copy so the data won't be changed later
-//        memcpy( inputDataShort, data, bytes );
-
-//        audioData( inputDataShort, bytes );
-//    }
-
-//    else if( type == QStringLiteral( "audiovolume" ) ) {
-//        if( outputAudioInterface ) {
-//            outputAudioInterface->setVolume( *( qreal * )data );
-//        }
-//    }
-//}
 
 void AudioOutput::libretroSetFramerate( qreal hostFPS ) {
     qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
@@ -142,7 +109,6 @@ void AudioOutput::controlIn( Command t_cmd, QVariant t_data)
     }
 
     case Command::UpdateAVFormat: {
-        Q_ASSERT( t_data.canConvert<AVFormat>() );
         const AVFormat _fmt = qvariant_cast<AVFormat>( t_data );
         consumerFormat( _fmt );
         break;
@@ -187,8 +153,9 @@ void AudioOutput::dataIn(DataReason t_reason
 
     switch( t_reason ) {
 
-        case DataReason::Create_Frame_any: {
-            if ( pipeState() != PipeState::Playing ) {
+        case DataReason::UpdateAudio: {
+
+            if ( pipeState() == PipeState::Playing ) {
                 qint64 _currentTime = QDateTime::currentMSecsSinceEpoch();
                 // Discard data that's too far from the past to matter anymore
                 if( _currentTime - t_timeStamp > 500 ) {

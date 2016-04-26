@@ -4,25 +4,14 @@
 #include <QDateTime>
 #include <QStringBuilder>
 
-LibretroCore::LibretroCore( Core *parent ): Core( parent ),
-    // Protected
-    symbols(),
-    openGLContext(),
+LibretroCore::LibretroCore( Core *parent ):
+    Core( parent ),
+    systemInfo( new retro_system_info ),
+    audioBufferPool{ nullptr },
+    videoBufferPool{ nullptr },
+    inputStates{ 0 }
+    {
 
-    // Private
-    coreFile(), gameFile(),
-    contentPath(), systemPath(), savePath(),
-    coreFileInfo(), gameFileInfo(), systemPathInfo(), savePathInfo(),
-    corePathByteArray(), gameFileByteArray(), gamePathByteArray(), systemPathByteArray(), savePathByteArray(),
-    corePathCString( nullptr ), gameFileCString( nullptr ), gamePathCString( nullptr ), systemPathCString( nullptr ), savePathCString( nullptr ),
-    gameData(),
-    saveDataBuf( nullptr ),
-    systemInfo( new retro_system_info() ),
-    inputDescriptors(),
-    audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
-    videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
-    m_avFormat(), inputStates{ 0 }, touchCoords(), touchState( false ), variablesHaveChanged( false ),
-    variables() {
     core = this;
 
     // All Libretro cores are pausable, just stop calling retro_run()
@@ -281,36 +270,35 @@ void LibretroCore::dataIn( DataReason t_reason
 
     switch( t_reason )  {
 
+        case DataReason::UpdateInput: {
+            // Discard data that's too far from the past to matter anymore
 
-    case DataReason::Create_Frame_any: {
-        // Discard data that's too far from the past to matter anymore
-
-        if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
-             qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
-            break;
-        }
-
-        QMutexLocker locker( t_mutex );
-        Q_UNUSED( locker );
-
-        // Copy incoming input data
-        auto newInputStates = static_cast<qint16 *>( t_data );
-        for( int i = 0; i < 16; i++ ) {
-            for ( int j = 0; j < 16; j++ ) {
-                inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
+            if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
+                 qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+                break;
             }
-        }
 
-        // Run the emulator for a frame if we're supposed to
-        if ( pipeState() == PipeState::Playing ) {
-            // printFPSStatistics();
-            symbols.retro_run();
+            QMutexLocker locker( t_mutex );
+            Q_UNUSED( locker );
 
+            // Copy incoming input data
+            auto newInputStates = static_cast<qint16 *>( t_data );
+            for( int i = 0; i < 16; i++ ) {
+                for ( int j = 0; j < 16; j++ ) {
+                    inputStates[ i ][ j ] = newInputStates[ i * 16 + j ];
+                }
+            }
+
+            // Run the emulator for a frame if we're supposed to
+            if ( pipeState() == PipeState::Playing ) {
+                // printFPSStatistics();
+                symbols.retro_run();
+
+            }
+            return;
         }
-        return;
-    }
-    default:
-        break;
+        default:
+            break;
     }
 
     emitDataOut( t_reason, t_data, t_bytes, t_timeStamp);
@@ -386,7 +374,7 @@ void LibretroCore::setVolume( qreal volume ) {
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emitDataOut( DataReason::Create_Frame_any, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataReason::UpdateAudio, data, bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
@@ -408,7 +396,7 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         emit controlOut( Command::UpdateAVFormat, _variant );
     }
 
-    emitDataOut( DataReason::Create_Frame_any, data, t_bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataReason::UpdateVideo, data, t_bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 
 }
@@ -501,7 +489,9 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
-    //emit producerFormat( m_avFormat );
+    QVariant _variant;
+    _variant.setValue( m_avFormat );
+    emit controlOut( Command::UpdateAVFormat, _variant );
 }
 
 void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {

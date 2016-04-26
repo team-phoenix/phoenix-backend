@@ -1,13 +1,22 @@
 #include "gamepad.h"
 
 #include <QDebug>
+#include <QVariant>
 
 Gamepad::Gamepad(int index)
     : m_buttonStates( static_cast<int>( Gamepad::Button::Max ) ),
-      m_axisStates( static_cast<int>( Gamepad::Axis::Max ) )
+      m_axisStates( static_cast<int>( Gamepad::Axis::Max ) ),
+      m_isKeyboard( index < 0 )
 {
+    if ( m_isKeyboard ) {
+        m_name = QStringLiteral( "Keyboard" );
+        m_id = index;
+        return;
+    }
+
     m_SDLGamepad =  SDL_GameControllerOpen( index );
     m_SDLJoystick = SDL_GameControllerGetJoystick( m_SDLGamepad );
+    m_name = SDL_GameControllerName( m_SDLGamepad );
     m_id = SDL_JoystickInstanceID( m_SDLJoystick );
 
     for ( int i=0; i < static_cast<int>( Gamepad::Button::Max ); ++i ) {
@@ -21,7 +30,9 @@ Gamepad::Gamepad(int index)
 }
 
 Gamepad::~Gamepad() {
-    SDL_GameControllerClose( m_SDLGamepad );
+    if ( m_isKeyboard ) {
+        SDL_GameControllerClose( m_SDLGamepad );
+    }
 }
 
 void Gamepad::update() {
@@ -45,8 +56,28 @@ void Gamepad::update() {
 
 }
 
-QString Gamepad::mapping() const {
-    return SDL_GameControllerMapping( m_SDLGamepad );
+QMap<QString, QString> Gamepad::mapping() const {
+    QMap<QString, QString> _result;
+
+    if ( !m_isKeyboard ) {
+        for ( int button=0; button < SDL_CONTROLLER_BUTTON_MAX; ++button ) {
+            auto _gPadButton = static_cast<SDL_GameControllerButton>( button );
+            QString val = SDL_GameControllerGetStringForButton( static_cast<SDL_GameControllerButton>( SDL_GameControllerGetBindForButton(
+                                                                    m_SDLGamepad
+                                                                    , _gPadButton ).value.button ) );
+            _result[ toString( toGamepadButton( button ) ) ] = val;
+        }
+
+        qDebug() << _result;
+        return _result;
+    }
+
+
+    return _result;
+}
+
+QString Gamepad::name() const {
+    return m_name;
 }
 
 qint32 Gamepad::id() const
@@ -67,29 +98,15 @@ qint16 Gamepad::axisState(Gamepad::Axis t_axis) const {
     return m_axisStates[ static_cast<int>( t_axis ) ];
 }
 
+void Gamepad::setMapping(QVariantMap t_mapping) {
+   // for ( auto iter = t_mapping.begin(); iter < t_mapping.end(); ++iter ) {
+   //     qDebug() << Q_FUNC_INFO << iter.key() << iter.value().toString();
+    //}
+}
+
 void Gamepad::updateButtonState(Gamepad::Button t_button, qint16 state) {
     auto _button = static_cast<int>( t_button );
-    if ( _button != m_buttonStates[ _button ] ) {
-        switch( t_button ) {
-        case Gamepad::Button::A:
-            setA( state );
-            break;
-        case Gamepad::Button::B:
-            setB( state );
-            break;
-        case Gamepad::Button::X:
-            setX( state );
-            break;
-        case Gamepad::Button::Y:
-            setY( state );
-            break;
-        default:
-            //Q_UNREACHABLE();
-            break;
-        }
-    }
     m_buttonStates[ _button ] = state;
-
 }
 
 void Gamepad::updateAxisState(Gamepad::Axis axis, qint16 state) {
@@ -158,6 +175,53 @@ Gamepad::Button toGamepadButton( int button ) {
             return Gamepad::Button::Right;
         case SDL_CONTROLLER_BUTTON_MAX:
             return Gamepad::Button::Max;
+        default:
+            Q_UNREACHABLE();
+        }
+    }();
+}
+
+QString toString(Gamepad::Button button) {
+    return [&button] {
+        switch( button ) {
+        case Gamepad::Button::Invalid:
+            return QStringLiteral( "invalid" );
+        case Gamepad::Button::B:
+            return QStringLiteral( "b" );
+        case Gamepad::Button::A:
+            return QStringLiteral( "a" );
+        case Gamepad::Button::Y:
+            return QStringLiteral( "y" );
+        case Gamepad::Button::X:
+            return QStringLiteral( "x" );
+        case Gamepad::Button::Select:
+            return QStringLiteral( "select" );
+        case Gamepad::Button::Guide:
+            return QStringLiteral( "guide" );
+        case Gamepad::Button::Start:
+            return QStringLiteral( "start" );
+        case Gamepad::Button::L3:
+            return QStringLiteral( "l3" );
+        case Gamepad::Button::R3:
+            return QStringLiteral( "r3" );
+        case Gamepad::Button::L:
+            return QStringLiteral( "l" );
+        case Gamepad::Button::R:
+            return QStringLiteral( "r" );
+        case Gamepad::Button::R2:
+            return QStringLiteral( "r2" );
+        case Gamepad::Button::L2:
+            return QStringLiteral( "l2" );
+        case Gamepad::Button::Up:
+            return QStringLiteral( "up" );
+        case Gamepad::Button::Down:
+            return QStringLiteral( "down" );
+        case Gamepad::Button::Left:
+            return QStringLiteral( "left" );
+        case Gamepad::Button::Right:
+            return QStringLiteral( "right" );
+        case Gamepad::Button::Max:
+            return QStringLiteral( "max" );
         default:
             Q_UNREACHABLE();
         }

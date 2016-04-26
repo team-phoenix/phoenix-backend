@@ -20,29 +20,6 @@ void Core::setVolume( qreal volume ) {
     emit volumeChanged( volume );
 }
 
-//void Core::load() {
-//    setState( Control::LOADING );
-//    setState( Control::PAUSED );
-//}
-
-//void Core::play() {
-//    setState( Control::PLAYING );
-//}
-
-//void Core::pause() {
-//    setState( Control::PAUSED );
-//}
-
-//void Core::reset() {
-//}
-
-//void Core::stop() {
-//    setState( Control::UNLOADING );
-//    setState( Control::STOPPED );
-//}
-
-// Protected
-
 void Core::allPropertiesChanged() {
     emit pausableChanged( pausable );
     emit playbackSpeedChanged( playbackSpeed );

@@ -23,6 +23,9 @@ GameConsoleProxy::GameConsoleProxy( QObject *parent ) : QObject( parent ),
     gameThread->setObjectName( "Game thread" );
     gameThread->start( QThread::HighestPriority );
 
+    connect( m_gameConsole, &GameConsole::gamepadAdded, this, &GameConsoleProxy::gamepadAdded );
+    connect( m_gameConsole, &GameConsole::gamepadRemoved, this, &GameConsoleProxy::gamepadRemoved );
+
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
         qDebug() << "";
         qCInfo( phxControlProxy ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";

@@ -29,7 +29,6 @@ class AudioOutput : public QObject {
 
     public slots:
         void consumerFormat( AVFormat consumerFmt );
-        //void consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp );
 
         // Systems have varying native framerates (coreFPS) which determine the *amount* of audio we'll get each
         // video frame period. This could be different from the rate frame production is driven (hostFPS).
@@ -50,20 +49,6 @@ class AudioOutput : public QObject {
     private slots:
         void handleStateChanged( QAudio::State currentState );
         void handleUnderflow();
-
-
-
-signals:
-        void dataOut( DataReason reason
-                     , QMutex *producerMutex
-                     , void *data
-                     , size_t bytes
-                     , qint64 timeStamp );
-
-        void controlOut( Command t_cmd
-                        , QVariant data );
-
-        void stateOut( PipeState t_state );
 
     private:
 

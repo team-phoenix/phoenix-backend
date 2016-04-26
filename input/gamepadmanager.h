@@ -42,25 +42,10 @@ class GamepadManager : public QObject {
                      , qint64 t_timeStamp );
 
     signals:
-
-
-        void dataOut( DataReason reason
-                     , QMutex *producerMutex
-                     , void *data
-                     , size_t bytes
-                     , qint64 timeStamp );
-
-        void controlOut( Command t_cmd
-                        , QVariant data );
-
-        void stateOut( PipeState t_state );
-
-
-
         void gamepadAdded( const Gamepad * );
         void gamepadRemoved( const Gamepad * );
 
-        void controllerDBFileChanged( QString controllerDBFile );
+        void controllerDBFileChanged( QString );
 
     private:
         // Current touch state
@@ -92,7 +77,7 @@ class GamepadManager : public QObject {
 
 };
 
-inline QHash<Qt::Key, Gamepad::Button > defaultMap() {
+inline QHash<Qt::Key, Gamepad::Button > defaultKeyboardMap() {
     return {
         { Qt::Key_Left, Gamepad::Button::Left },
         { Qt::Key_Right, Gamepad::Button::Right },

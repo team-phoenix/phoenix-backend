@@ -65,10 +65,6 @@
     input/inputdevice.h \
     input/joystick.h \
     input/sdleventloop.h \
-    role/consumer.h \
-    role/controllable.h \
-    role/control.h \
-    role/producer.h \
     util/controlhelper.h \
     util/logging.h \
     util/looper.h \
@@ -77,14 +73,16 @@
     input/keyboardevent.h \
     input/joystickevent.h \
     libretro_cpp.h \
-    util/iter.h \
     input/inputmapvalue.h \
     input/gamepad.h \
     core/gameconsoleproxy.h \
     core/gameconsole.h \
     input/gamepadmanager.h \
     pipelinenode.h \
-    consumer/avformat.h
+    consumer/avformat.h \
+    input/globalgamepad.h \
+    input/gamepadmodel.h \
+    input/remapmodel.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -98,22 +96,20 @@
     input/joystick.cpp \
     input/sdleventloop.cpp \
     input/inputdevice.cpp \
-    role/consumer.cpp \
-    role/controllable.cpp \
-    role/control.cpp \
-    role/producer.cpp \
     util/logging.cpp \
     util/looper.cpp  \
     backendplugin.cpp \
     input/keyboardevent.cpp \
     input/joystickevent.cpp \
-    util/iter.cpp \
     input/inputmapvalue.cpp \
     input/gamepad.cpp \
     core/gameconsoleproxy.cpp \
     core/gameconsole.cpp \
     input/gamepadmanager.cpp \
-    pipelinenode.cpp
+    pipelinenode.cpp \
+    input/globalgamepad.cpp \
+    input/gamepadmodel.cpp \
+    input/remapmodel.cpp
 
 ##
 ## Linker settings

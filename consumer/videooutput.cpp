@@ -50,15 +50,7 @@ void VideoOutput::dataIn(DataReason t_reason, QMutex *t_mutex, void *t_data, siz
 
     switch( t_reason ) {
 
-    case DataReason::Create_Frame_any: {
-
-        if ( t_bytes < 3000 ) {
-
-
-            int a;
-
-        }
-        qDebug() << Q_FUNC_INFO << "bytes:" << t_bytes << "format: " << m_avFormat.videoBytesPerLine;
+    case DataReason::UpdateVideo: {
         if ( pipeState() == PipeState::Playing ) {
             updateFrame( t_mutex, t_data, t_bytes, t_timeStamp );
         }
@@ -114,52 +106,6 @@ void VideoOutput::consumerFormat( AVFormat format ) {
 
     m_avFormat = format;
 }
-
-//void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-//    Q_UNUSED( mutex )
-//    Q_UNUSED( bytes )
-//    Q_UNUSED( timestamp )
-
-//    // Copy framebuffer to our own buffer for later drawing
-//    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
-//        // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
-//        // QMutexLocker locker( mutex );
-
-//        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-
-//        // Discard data that's too far from the past to matter anymore
-//        if( currentTime - timestamp > 500 ) {
-//            static qint64 lastMessage = 0;
-
-//            if( currentTime - lastMessage > 1000 ) {
-//                lastMessage = currentTime;
-//                // qCWarning( phxVideo ) << "Discarding" << bytes << "bytes of old video data from" <<
-//                //                           currentTime - timestamp << "ms ago";
-//            }
-
-//            return;
-//        }
-
-//        const uchar *newFramebuffer = ( const uchar * )data;
-
-//        // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-//        for( int i = 0; i < m_avFormat.videoSize.height(); i++ ) {
-//            // Don't read past the end of the given buffer
-//            Q_ASSERT( i * m_avFormat.videoBytesPerLine < bytes );
-
-//            // Don't write past the end of our framebuffer
-//            Q_ASSERT( i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel < framebufferSize );
-
-//            memcpy( framebuffer + i * m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel,
-//                    newFramebuffer + i * m_avFormat.videoBytesPerLine,
-//                    m_avFormat.videoSize.width() * m_avFormat.videoBytesPerPixel
-//                  );
-//        }
-
-//        // Schedule a call to updatePaintNode() for this Item
-//        update();
-//    }
-//}
 
 QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData *paintData ) {
     Q_UNUSED( paintData );
@@ -285,11 +231,9 @@ void VideoOutput::updateFrame(QMutex *t_mutex, void *t_data, size_t t_bytes, qin
     }
 
     const uchar *newFramebuffer = ( const uchar * )t_data;
-
     // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
     for( int i = 0; i < m_avFormat.videoSize.height(); i++ ) {
         // Don't read past the end of the given buffer
-        qDebug() << i * m_avFormat.videoBytesPerLine << t_bytes;
         Q_ASSERT( i * m_avFormat.videoBytesPerLine < t_bytes );
 
         // Don't write past the end of our framebuffer

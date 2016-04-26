@@ -19,6 +19,17 @@
 
 #define PHX_PIPELINE_INTERFACE( DerivedClass )          \
                                                         \
+    Q_SIGNALS:                                          \
+        void dataOut( DataReason reason                 \
+                     , QMutex *producerMutex            \
+                     , void *data                       \
+                     , size_t bytes                     \
+                     , qint64 timeStamp );              \
+                                                        \
+        void controlOut( Command t_cmd                  \
+                        , QVariant data );              \
+                                                        \
+        void stateOut( PipeState t_state );             \
                                                         \
     public:                                             \
                                                         \
@@ -124,12 +135,11 @@ enum class PipeState {
 
 enum class DataReason {
 
-    Update_Video,
-    Update_Audio,
-    Update_Input,
+    UpdateVideo,
+    UpdateAudio,
+    UpdateInput,
 
-    Poll_Input_nullptr,
-    Create_Frame_any,
+    PollInput,
 
 };
 

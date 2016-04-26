@@ -12,10 +12,6 @@
 LooperPrivate::LooperPrivate( QObject *parent ): QObject( parent ) {
 }
 
-LooperPrivate::~LooperPrivate() {
-}
-
-
 void LooperPrivate::beginLoop( double interval ) {
 
     // High-precision elapsed time timer
@@ -96,11 +92,11 @@ Looper::Looper( QObject *parent ) : QObject( parent ),
     connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
     //connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
     connect( looper, &LooperPrivate::timeout, this, [this]( qint64 t_timeStamp ) {
-        emitDataOut( DataReason::Create_Frame_any, nullptr, 0, t_timeStamp );
+        emitDataOut( DataReason::UpdateInput, nullptr, 0, t_timeStamp );
     });
 
     connect( &m_timer, &QTimer::timeout, this, [this] {
-        emitDataOut( DataReason::Poll_Input_nullptr, nullptr, 0, 0 );
+        emitDataOut( DataReason::PollInput, nullptr, 0, 0 );
     });
 
     looper->moveToThread( looperThread );

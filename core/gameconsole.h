@@ -1,7 +1,5 @@
 #pragma once
 
-#include "control.h"
-#include "producer.h"
 #include "gamepadmanager.h"
 
 #include <QUrl>

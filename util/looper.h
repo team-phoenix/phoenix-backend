@@ -1,7 +1,6 @@
 #ifndef LOOPER_H
 #define LOOPER_H
 
-#include "controllable.h"
 #include "pipelinenode.h"
 
 #include <QObject>
@@ -17,7 +16,7 @@ class LooperPrivate : public QObject {
 
     public:
         explicit LooperPrivate( QObject *parent = 0 );
-        ~LooperPrivate();
+        ~LooperPrivate() = default;
 
     signals:
         void timeout( qint64 timestamp );
@@ -58,18 +57,6 @@ class Looper : public QObject {
         void libretroSetFramerate( qreal hostFPS );
 
     signals:
-
-        void dataOut( DataReason reason
-                     , QMutex *producerMutex
-                     , void *data
-                     , size_t bytes
-                     , qint64 timeStamp );
-
-        void controlOut( Command t_cmd
-                        , QVariant data );
-
-        void stateOut( PipeState t_state );
-
         void beginLoop( double interval );
         void endLoop();
         void timeout( qint64 timestamp );
