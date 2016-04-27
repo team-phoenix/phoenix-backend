@@ -91,12 +91,12 @@ Looper::Looper( QObject *parent ) : QObject( parent ),
     connect( this, &Looper::beginLoop, looper, &LooperPrivate::beginLoop );
     connect( this, &Looper::endLoop, looper, &LooperPrivate::endLoop );
     //connect( looper, &LooperPrivate::timeout, this, &Looper::timeout );
-    connect( looper, &LooperPrivate::timeout, this, [this]( qint64 t_timeStamp ) {
-        emitDataOut( DataReason::UpdateInput, nullptr, 0, t_timeStamp );
+    connect( looper, &LooperPrivate::timeout, this, [ this ]( qint64 t_timeStamp ) {
+        emitDataOut( DataType::Input, nullptr, 0, t_timeStamp );
     });
 
-    connect( &m_timer, &QTimer::timeout, this, [this] {
-        emitDataOut( DataReason::PollInput, nullptr, 0, 0 );
+    connect( &m_timer, &QTimer::timeout, this, [ this ] {
+        emitDataOut( DataType::PollInput, nullptr, 0, 0 );
     });
 
     looper->moveToThread( looperThread );
@@ -117,8 +117,8 @@ Looper::~Looper() {
     }
 }
 
-void Looper::stateIn(PipeState t_state) {
-    if ( t_state == PipeState::Playing ) {
+void Looper::stateIn(PipelineState t_state) {
+    if ( t_state == PipelineState::Playing ) {
         m_timer.stop();
         emit beginLoop( ( 1.0 / hostFPS ) * 1000.0 );
     } else {
@@ -134,7 +134,7 @@ void Looper::controlIn( Command t_cmd, QVariant t_data ) {
     emit controlOut( t_cmd, t_data );
 }
 
-void Looper::dataIn( DataReason t_reason
+void Looper::dataIn( DataType t_reason
                     , QMutex *
                     , void *t_data
                     , size_t t_size

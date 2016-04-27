@@ -25,8 +25,7 @@
 using namespace Input;
 
 GameConsole::GameConsole( QObject *parent )
-    : QObject( parent )
-{
+    : QObject( parent ) {
 
 }
 
@@ -37,24 +36,24 @@ void GameConsole::componentComplete() {
 // Public slots
 
 void GameConsole::shutdown() {
-//    if( state != Control::STOPPED && m_core ) {
-//        qCDebug( phxControl ) << "Stopping running game...";
-//        stop();
-//    } else if( !m_core ) {
-//        qCDebug( phxControl ) << "No core running, continuing";
-//        cleanup();
-//    } else {
-//        qCDebug( phxControl ) << "Core has already stopped, continuing";
-//        cleanup();
-//    }
+    //    if( state != Control::STOPPED && m_core ) {
+    //        qCDebug( phxControl ) << "Stopping running game...";
+    //        stop();
+    //    } else if( !m_core ) {
+    //        qCDebug( phxControl ) << "No core running, continuing";
+    //        cleanup();
+    //    } else {
+    //        qCDebug( phxControl ) << "Core has already stopped, continuing";
+    //        cleanup();
+    //    }
     stop();
     cleanup();
     QThread::currentThread()->quit();
 }
 
-void GameConsole::setSrc(QVariantMap t_src) {
-    QMetaObject::invokeMethod( m_looper, "controlIn", Q_ARG( Command , Command::Set_Source_QVariantMap )
-                                                    , Q_ARG( QVariant, QVariant( t_src ) ) );
+void GameConsole::setSource( QVariantMap source ) {
+    this->source = source;
+    // Do not send the source to the pipeline until load() is called
 }
 
 void GameConsole::setVideoOutput( VideoOutput *videoOutput ) {
@@ -72,6 +71,7 @@ void GameConsole::setVolume( qreal volume ) {
 
 void GameConsole::setVsync( bool vsync ) {
     // This is relevant to us only, so we'll immediately acknowledge
+    // FIXME: Pass to pipeline
     m_vsync = vsync;
     emit vsyncChanged( vsync );
 }
@@ -81,22 +81,20 @@ void GameConsole::load() {
         stop();
     }
 
-    QMetaObject::invokeMethod( m_looper, "stateIn", Q_ARG( PipeState, PipeState::Loading ) );
-
-    //setSrc( m_src );
-
-    qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
-
-    //QMetaObject::invokeMethod( core, "load" );
-
     // Determine Core type, instantiate appropiate type
-//    if( source[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
-//        initLibretroCore();
-//    } else {
-//        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
-//                                           << source[ "type" ] << QStringLiteral( " passed to load()!" );
-//        return;
-//    }
+    if( source[ QStringLiteral( "type" ) ] == QStringLiteral( "libretro" ) ) {
+        initLibretroCore();
+        qCDebug( phxControl ) << "LibretroCore fully initalized and connected";
+    } else {
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
+                                           << source[ "type" ] << QStringLiteral( " passed to load()!" );
+        return;
+    }
+
+    Q_ASSERT( pipelineHead );
+    QMetaObject::invokeMethod( pipelineHead, "controlIn", Q_ARG( Command , Command::Set_Source_QVariantMap )
+                               , Q_ARG( QVariant, QVariant( source ) ) );
+    QMetaObject::invokeMethod( pipelineHead, "stateIn", Q_ARG( PipelineState, PipelineState::Loading ) );
 
     //emit setSourceForwarder( source );
 
@@ -104,23 +102,23 @@ void GameConsole::load() {
 }
 
 void GameConsole::play() {
-    QMetaObject::invokeMethod( m_looper, "stateIn"
-                               , Q_ARG( PipeState, PipeState::Playing ) );
+    Q_ASSERT( pipelineHead );
+    QMetaObject::invokeMethod( pipelineHead, "stateIn", Q_ARG( PipelineState, PipelineState::Playing ) );
 }
 
 void GameConsole::pause() {
-    QMetaObject::invokeMethod( m_looper, "stateIn"
-                               , Q_ARG( PipeState, PipeState::Paused ) );
+    Q_ASSERT( pipelineHead );
+    QMetaObject::invokeMethod( pipelineHead, "stateIn", Q_ARG( PipelineState, PipelineState::Paused ) );
 }
 
 void GameConsole::stop() {
-    QMetaObject::invokeMethod( m_looper, "stateIn"
-                               , Q_ARG( PipeState, PipeState::Stopped ) );
+    Q_ASSERT( pipelineHead );
+    QMetaObject::invokeMethod( pipelineHead, "stateIn", Q_ARG( PipelineState, PipelineState::Stopped ) );
 }
 
 void GameConsole::reset() {
-    //QMetaObject::invokeMethod( looper, "controlIn"
-                               //, Q_ARG( Command, Command::State_Changed_To_Playing ) );
+    Q_ASSERT( pipelineHead );
+    //QMetaObject::invokeMethod( looper, "controlIn", Q_ARG( Command, Command::State_Changed_To_Playing ) );
 }
 
 // Private
@@ -187,6 +185,7 @@ void GameConsole::cleanup() {
 void GameConsole::connectCoreForwarder() {
     // Forward these signals that are important to QML (but not us) to whoever's concerned (such as Core)
     // In some rare cases we DO hook our own signal to do stuff, but not generally
+    // FIXME: This should be taken over by MetaOutput
     connectionList << connect( m_core, &Core::pausableChanged, this, &GameConsole::pausableChanged );
     connectionList << connect( m_core, &Core::playbackSpeedChanged, this, &GameConsole::playbackSpeedChanged );
     connectionList << connect( m_core, &Core::resettableChanged, this, &GameConsole::resettableChanged );
@@ -274,16 +273,16 @@ void GameConsole::initLibretroCore() {
         // Will only fire once per session thanks to the disconnect()
         // Credit for the std::make_shared idea: http://stackoverflow.com/a/14829520/4190028
         // TODO: Let the user set this to the true value (based on pixel clock and timing parameters/measuring)
-//        auto playHandlerHandle = std::make_shared<QMetaObject::Connection>();
-//        *playHandlerHandle = connect( this, &GameConsole::stateChanged, this, [ this, playHandlerHandle ]( Control::State newState ) {
-//            if( ( Control::State )newState == Control::PLAYING ) {
-//                disconnect( *playHandlerHandle );
+        //        auto playHandlerHandle = std::make_shared<QMetaObject::Connection>();
+        //        *playHandlerHandle = connect( this, &GameConsole::stateChanged, this, [ this, playHandlerHandle ]( Control::State newState ) {
+        //            if( ( Control::State )newState == Control::PLAYING ) {
+        //                disconnect( *playHandlerHandle );
 
-//                if( m_vsync ) {
-//                    emit libretroSetFramerate( 60.0 );
-//                }
-//            }
-//        });
+        //                if( m_vsync ) {
+        //                    emit libretroSetFramerate( 60.0 );
+        //                }
+        //            }
+        //        });
     }
 
     // Create Looper
@@ -300,17 +299,21 @@ void GameConsole::initLibretroCore() {
 
             connectionList << connect( this, &GameConsole::libretroSetFramerate, m_looper, &Looper::libretroSetFramerate );
         }
+
+        // Mark as root of pipeline
+        pipelineHead = m_looper;
+        pointersToClear << &pipelineHead;
     }
 
     // GamepadManager (Producer)
     {
 
-         //Connect GamepadManager to LibretroCore (produces input data which also drives frame production in LibretroCore)
-//         CLIST_CONNECT_PRODUCER_CONSUMER( &m_gamepadManager, libretroCore );
+        //Connect GamepadManager to LibretroCore (produces input data which also drives frame production in LibretroCore)
+        //         CLIST_CONNECT_PRODUCER_CONSUMER( &m_gamepadManager, libretroCore );
 
-//         CLIST_CONNECT_CONTROL_CONTROLLABLE( this, &m_gamepadManager );
+        //         CLIST_CONNECT_CONTROL_CONTROLLABLE( this, &m_gamepadManager );
 
-         //Connect Looper to GamepadManager (drive input polling)
+        //Connect Looper to GamepadManager (drive input polling)
         if( !m_vsync ) {
             //connectionList << connect( looper, &Looper::timeout, &m_gamepadManager, &GamepadManager::poll );
 
@@ -331,12 +334,12 @@ void GameConsole::initLibretroCore() {
         Q_ASSERT( m_videoOutput );
 
         // Connect LibretroCore to the consumers (AV output)
-//        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
-//        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
+        //        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, audioOutput );
+        //        CLIST_CONNECT_PRODUCER_CONSUMER( libretroCore, videoOutput );
 
         // Connect control signals to consumers
-//        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
-//        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
+        //        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, audioOutput );
+        //        CLIST_CONNECT_CONTROL_CONTROLLABLE( this, videoOutput );
 
         // Connect framerate assigning signal to AudioOutput
         connectionList << connect( this, &GameConsole::libretroSetFramerate, m_audioOutput, &AudioOutput::libretroSetFramerate );
@@ -345,7 +348,7 @@ void GameConsole::initLibretroCore() {
         // TODO: Don't hook window updates, instead create a VSynced timer object and hook that
         if( m_vsync ) {
             //connectionList << connect( videoOutput, &VideoOutput::windowUpdate, &m_gamepadManager, &GamepadManager::poll );
-           // connectionList << connect( this, &GameConsole::libretroCoreDoFrame, &m_gamepadManager, &GamepadManager::poll );
+            // connectionList << connect( this, &GameConsole::libretroCoreDoFrame, &m_gamepadManager, &GamepadManager::poll );
         }
 
     }
@@ -354,13 +357,13 @@ void GameConsole::initLibretroCore() {
     {
         // Intercept our own signal to handle state changes
         // Once LibretroCore has fully stopped, delete all threads and all objects declared up above
-//        auto stoppedHandlerHandle = std::make_shared<QMetaObject::Connection>();
-//        *stoppedHandlerHandle = connect( this, &GameConsole::stateChanged, this, [ this, stoppedHandlerHandle ]( Control::State newState ) {
-//            if( ( Control::State )newState == Control::STOPPED ) {
-//                disconnect( *stoppedHandlerHandle );
-//                cleanup();
-//            }
-//        } );
+        //        auto stoppedHandlerHandle = std::make_shared<QMetaObject::Connection>();
+        //        *stoppedHandlerHandle = connect( this, &GameConsole::stateChanged, this, [ this, stoppedHandlerHandle ]( Control::State newState ) {
+        //            if( ( Control::State )newState == Control::STOPPED ) {
+        //                disconnect( *stoppedHandlerHandle );
+        //                cleanup();
+        //            }
+        //        } );
     }
 
     connectionList << connect( &m_gamepadManager, &GamepadManager::gamepadAdded, this, &GameConsole::gamepadAdded );

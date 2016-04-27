@@ -1,5 +1,7 @@
 #include "backendplugin.h"
 
+#include <pipelinenode.h>
+
 #include "gameconsoleproxy.h"
 #include "gameconsole.h"
 #include "core.h"
@@ -30,15 +32,12 @@ void CorePlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<ControlHelper::State>( "ControlHelper::State" );
     qRegisterMetaType<size_t>( "size_t" );
     qRegisterMetaType<AVFormat>();
-    qRegisterMetaType<VideoOutput *>( "VideoOutput *");
-    qRegisterMetaType<Gamepad *>( "Gamepad *");
+    qRegisterMetaType<VideoOutput *>( "VideoOutput *" );
+    qRegisterMetaType<Gamepad *>( "Gamepad *" );
 
-    qRegisterMetaType<DataReason>();
-    qRegisterMetaType<Command>();
-    qRegisterMetaType<PipeState>();
-
-
-
+    qRegisterMetaType<Command>( "Command" );
+    qRegisterMetaType<PipelineState>( "PipelineState" );
+    qRegisterMetaType<DataType>( "DataType" );
 }
 
 

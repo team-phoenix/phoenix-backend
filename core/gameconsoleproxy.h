@@ -60,26 +60,26 @@ class QThread;
 
 class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_OBJECT
-        Q_INTERFACES( QQmlParserStatus)
+        Q_INTERFACES( QQmlParserStatus )
 
         // Settings
 
         // Producers and consumers that live in QML (and the QML thread)
 
         // Needed by: "libretro"
-        Q_PROPERTY( VideoOutput *videoOutput READ videoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
+        Q_PROPERTY( VideoOutput *videoOutput READ getVideoOutput WRITE setVideoOutput NOTIFY videoOutputChanged )
 
         // Proxy
-        Q_PROPERTY( QVariantMap src READ src WRITE setSrc NOTIFY srcChanged)
+        Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
 
-        Q_PROPERTY( PlaybackState playbackState READ playbackState NOTIFY playbackStateChanged )
-        Q_PROPERTY( qreal volume READ volume WRITE setVolume NOTIFY volumeChanged )
-        Q_PROPERTY( qreal playbackSpeed READ playbackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
+        Q_PROPERTY( PlaybackState playbackState READ getPlaybackState NOTIFY playbackStateChanged )
+        Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
+        Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
 
-        Q_PROPERTY( bool vsync READ vsync WRITE setVsync NOTIFY vsyncChanged )
-        Q_PROPERTY( bool pausable READ pausable NOTIFY pausableChanged )
-        Q_PROPERTY( bool resettable READ resettable NOTIFY resettableChanged )
-        Q_PROPERTY( bool rewindable READ rewindable NOTIFY rewindableChanged )
+        Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
+        Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
+        Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
+        Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
 
     public:
         explicit GameConsoleProxy( QObject *parent = nullptr );
@@ -102,35 +102,37 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         Q_INVOKABLE void stop();
         Q_INVOKABLE void reset();
 
-        // QML Getters
-        void componentComplete() override;
+        // QML engine listeners
+        void componentComplete() override {}
         void classBegin() override;
 
-        QVariantMap src() const;
-        VideoOutput *videoOutput() const;
+        // QML Getters
+        VideoOutput *getVideoOutput() const;
 
-        qreal playbackSpeed() const;
-        qreal volume() const;
+        qreal getPlaybackSpeed() const;
+        PlaybackState getPlaybackState() const;
 
-        bool pausable() const;
-        bool resettable() const;
-        bool rewindable() const;
-        bool vsync() const;
+        qreal getVolume() const;
 
-        PlaybackState playbackState() const;
+        QVariantMap getSource() const;
+        bool getPausable() const;
+        bool getResettable() const;
+        bool getRewindable() const;
+        bool getVsync() const;
+
 
         // QML Setters
-        void setSrc( QVariantMap t_src );
-        void setVideoOutput( VideoOutput *t_output );
-        void setPlaybackSpeed( qreal t_speed );
-        void setVolume( qreal t_volume );
-        void setVsync( bool t_vsync );
-        void setRewindable( bool t_rewindable );
-        void setResettable( bool t_resettable );
-        void setPausable( bool t_pausable );
+        void setSource( QVariantMap source );
+        void setVideoOutput( VideoOutput *videoOutput );
+        void setPlaybackSpeed( qreal speed );
+        void setVolume( qreal volume );
+        void setVsync( bool vsync );
+        void setRewindable( bool rewindable );
+        void setResettable(bool resettable );
+        void setPausable( bool pausable );
 
     signals:
-        void srcChanged();
+        // FIXME: Delete these
         void gamepadAdded( const Gamepad *gamepad );
         void gamepadRemoved( const Gamepad *gamepad );
 
@@ -147,25 +149,24 @@ class GameConsoleProxy : public QObject, public QQmlParserStatus {
         void playbackStateChanged();
 
     private:
-        GameConsole *m_gameConsole;
+        GameConsole *gameConsole;
         QThread *gameThread;
 
         // GameConsole property proxy
-        VideoOutput *m_videoOutput;
+        VideoOutput *videoOutput;
 
-        QVariantMap m_src;
+        QVariantMap source;
 
-        qreal m_playbackSpeed{ 1.0 };
-        qreal m_volume{ 1.0 };
+        qreal playbackSpeed{ 1.0 };
+        qreal volume{ 1.0 };
 
-        bool m_vsync{ false };
-        bool m_resettable{ false };
-        bool m_rewindable{ false };
-        bool m_pausable{ false };
-        PlaybackState m_playbackState{ PlaybackState::Stopped };
+        bool vsync{ false };
+        bool resettable{ false };
+        bool rewindable{ false };
+        bool pausable{ false };
+        PlaybackState playbackState{ PlaybackState::Stopped };
 
-
-        void setPlaybackState( PlaybackState t_state );
+        void setPlaybackState( PlaybackState state );
 
 };
 

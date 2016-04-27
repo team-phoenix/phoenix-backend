@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QMutex>
 #include <QObject>
 #include <QList>
@@ -7,173 +8,166 @@
 
 #include <QDebug>
 
-// The INTERFACES macro is a way to provide common signal and slot to any
-// QObjects, while getting around Qt's limitation of no multiple inheritance
-// of QObjects.
+// Some enums for the types of data/commands that flow across the pipeline
+// This Q_GADGET contains the enums so we can utilize the Q_ENUM() macro to pretty-print them
+class PipelineEnums {
+    Q_GADGET
 
-// The 'DerivedClass' argument is the name of the 'subclass', so if you had a
-// class named 'Gamepad', you would pass that name to the first argument.
+    public:
+        enum class Command {
+            // State setters
+            Play,
+            Pause, // Do not call if not pausable
+            Stop,
+            Load,
+            Unload,
 
-// The Interface class argument will probably always be PipelineNode, but who
-// knows.
+            // Run emulation for a frame
+            Heartbeat,
 
-#define PHX_PIPELINE_INTERFACE( DerivedClass )          \
-                                                        \
-    Q_SIGNALS:                                          \
-        void dataOut( DataReason reason                 \
-                     , QMutex *producerMutex            \
-                     , void *data                       \
-                     , size_t bytes                     \
-                     , qint64 timeStamp );              \
-                                                        \
-        void controlOut( Command t_cmd                  \
-                        , QVariant data );              \
-                                                        \
-        void stateOut( PipeState t_state );             \
-                                                        \
-    public:                                             \
-                                                        \
-        PipelineNode &interface() {                     \
-            if ( !m_selfConnectionMade ) {              \
-                connect( &m_interface                   \
-                        , &PipelineNode::dataOut        \
-                        , this                          \
-                        , &DerivedClass::dataIn );      \
-                                                        \
-                connect( &m_interface                   \
-                        , &PipelineNode::controlOut     \
-                        , this                          \
-                        , &DerivedClass::controlIn );   \
-                                                        \
-                connect( &m_interface                   \
-                        , &PipelineNode::stateOut       \
-                        , this                          \
-                        , &DerivedClass::stateIn );     \
-                                                        \
-                m_selfConnectionMade = true;            \
-            }                                           \
-            return m_interface;                         \
-        }                                               \
-                                                        \
-                                                        \
-        void lock() const {                             \
-            m_interfaceMutex.lock();                    \
-        }                                               \
-                                                        \
-        void unlock() const {                           \
-            m_interfaceMutex.unlock();                  \
-        }                                               \
-                                                        \
-        QMutex &interfaceMutex() {                \
-            return m_interfaceMutex;                    \
-        }                                               \
-                                                        \
-        void emitDataOut( DataReason t_reason           \
-                         , void *t_data                             \
-                         , size_t t_bytes                           \
-                         , qint64 t_timeStamp ) {                   \
-                                                                    \
-            emit dataOut( t_reason                                  \
-                         , &m_interfaceMutex                        \
-                         , t_data                                   \
-                         , t_bytes                                  \
-                         , t_timeStamp);                            \
-        }                                                           \
-                                                                    \
-        void setPipeState( PipeState t_state ) {                    \
-            m_state = t_state;                                      \
-            emit stateOut( t_state );                               \
-        }                                                           \
-                                                                    \
-        PipeState pipeState() const {                                       \
-            return m_state;                                         \
-        }                                                           \
-                                                                    \
-    protected:                                                      \
-        PipelineNode m_interface;                                   \
-        mutable QMutex m_interfaceMutex;                            \
-        PipeState m_state{ PipeState::Stopped }; \
-                                                                    \
-    private:                                                        \
-        bool m_selfConnectionMade{ false };
+            Format_Changed_ProducerFormat,
+            Set_Vsync_bool,
+            Set_Playback_Speed_qreal,
+            Set_Volume_Level_qreal,
+            Set_FrameRate_qreal,
+            Set_Source_QVariantMap,
+            Set_QML_Loaded_nullptr,
 
-// PipelineNode is a used as a standalone object inside of any class, in order
-// to provide the dataIn() / dataOut() signal and slot functionality.
+            UpdateAVFormat,
+        };
 
-// All types of objects that are expected to recieve events from the emulation
-// pipeline, must use this in order to be synced in.
+        enum class PipelineState {
+            Playing,
+            Paused,
+            Stopped,
+            Loading,
+            Unloading,
+        };
 
-// Usage is defined by using the INTERFACES( XXX, PipelineNode ), 'XXX' denoting
-// the name of the class that you want to be a PipelineNode.
+        enum class DataType {
+            Video,
+            Audio,
+            Input,
 
-// QObjects only allow single inheritance, this the way that we get around that,
-// while keeping common QObject signals and slots.
-
-enum class Command {
-    First = 0,
-
-    Format_Changed_ProducerFormat,
-    Set_Vsync_bool,
-    Set_Playback_Speed_qreal,
-    Set_Volume_Level_qreal,
-    Set_FrameRate_qreal,
-    Set_Source_QVariantMap,
-    Set_QML_Loaded_nullptr,
-
-    UpdateAVFormat,
-
-    Last,
+            PollInput,
+        };
+        Q_ENUM( Command )
+        Q_ENUM( PipelineState )
+        Q_ENUM( DataType )
 };
 
-enum class PipeState {
-    Playing,
-    Paused,
-    Stopped,
-    Loading,
-    Unloading,
+// Make the enums available with only one level of scoping necessary
+using Command = PipelineEnums::Command;
+using PipelineState = PipelineEnums::PipelineState;
+using DataType = PipelineEnums::DataType;
+
+// The PHX_PIPELINE_NODE_* macros and the PipelineNode class are a way to provide common signals and slots to all pipeline
+// nodes while getting around Qt's limitation of multiple inheritance of QObjects.
+// To make a valid node subclass:
+// 1. Make your class a subclass of "public PipelineNode" (shown below)
+// 2. Use the signal macro and at least one of each slot macro
+
+// Put the following macros in your subclass:
+
+// (required) Place after "signals:" in your node class
+#define PHX_PIPELINE_NODE_SIGNALS                                                                                      \
+    void dataOut( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp );                \
+    void controlOut( Command command, QVariant data );                                                                 \
+    void stateOut( PipelineState state );                                                                              \
+
+// (required) Choose one of the following and place after "public slots:" in your node class
+#define PHX_PIPELINE_NODE_SLOT_DATAIN_PURE_VIRTUAL                                                                     \
+    virtual void dataIn( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp ) = 0;     \
+
+#define PHX_PIPELINE_NODE_SLOT_DATAIN_DEFAULT                                                                          \
+    void dataIn( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp ) override {       \
+        emit dataOut( reason, producerMutex, data, bytes, timeStamp );                                                 \
+    }                                                                                                                  \
+                                                                                                                       \
+
+#define PHX_PIPELINE_NODE_SLOT_DATAIN_OVERRIDE                                                                         \
+    void dataIn( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp ) override;        \
+
+// (required) Choose one of the following and place after "public slots:" in your node class
+#define PHX_PIPELINE_NODE_SLOT_CONTROLIN_PURE_VIRTUAL                                                                  \
+    virtual void controlIn( Command command, QVariant data ) = 0;                                                      \
+
+#define PHX_PIPELINE_NODE_SLOT_CONTROLIN_DEFAULT                                                                       \
+    void controlIn( Command command, QVariant data ) override {                                                        \
+        emit controlOut( command, data );                                                                              \
+    }                                                                                                                  \
+                                                                                                                       \
+
+#define PHX_PIPELINE_NODE_SLOT_CONTROLIN_OVERRIDE                                                                      \
+    void controlIn( Command command, QVariant data ) override;                                                         \
+
+// (required) Choose one of the following and place after "public slots:" in your node class
+#define PHX_PIPELINE_NODE_SLOT_STATEIN_PURE_VIRTUAL                                                                    \
+    virtual void stateIn( PipelineState state ) = 0;                                                                   \
+
+#define PHX_PIPELINE_NODE_SLOT_STATEIN_DEFAULT                                                                         \
+    void stateIn( PipelineState state ) override {                                                                     \
+        m_state = state;                                                                                               \
+        emit stateOut( state );                                                                                        \
+    }                                                                                                                  \
+                                                                                                                       \
+
+#define PHX_PIPELINE_NODE_SLOT_STATEIN_OVERRIDE                                                                        \
+    void stateIn( PipelineState state ) override;                                                                      \
+
+// Extend your node with this subclass
+class PipelineNode {
+    public:
+        PipelineNode();
+
+ /* signals:
+        // Signals used by all nodes, use PHX_PIPELINE_NODE_SIGNALS to declare them
+        void dataOut( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp );
+        void controlOut( Command command, QVariant data );
+        void stateOut( PipelineState state ); */
+
+    public /*slots*/:
+        // Slots available on all nodes, use PHX_PIPELINE_NODE_SLOT_* to declare them
+        virtual void dataIn( DataType reason, QMutex *producerMutex, void *data, size_t bytes, qint64 timeStamp ) = 0;
+        virtual void controlIn( Command command, QVariant data ) = 0;
+        virtual void stateIn( PipelineState state ) = 0;
+
+    protected:
+        mutable QMutex m_interfaceMutex;
+        PipelineState m_state{ PipelineState::Stopped };
+
+        // Convenience methods for data producers
+
+        // Use to lock and unlock the included mutex
+        void lock() const {
+            m_interfaceMutex.lock();
+        }
+
+        void unlock() const {
+            m_interfaceMutex.unlock();
+        }
+
+        QMutex &interfaceMutex() {
+            return m_interfaceMutex;
+        }
+
+        PipelineState pipeState() const {
+            return m_state;
+        }
 };
 
-enum class DataReason {
+// Convenience functions for producers
+// Must be defined as macros as PipelineNode is not a QObject
 
-    UpdateVideo,
-    UpdateAudio,
-    UpdateInput,
+#define emitDataOut( t_reason, t_data, t_bytes, t_timeStamp )                                                          \
+    emit dataOut( t_reason, &m_interfaceMutex, t_data, t_bytes, t_timeStamp );                                         \
 
-    PollInput,
+#define setPipeState( t_state )                                                                                        \
+    m_state = t_state;                                                                                                 \
+    emit stateOut( t_state );                                                                                          \
 
-};
-
-class PipelineNode : public QObject
-{
-    Q_OBJECT
-public:
-    explicit PipelineNode( QObject *parent = nullptr )
-        : QObject( parent ) {
-    }
-    ~PipelineNode() = default;
-
-
-    // The DataReason enum is used as a flag to specifiy the types of
-    // dataIn() signals you want to handle. All additional reasons to the enum.
-
-
-signals:
-    void dataOut( DataReason
-                  , QMutex *
-                  , void *
-                  , size_t
-                  , qint64 );
-
-    void controlOut( Command
-                     , QVariant );
-
-    void stateOut( PipeState );
-
-};
-
-// This is a wrapper around QObject::connect() so that you can connect the parent
-// QObject to the child QObject via the PipelineNode interface,
-// aka, classes defined by the INTERFACES macro
+// This is a wrapper around QObject::connect() so that you can connect the parent QObject to the child QObject via the
+// PipelineNode interface, aka, classes defined by the PHX_PIPELINE_NODE macro
 
 template<typename Parent, typename Child>
 QList<QMetaObject::Connection> connectInterface( Parent *t_parent, Child *t_child ) {
@@ -181,13 +175,9 @@ QList<QMetaObject::Connection> connectInterface( Parent *t_parent, Child *t_chil
     Q_ASSERT( t_child != nullptr );
 
     return {
-        QObject::connect( t_parent, &Parent::dataOut
-                                     , &t_child->interface(), &PipelineNode::dataOut )
-        , QObject::connect( t_parent, &Parent::controlOut
-                            , &t_child->interface(), &PipelineNode::controlOut )
-
-        , QObject::connect( t_parent, &Parent::stateOut
-                            , &t_child->interface(), &PipelineNode::stateOut )
+        QObject::connect( t_parent, &Parent::dataOut, t_child, &Child::dataIn ),
+        QObject::connect( t_parent, &Parent::controlOut, t_child, &Child::controlIn ),
+        QObject::connect( t_parent, &Parent::stateOut, t_child, &Child::stateIn )
     };
 }
 
@@ -196,26 +186,19 @@ QList<QMetaObject::Connection> connectInterface( Parent &t_parent, Child &t_chil
     return connectInterface( &t_parent, &t_child );
 }
 
-// The same as the connectInterface() function, except it disconnects the
-// already connected signals.
+// The same as the connectInterface() function, except it disconnects the already connected signals.
 
 template<typename Parent, typename Child>
 bool disconnectInterface( Parent *t_parent, Child *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
-    return ( QObject::disconnect( t_parent, &Parent::dataOut
-                                , &t_child->interface(), &PipelineNode::dataOut )
-             && QObject::disconnect( t_parent, &Parent::controlOut
-                                 , &t_child->interface(), &PipelineNode::controlOut )
-             && QObject::disconnect( t_parent, &Parent::stateOut
-                                  , &t_child->interface(), &PipelineNode::stateOut ) );
+    return ( QObject::disconnect( t_parent, &Parent::dataOut, t_child, &Child::dataIn ) &&
+             QObject::disconnect( t_parent, &Parent::controlOut, t_child, &Child::controlIn ) &&
+             QObject::disconnect( t_parent, &Parent::stateOut, t_child, &Child::stateIn )
+           );
 }
 
 template<typename Parent, typename Child>
 bool disconnectInterface( Parent &t_parent, Child &t_child ) {
     return disconnectFrom( &t_parent, &t_child );
 }
-
-Q_DECLARE_METATYPE( PipeState )
-Q_DECLARE_METATYPE( Command )
-Q_DECLARE_METATYPE( DataReason )

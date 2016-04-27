@@ -1,5 +1,4 @@
-#ifndef VIDEOOUTPUT_H
-#define VIDEOOUTPUT_H
+#pragma once
 
 #include "pipelinenode.h"
 #include "avformat.h"
@@ -14,9 +13,8 @@
 
 class QSGTexture;
 
-class VideoOutput : public QQuickItem {
+class VideoOutput : public QQuickItem, public PipelineNode {
         Q_OBJECT
-        PHX_PIPELINE_INTERFACE( VideoOutput )
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool linearFiltering MEMBER linearFiltering NOTIFY linearFilteringChanged )
@@ -29,6 +27,7 @@ class VideoOutput : public QQuickItem {
         ~VideoOutput();
 
     signals:
+        PHX_PIPELINE_NODE_SIGNALS
         // Properties
         void aspectRatioChanged( qreal aspectRatio );
         void linearFilteringChanged( bool linearFiltering );
@@ -41,19 +40,11 @@ class VideoOutput : public QQuickItem {
         void windowUpdate( qint64 timestamp );
 
     public slots:
+        PHX_PIPELINE_NODE_SLOT_DATAIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_CONTROLIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_STATEIN_DEFAULT
+
         void consumerFormat( AVFormat _avFormat );
-
-        void stateIn( PipeState t_state ) {
-            setPipeState( t_state );
-        }
-
-        void controlIn( Command t_cmd, QVariant t_data );
-
-        void dataIn( DataReason t_reason
-                     , QMutex *t_mutex
-                     , void *t_data
-                     , size_t t_bytes
-                     , qint64 t_timeStamp );
 
     private:
 
@@ -105,5 +96,3 @@ class VideoOutput : public QQuickItem {
 };
 
 Q_DECLARE_METATYPE( VideoOutput * )
-
-#endif // VIDEOOUTPUT_H

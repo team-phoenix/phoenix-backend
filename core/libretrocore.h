@@ -39,7 +39,6 @@
 
 class LibretroCore : public Core {
         Q_OBJECT
-        PHX_PIPELINE_INTERFACE( LibretroCore )
     public:
         explicit LibretroCore( Core *parent = nullptr );
         ~LibretroCore();
@@ -49,6 +48,9 @@ class LibretroCore : public Core {
         void libretroCoreNTSC( bool NTSC );
 
     public slots:
+        PHX_PIPELINE_NODE_SLOT_DATAIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_CONTROLIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_STATEIN_OVERRIDE
         void consumerFormat( AVFormat t_avFormat );
         //void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
 
@@ -63,16 +65,6 @@ class LibretroCore : public Core {
         void stop();
 
         void setSrc(QVariantMap _src) override;
-
-        void stateIn( PipeState t_state );
-
-        void controlIn( Command t_cmd, QVariant t_data );
-
-        void dataIn( DataReason t_reason
-                     , QMutex *t_mutex
-                     , void *t_data
-                     , size_t t_bytes
-                     , qint64 t_timeStamp );
 
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods

@@ -224,11 +224,11 @@ void LibretroCore::setSrc(QVariantMap _src) {
     m_src = _src;
 }
 
-void LibretroCore::stateIn(PipeState t_state) {
+void LibretroCore::stateIn(PipelineState t_state) {
     setPipeState( t_state );
-    if ( t_state == PipeState::Loading ) {
+    if ( t_state == PipelineState::Loading ) {
         load();
-    } else if ( t_state == PipeState::Stopped ) {
+    } else if ( t_state == PipelineState::Stopped ) {
         stop();
     }
 }
@@ -262,7 +262,7 @@ void LibretroCore::controlIn(Command t_cmd, QVariant t_data) {
     }
 }
 
-void LibretroCore::dataIn( DataReason t_reason
+void LibretroCore::dataIn( DataType t_reason
                            , QMutex *t_mutex
                            , void *t_data
                            , size_t t_bytes
@@ -270,7 +270,7 @@ void LibretroCore::dataIn( DataReason t_reason
 
     switch( t_reason )  {
 
-        case DataReason::UpdateInput: {
+        case DataType::Input: {
             // Discard data that's too far from the past to matter anymore
 
             if( QDateTime::currentMSecsSinceEpoch() - t_timeStamp > 100 ) {
@@ -290,7 +290,7 @@ void LibretroCore::dataIn( DataReason t_reason
             }
 
             // Run the emulator for a frame if we're supposed to
-            if ( pipeState() == PipeState::Playing ) {
+            if ( pipeState() == PipelineState::Playing ) {
                 // printFPSStatistics();
                 symbols.retro_run();
 
@@ -358,7 +358,7 @@ void LibretroCore::consumerFormat( AVFormat format ) {
 
 void LibretroCore::testDoFrame() {
     // Run the emulator for a frame if we're supposed to
-    if( pipeState() == PipeState::Playing ) {
+    if( pipeState() == PipelineState::Playing ) {
         // printFPSStatistics();
         symbols.retro_run();
     }
@@ -374,7 +374,7 @@ void LibretroCore::setVolume( qreal volume ) {
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emitDataOut( DataReason::UpdateAudio, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataType::Audio, data, bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
@@ -396,7 +396,7 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         emit controlOut( Command::UpdateAVFormat, _variant );
     }
 
-    emitDataOut( DataReason::UpdateVideo, data, t_bytes, QDateTime::currentMSecsSinceEpoch() );
+    emitDataOut( DataType::Video, data, t_bytes, QDateTime::currentMSecsSinceEpoch() );
     //emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 
 }

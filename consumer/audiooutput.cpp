@@ -24,7 +24,7 @@ AudioOutput::~AudioOutput() {
 
 void AudioOutput::consumerFormat( AVFormat format ) {
     // Currently, we assume that the audio format will only be set once per session, during loading
-    if( pipeState() == PipeState::Loading ) {
+    if( pipeState() == PipelineState::Loading ) {
         m_avFormat = format;
 
         this->sampleRate = m_avFormat.audioFormat.sampleRate();
@@ -72,20 +72,20 @@ void AudioOutput::libretroSetFramerate( qreal hostFPS ) {
     this->hostFPS = hostFPS;
 }
 
-void AudioOutput::stateIn(PipeState t_state) {
+void AudioOutput::stateIn(PipelineState t_state) {
     switch( t_state ) {
-    case PipeState::Playing:
-    case PipeState::Paused:
-    case PipeState::Stopped:
-    case PipeState::Loading:
-    case PipeState::Unloading: {
+    case PipelineState::Playing:
+    case PipelineState::Paused:
+    case PipelineState::Stopped:
+    case PipelineState::Loading:
+    case PipelineState::Unloading: {
         if ( pipeState() != t_state ) {
-            if ( t_state == PipeState::Unloading ) {
+            if ( t_state == PipelineState::Unloading ) {
                 setAudioActive( false );
                 shutdown();
-            } else if ( t_state == PipeState::Paused ) {
+            } else if ( t_state == PipelineState::Paused ) {
                 setAudioActive( false );
-            } else if ( t_state == PipeState::Playing ) {
+            } else if ( t_state == PipelineState::Playing ) {
                 setAudioActive( true );
             }
         }
@@ -145,7 +145,7 @@ void AudioOutput::handleUnderflow() {
     }
 }
 
-void AudioOutput::dataIn(DataReason t_reason
+void AudioOutput::dataIn(DataType t_reason
                          , QMutex *
                          , void *t_data
                          , size_t t_bytes
@@ -153,9 +153,9 @@ void AudioOutput::dataIn(DataReason t_reason
 
     switch( t_reason ) {
 
-        case DataReason::UpdateAudio: {
+        case DataType::Audio: {
 
-            if ( pipeState() == PipeState::Playing ) {
+            if ( pipeState() == PipelineState::Playing ) {
                 qint64 _currentTime = QDateTime::currentMSecsSinceEpoch();
                 // Discard data that's too far from the past to matter anymore
                 if( _currentTime - t_timeStamp > 500 ) {

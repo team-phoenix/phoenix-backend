@@ -20,14 +20,20 @@
  * 1 sample = 2 bytes (L, L) or (R, R)
  */
 
-class AudioOutput : public QObject {
+class AudioOutput : public QObject, public PipelineNode {
         Q_OBJECT
-        PHX_PIPELINE_INTERFACE( AudioOutput )
+
     public:
         explicit AudioOutput( QObject *parent = 0 );
         ~AudioOutput();
 
+    signals:
+        PHX_PIPELINE_NODE_SIGNALS
+
     public slots:
+        PHX_PIPELINE_NODE_SLOT_DATAIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_CONTROLIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_STATEIN_OVERRIDE
         void consumerFormat( AVFormat consumerFmt );
 
         // Systems have varying native framerates (coreFPS) which determine the *amount* of audio we'll get each
@@ -36,22 +42,11 @@ class AudioOutput : public QObject {
         // Must be called *after* consumerData (which will make hostFPS = coreFPS)
         void libretroSetFramerate( qreal hostFPS );
 
-        void stateIn( PipeState t_state );
-
-        void controlIn( Command t_cmd, QVariant t_data);
-
-        void dataIn( DataReason t_reason
-                     , QMutex *
-                     , void *t_data
-                     , size_t t_bytes
-                     , qint64 t_timeStamp );
-
     private slots:
         void handleStateChanged( QAudio::State currentState );
         void handleUnderflow();
 
     private:
-
         AVFormat m_avFormat;
 
         // Respond to the core running or not by keeping audio output active or not

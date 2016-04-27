@@ -10,9 +10,8 @@
  * maintains a list of connected controllers.
  */
 
-class GamepadManager : public QObject {
+class GamepadManager : public QObject, public PipelineNode {
         Q_OBJECT
-        PHX_PIPELINE_INTERFACE( GamepadManager )
         Q_PROPERTY( QString controllerDBFile MEMBER controllerDBFile NOTIFY controllerDBFileChanged )
 
     public:
@@ -20,7 +19,9 @@ class GamepadManager : public QObject {
         ~GamepadManager() = default;
 
     public slots:
-
+        PHX_PIPELINE_NODE_SLOT_CONTROLIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_DATAIN_OVERRIDE
+        PHX_PIPELINE_NODE_SLOT_STATEIN_OVERRIDE
         void poll( QMutex *t_mutex, qint64 t_timeStamp );
 
         // Update touch state
@@ -30,18 +31,8 @@ class GamepadManager : public QObject {
 
         void addGamepad( const Gamepad *_gamepad );
 
-        void stateIn( PipeState t_state );
-
-        void controlIn( Command t_cmd
-                        , QVariant t_data );
-
-        void dataIn( DataReason t_reason
-                     , QMutex *t_mutex
-                     , void *t_data
-                     , size_t t_bytes
-                     , qint64 t_timeStamp );
-
     signals:
+        PHX_PIPELINE_NODE_SIGNALS
         void gamepadAdded( const Gamepad * );
         void gamepadRemoved( const Gamepad * );
 

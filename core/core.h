@@ -2,6 +2,7 @@
 #define CORE_H
 
 #include "backendcommon.h"
+#include "pipelinenode.h"
 
 #include <QUrl>
 #include <QDebug>
@@ -22,7 +23,7 @@
  * Core is also a consumer of input data.
  */
 
-class Core : public QObject {
+class Core : public QObject, public PipelineNode {
         Q_OBJECT
 
     public:
@@ -30,7 +31,7 @@ class Core : public QObject {
         virtual ~Core() = default;
 
     signals:
-
+        PHX_PIPELINE_NODE_SIGNALS
         // Notifiers
         void pausableChanged( bool pausable );
         void playbackSpeedChanged( qreal playbackSpeed );
@@ -39,7 +40,9 @@ class Core : public QObject {
         void volumeChanged( qreal volume );
 
     public slots:
-
+        PHX_PIPELINE_NODE_SLOT_CONTROLIN_PURE_VIRTUAL
+        PHX_PIPELINE_NODE_SLOT_DATAIN_PURE_VIRTUAL
+        PHX_PIPELINE_NODE_SLOT_STATEIN_PURE_VIRTUAL
         // Setters
         virtual void setPlaybackSpeed( qreal playbackSpeed );
         virtual void setVolume( qreal volume );

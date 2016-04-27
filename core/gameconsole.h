@@ -53,7 +53,6 @@ class GameConsole : public QObject {
         ~GameConsole() = default;
 
     signals:
-
         // Notifiers
         void gamepadAdded( const Gamepad * );
         void gamepadRemoved( const Gamepad * );
@@ -86,7 +85,7 @@ class GameConsole : public QObject {
 
         void shutdown();
 
-        void setSrc( QVariantMap _src );
+        void setSource( QVariantMap source );
 
         // Setters (from anywhere)
         void setVideoOutput( VideoOutput *videoOutput );
@@ -102,6 +101,13 @@ class GameConsole : public QObject {
         void reset();
 
     private:
+        // Pipeline meta
+
+        // Head of the pipeline tree, all messages should be sent to this pointer
+        QObject *pipelineHead{ nullptr };
+
+        // Source dictionary, needed to determine what pipeline to load
+        QVariantMap source;
 
         // Thread management
 
@@ -153,6 +159,4 @@ class GameConsole : public QObject {
         // Core loaders
 
         void initLibretroCore();
-
-
 };

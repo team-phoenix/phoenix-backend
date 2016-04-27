@@ -46,12 +46,12 @@ void VideoOutput::controlIn(Command t_cmd, QVariant t_data) {
     }
 }
 
-void VideoOutput::dataIn(DataReason t_reason, QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
+void VideoOutput::dataIn(DataType t_reason, QMutex *t_mutex, void *t_data, size_t t_bytes, qint64 t_timeStamp) {
 
     switch( t_reason ) {
 
-    case DataReason::UpdateVideo: {
-        if ( pipeState() == PipeState::Playing ) {
+    case DataType::Video: {
+        if ( pipeState() == PipelineState::Playing ) {
             updateFrame( t_mutex, t_data, t_bytes, t_timeStamp );
         }
 
@@ -115,8 +115,8 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     emit windowUpdate( QDateTime::currentMSecsSinceEpoch() );
 
     // Don't draw unless emulation is active
-    if( pipeState() != PipeState::Playing
-            && pipeState() != PipeState::Paused ) {
+    if( pipeState() != PipelineState::Playing
+            && pipeState() != PipelineState::Paused ) {
         return nullptr;
     }
 
