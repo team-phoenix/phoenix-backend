@@ -1,4 +1,4 @@
 #include "videooutputnode.h"
 
-VideoOutputNode::VideoOutputNode( QObject *parent ) : QObject( parent ) {
+VideoOutputNode::VideoOutputNode( Node *parent ) : Node( parent ) {
 }

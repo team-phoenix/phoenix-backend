@@ -12,7 +12,7 @@ class VideoOutputNode : public Node {
         Q_PROPERTY( VideoOutput *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
     public:
-        explicit VideoOutputNode( QObject *parent = 0 );
+        explicit VideoOutputNode( Node *parent = 0 );
 
     signals:
         void videoOutputChanged();

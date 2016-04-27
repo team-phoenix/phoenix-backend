@@ -73,6 +73,7 @@
     util/controlhelper.h \
     util/logging.h \
     util/looper.h \
+    pipeline/pipelinecommon.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
