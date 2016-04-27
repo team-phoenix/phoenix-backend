@@ -6,7 +6,7 @@ CoreControl::CoreControl( QObject *parent ) : QObject( parent ), Control(),
     threadChildren(),
     gameThreadChildren(),
     pointersToClear(),
-    looper( nullptr ),
+    microTimer( nullptr ),
     inputManager( nullptr ),
     core( nullptr ),
     audioOutput( nullptr ),
@@ -34,6 +34,7 @@ void CoreControl::shutdown() {
         qCDebug( phxControl ) << "Core has already stopped, continuing";
         cleanup();
     }
+
     QThread::currentThread()->quit();
 }
 
@@ -286,17 +287,19 @@ void CoreControl::initLibretroCore() {
         } );
     }
 
-    // Create Looper
-    looper = new Looper();
+    // Create MicroTimer
+    microTimer = new MicroTimer();
     {
-        pointersToClear << ( QObject ** )&looper;
-        looper->setObjectName( "Looper (Libretro)" );
-        gameThreadChildren << looper;
+        pointersToClear << ( QObject ** )&microTimer;
+        microTimer->setObjectName( "MicroTimer (Libretro)" );
+        gameThreadChildren << microTimer;
 
         // Connect control and framerate assigning signals to Looper
         if( !vsync ) {
-            CLIST_CONNECT_CONTROL_CONTROLLABLE( this, looper );
-            connectionList << connect( this, &CoreControl::libretroSetFramerate, looper, &Looper::libretroSetFramerate );
+            CLIST_CONNECT_CONTROL_CONTROLLABLE( this, microTimer );
+            connectionList << connect( this, &CoreControl::libretroSetFramerate, [ this ]( qreal hostFPS ) {
+                microTimer->setProperty( "frequency", hostFPS );
+            } );
         }
     }
 
@@ -314,7 +317,7 @@ void CoreControl::initLibretroCore() {
 
         // Connect Looper to InputManager (drive input polling)
         if( !vsync ) {
-            connectionList << connect( looper, &Looper::timeout, inputManager, &InputManager::libretroGetInputState );
+            connectionList << connect( microTimer, &MicroTimer::timeout, inputManager, &InputManager::libretroGetInputStateNoTimestamp );
         }
     }
 

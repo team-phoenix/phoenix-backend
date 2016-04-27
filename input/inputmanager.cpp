@@ -89,6 +89,10 @@ void InputManager::libretroGetInputState( qint64 timestamp ) {
     }
 }
 
+void InputManager::libretroGetInputStateNoTimestamp() {
+    libretroGetInputState( QDateTime::currentMSecsSinceEpoch() );
+}
+
 bool InputManager::gamepadControlsFrontend() const {
     return InputDevice::gamepadControlsFrontend;
 }

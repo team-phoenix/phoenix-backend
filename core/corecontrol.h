@@ -6,7 +6,7 @@
 #include "controllable.h"
 
 // Timers that drive frame production (controllers)
-#include "looper.h"
+#include "microtimer.h"
 
 // Producers
 #include "producer.h"
@@ -139,7 +139,7 @@ class CoreControl : public QObject, public Control {
 
         // Controllers
 
-        Looper *looper;
+        MicroTimer *microTimer;
 
         // Producers
 
