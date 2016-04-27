@@ -72,7 +72,6 @@
     role/producer.h \
     util/controlhelper.h \
     util/logging.h \
-    util/looper.h \
     pipeline/pipelinecommon.h \
     util/microtimer.h
 
@@ -100,7 +99,6 @@
     role/controllable.cpp \
     role/producer.cpp \
     util/logging.cpp \
-    util/looper.cpp \
     util/microtimer.cpp
 
     RESOURCES += input/controllerdb.qrc
