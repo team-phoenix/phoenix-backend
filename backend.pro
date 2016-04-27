@@ -43,58 +43,62 @@
     INCLUDEPATH += ../externals/quazip/quazip
 
     # Include our stuff
-    INCLUDEPATH += consumer core input role util
+    INCLUDEPATH += consumer core input pipeline role util
 
     HEADERS += \
+    backendcommon.h \
     consumer/audiobuffer.h \
     consumer/audiooutput.h \
     consumer/videooutput.h \
+    consumer/videooutputnode.h \
     core/core.h \
     core/corecontrol.h \
     core/corecontrolproxy.h \
     core/libretro.h \
     core/libretrocore.h \
-    core/libretrovariable.h \
     core/libretrosymbols.h \
-    input/keyboard.h \
-    input/inputmanager.h \
+    core/libretrovariable.h \
     input/inputdevice.h \
     input/inputdeviceevent.h \
+    input/inputmanager.h \
     input/joystick.h \
-    input/sdleventloop.h \
+    input/keyboard.h \
     input/qmlinputdevice.h \
+    input/sdleventloop.h \
+    pipeline/node.h \
     role/consumer.h \
-    role/controllable.h \
     role/control.h \
+    role/controllable.h \
     role/producer.h \
     util/controlhelper.h \
     util/logging.h \
-    util/looper.h\
-    backendcommon.h
+    util/looper.h \
 
     SOURCES += \
     consumer/audiobuffer.cpp \
     consumer/audiooutput.cpp \
     consumer/videooutput.cpp \
+    consumer/videooutputnode.cpp \
     core/core.cpp \
     core/corecontrol.cpp \
     core/corecontrolproxy.cpp \
     core/libretrocore.cpp \
-    core/libretrovariable.cpp \
     core/libretrosymbols.cpp \
-    input/keyboard.cpp \
-    input/inputmanager.cpp \
-    input/joystick.cpp \
-    input/sdleventloop.cpp \
+    core/libretrovariable.cpp \
     input/inputdevice.cpp \
     input/inputdeviceevent.cpp \
+    input/inputmanager.cpp \
+    input/joystick.cpp \
+    input/keyboard.cpp \
     input/qmlinputdevice.cpp \
+    input/sdleventloop.cpp \
+    pipeline/node.cpp \
     role/consumer.cpp \
-    role/controllable.cpp \
     role/control.cpp \
+    role/controllable.cpp \
     role/producer.cpp \
     util/logging.cpp \
-    util/looper.cpp
+    util/looper.cpp \
 
     RESOURCES += input/controllerdb.qrc
 
