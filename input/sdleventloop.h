@@ -1,6 +1,4 @@
 #pragma once
-#ifndef SDLEVENTLOOP_H
-#define SDLEVENTLOOP_H
 
 #include <QObject>
 #include <QTimer>
@@ -55,4 +53,3 @@ class SDLEventLoop : public QObject {
         QHash<int, int> deviceLocationMap;
 };
 
-#endif // SDLEVENTLOOP_H

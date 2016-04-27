@@ -1,6 +1,4 @@
 #pragma once
-#ifndef CONSUMER_H
-#define CONSUMER_H
 
 #include "producer.h"
 
@@ -53,5 +51,3 @@ class Consumer {
         void printFPSStatistics( int printEvery = 60 );
 
 };
-
-#endif // CONSUMER_H

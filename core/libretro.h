@@ -20,8 +20,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #pragma once
-#ifndef LIBRETRO_H__
-#define LIBRETRO_H__
 
 #include <stdint.h>
 #include <stddef.h>
@@ -1962,6 +1960,4 @@ RETRO_API size_t retro_get_memory_size(unsigned id);
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif

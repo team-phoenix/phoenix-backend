@@ -38,8 +38,6 @@
 **
 ****************************************************************************/
 #pragma once
-#ifndef AUDIOBUFFER_H
-#define AUDIOBUFFER_H
 
 #include <QIODevice>
 
@@ -64,4 +62,3 @@ class AudioBuffer : public QIODevice {
 
 };
 
-#endif // AUDIOBUFFER_H

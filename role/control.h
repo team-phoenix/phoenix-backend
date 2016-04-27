@@ -1,6 +1,4 @@
 #pragma once
-#ifndef CONTROL_H
-#define CONTROL_H
 
 // Helper for QML and printing enum values
 #include <QObject>
@@ -58,5 +56,3 @@ class Control {
         State state;
 
 };
-
-#endif // CONTROL_H

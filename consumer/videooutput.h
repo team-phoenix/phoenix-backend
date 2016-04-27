@@ -1,6 +1,4 @@
 #pragma once
-#ifndef VIDEOOUTPUT_H
-#define VIDEOOUTPUT_H
 
 #include "controllable.h"
 #include "consumer.h"
@@ -90,5 +88,3 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
 };
 
 Q_DECLARE_METATYPE( VideoOutput * )
-
-#endif // VIDEOOUTPUT_H

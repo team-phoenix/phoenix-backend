@@ -1,6 +1,4 @@
 #pragma once
-#ifndef LOGGING_H
-#define LOGGING_H
 
 #include <QDebug>
 #include <QLoggingCategory>
@@ -18,5 +16,3 @@ Q_DECLARE_LOGGING_CATEGORY( phxControlProxy )
 Q_DECLARE_LOGGING_CATEGORY( phxVideo )
 Q_DECLARE_LOGGING_CATEGORY( phxAudioOutput )
 Q_DECLARE_LOGGING_CATEGORY( phxInput )
-
-#endif

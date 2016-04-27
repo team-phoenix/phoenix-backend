@@ -1,6 +1,4 @@
 #pragma once
-#ifndef INPUTDEVICEEVENT_H
-#define INPUTDEVICEEVENT_H
 
 #include "libretro.h"
 
@@ -51,6 +49,3 @@ class InputDeviceEvent : public QObject {
 
 Q_DECLARE_METATYPE( InputDeviceEvent::EditEventType )
 Q_DECLARE_METATYPE( InputDeviceEvent::Event )
-
-#endif // INPUTDEVICEEVENT_H
-
