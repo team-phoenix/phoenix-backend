@@ -12,32 +12,28 @@ void Node::dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint6
     emit dataOut( type, mutex, data, bytes, timeStamp );
 }
 
-template<typename Parent, typename Child>
-QList<QMetaObject::Connection> connectNodes( Parent *t_parent, Child *t_child ) {
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
 
     return {
-        QObject::connect( t_parent, &Parent::dataOut, t_child, &Child::dataIn ),
-        QObject::connect( t_parent, &Parent::controlOut, t_child, &Child::controlIn )
+        QObject::connect( t_parent, &Node::dataOut, t_child, &Node::dataIn ),
+        QObject::connect( t_parent, &Node::controlOut, t_child, &Node::controlIn )
     };
 }
 
-template<typename Parent, typename Child>
-QList<QMetaObject::Connection> connectNodes( Parent &t_parent, Child &t_child ) {
+QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child ) {
     return connectNodes( &t_parent, &t_child );
 }
 
-template<typename Parent, typename Child>
-bool disconnectNodes( Parent *t_parent, Child *t_child ) {
+bool disconnectNodes( Node *t_parent, Node *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
-    return ( QObject::disconnect( t_parent, &Parent::dataOut, t_child, &Child::dataIn ) &&
-             QObject::disconnect( t_parent, &Parent::controlOut, t_child, &Child::controlIn )
+    return ( QObject::disconnect( t_parent, &Node::dataOut, t_child, &Node::dataIn ) &&
+             QObject::disconnect( t_parent, &Node::controlOut, t_child, &Node::controlIn )
            );
 }
 
-template<typename Parent, typename Child>
-bool disconnectNodes( Parent &t_parent, Child &t_child ) {
+bool disconnectNodes( Node &t_parent, Node &t_child ) {
     return disconnectNodes( &t_parent, &t_child );
 }

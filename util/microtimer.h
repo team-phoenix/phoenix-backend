@@ -36,11 +36,12 @@
 
 #include "controllable.h"
 #include "logging.h"
+#include "node.h"
 
 class QEvent;
 
 // FIXME: stop being Controllable
-class MicroTimer : public QObject, public Controllable {
+class MicroTimer : public Node, public Controllable {
         Q_OBJECT
         Q_PROPERTY( bool singleShot READ isSingleShot WRITE setSingleShot )
         Q_PROPERTY( qreal interval READ interval WRITE setInterval )
@@ -51,7 +52,7 @@ class MicroTimer : public QObject, public Controllable {
         Q_PROPERTY( qreal frequency READ getFrequency WRITE setFrequency )
 
     public:
-        explicit MicroTimer( QObject *parent = 0 );
+        explicit MicroTimer( Node *parent = 0 );
         virtual ~MicroTimer();
         bool event( QEvent *e ) override;
 
@@ -67,6 +68,8 @@ class MicroTimer : public QObject, public Controllable {
 
         // FIXME: Remove once we stop using Control
         void setState( Control::State currentState ) override;
+
+        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
 
         // Make sure to connect to this slot to safely clean up once thread finishes
         void killTimers();

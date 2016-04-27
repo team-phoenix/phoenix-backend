@@ -22,7 +22,9 @@
 #include <QDebug>
 #include <QEvent>
 
-MicroTimer::MicroTimer( QObject *parent ) : QObject( parent ) {
+#include "logging.h"
+
+MicroTimer::MicroTimer( Node *parent ) : Node( parent ) {
     timer.invalidate();
 }
 
@@ -117,6 +119,29 @@ void MicroTimer::setState( Control::State state ) {
     }
 
     this->currentState = state;
+}
+
+void MicroTimer::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    Node::controlIn( command, data, timeStamp );
+
+    switch( command ) {
+        // Stop generating events so the event queue will flush on exit
+        case Command::Quit: {
+            qCDebug( phxControl ) << "stop";
+            stop();
+            break;
+        }
+
+        // Update heartbeat rate
+        case Command::HeartbeatRate: {
+            qCDebug( phxControl ).nospace() << "Began timer at " << data.toReal() << "Hz";
+            startFreq( data.toReal() );
+            break;
+        }
+
+        default:
+            break;
+    }
 }
 
 void MicroTimer::killTimers() {

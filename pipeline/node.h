@@ -1,13 +1,12 @@
 #pragma once
 
+#include <QMutex>
 #include <QObject>
 #include <QVariant>
 #include <QDateTime>
 
 // FIXME: start using once producer.h is no longer needed
 // #include "pipelinecommon.h"
-
-class QMutex;
 
 /*
  * A node in the pipeline tree. This class defines a set of signals and slots common to each node.
@@ -27,6 +26,9 @@ class Node : public QObject {
             Pause,
             Unload,
             Reset,
+
+            // Called just before app quits
+            Quit,
 
             // Run pipeline for a frame
             Heartbeat,
@@ -60,14 +62,10 @@ class Node : public QObject {
 
 // Convenience functions for easily connecting and disconnecting nodes
 
-template<typename Parent, typename Child>
-QList<QMetaObject::Connection> connectNodes( Parent *t_parent, Child *t_child );
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child );
 
-template<typename Parent, typename Child>
-QList<QMetaObject::Connection> connectNodes( Parent &t_parent, Child &t_child );
+QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child );
 
-template<typename Parent, typename Child>
-bool disconnectNodes( Parent *t_parent, Child *t_child );
+bool disconnectNodes( Node *t_parent, Node *t_child );
 
-template<typename Parent, typename Child>
-bool disconnectNodes( Parent &t_parent, Child &t_child );
+bool disconnectNodes( Node &t_parent, Node &t_child );

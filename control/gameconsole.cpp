@@ -14,24 +14,35 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     microTimer->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
 
+    gameThread->start();
+
     // Connect global pipeline
-    // TODO
+    connectNodes( this, microTimer );
 
     // Begin timer so it may poll for input
     emit controlOut( Command::HeartbeatRate, 60.0, QDateTime::currentMSecsSinceEpoch() );
 
-    // Handle app quits
+    // Handle app quitting
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
         qDebug() << "";
         qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
         qDebug() << "";
 
         // Tell the pipeline to stop
-        controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+
+        // Tell the thread to stop
+        gameThread->quit();
 
         // Wait up to 30 seconds to let the pipeline finish its events
         gameThread->wait( 30 * 1000 );
         gameThread->deleteLater();
+
+        // Destroy our global pipeline objects
+        audioOutput->deleteLater();
+        gamepadManager->deleteLater();
+        microTimer->deleteLater();
+        remapper->deleteLater();
 
         qDebug() << "";
         qCInfo( phxControl ) << ">>>>>>>> Fully unloaded, quitting!";
@@ -40,12 +51,6 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 }
 
 GameConsole::~GameConsole() {
-    delete audioOutput;
-    delete gamepadManager;
-    delete microTimer;
-    delete remapper;
-
-    delete gameThread;
 }
 
 // Public slots
