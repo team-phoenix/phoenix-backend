@@ -43,7 +43,7 @@
     INCLUDEPATH += ../externals/quazip/quazip
 
     # Include our stuff
-    INCLUDEPATH += consumer core input pipeline role util
+    INCLUDEPATH += consumer control core input pipeline role util
 
     HEADERS += \
     backendcommon.h \
@@ -73,7 +73,12 @@
     util/controlhelper.h \
     util/logging.h \
     pipeline/pipelinecommon.h \
-    util/microtimer.h
+    util/microtimer.h \
+    control/gameconsole.h \
+    input/gamepadmanager.h \
+    util/metaoutput.h \
+    input/globalgamepad.h \
+    input/remapper.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -99,7 +104,12 @@
     role/controllable.cpp \
     role/producer.cpp \
     util/logging.cpp \
-    util/microtimer.cpp
+    util/microtimer.cpp \
+    control/gameconsole.cpp \
+    input/gamepadmanager.cpp \
+    util/metaoutput.cpp \
+    input/globalgamepad.cpp \
+    input/remapper.cpp
 
     RESOURCES += input/controllerdb.qrc
 

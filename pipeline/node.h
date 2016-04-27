@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QVariant>
+#include <QDateTime>
 
 // FIXME: start using once producer.h is no longer needed
 // #include "pipelinecommon.h"
@@ -9,7 +10,7 @@
 class QMutex;
 
 /*
- * A node in the pipeline tree. Defines a set of signals and slots common to each node.
+ * A node in the pipeline tree. This class defines a set of signals and slots common to each node.
  */
 
 class Node : public QObject {
@@ -52,6 +53,21 @@ class Node : public QObject {
         void dataOut( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 
     public slots:
+        // By default, these slots will relay the signals given to them to their children
         virtual void controlIn( Command command, QVariant data, qint64 timeStamp );
         virtual void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 };
+
+// Convenience functions for easily connecting and disconnecting nodes
+
+template<typename Parent, typename Child>
+QList<QMetaObject::Connection> connectNodes( Parent *t_parent, Child *t_child );
+
+template<typename Parent, typename Child>
+QList<QMetaObject::Connection> connectNodes( Parent &t_parent, Child &t_child );
+
+template<typename Parent, typename Child>
+bool disconnectNodes( Parent *t_parent, Child *t_child );
+
+template<typename Parent, typename Child>
+bool disconnectNodes( Parent &t_parent, Child &t_child );
