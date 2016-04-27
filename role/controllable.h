@@ -1,5 +1,4 @@
-#ifndef CONTROLLABLE_H
-#define CONTROLLABLE_H
+#pragma once
 
 #include "control.h"
 
@@ -29,5 +28,3 @@ class Controllable {
         Control::State currentState;
 
 };
-
-#endif // CONTROLLABLE_H

@@ -1,5 +1,4 @@
-#ifndef LOOPER_H
-#define LOOPER_H
+#pragma once
 
 #include "controllable.h"
 
@@ -55,5 +54,3 @@ class Looper : public QObject, public Controllable {
         qreal hostFPS;
 
 };
-
-#endif // LOOPER_H

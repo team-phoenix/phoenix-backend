@@ -37,9 +37,7 @@
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
-#ifndef AUDIOBUFFER_H
-#define AUDIOBUFFER_H
+#pragma once
 
 #include <QIODevice>
 
@@ -64,4 +62,3 @@ class AudioBuffer : public QIODevice {
 
 };
 
-#endif // AUDIOBUFFER_H

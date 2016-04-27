@@ -1,5 +1,4 @@
-#ifndef COREPLUGIN_H
-#define COREPLUGIN_H
+#pragma once
 
 #include <QQmlExtensionPlugin>
 
@@ -10,5 +9,3 @@ class CorePlugin : public QQmlExtensionPlugin
 public:
     void registerTypes( const char *uri ) override;
 };
-
-#endif // COREPLUGIN_H

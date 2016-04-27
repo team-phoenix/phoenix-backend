@@ -1,5 +1,4 @@
-#ifndef INPUTDEVICE_H
-#define INPUTDEVICE_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -160,6 +159,3 @@ class InputDevice : public QObject {
 };
 
 Q_DECLARE_METATYPE( InputDevice * )
-
-#endif // INPUTDEVICE_H
-

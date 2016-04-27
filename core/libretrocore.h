@@ -1,5 +1,4 @@
-#ifndef LIBRETROCORE_H
-#define LIBRETROCORE_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -175,5 +174,3 @@ class LibretroCore : public Core {
         QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
 
 };
-
-#endif // LIBRETROCORE_H

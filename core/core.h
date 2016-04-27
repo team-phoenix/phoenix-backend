@@ -1,5 +1,4 @@
-#ifndef CORE_H
-#define CORE_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -97,5 +96,3 @@ class Core : public QObject, public Producer, public Consumer, public Controllab
         virtual void setRewindable( bool rewindable );
         
 };
-
-#endif // CORE_H

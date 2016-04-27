@@ -1,5 +1,4 @@
-#ifndef CONTROLQMLENUM_H
-#define CONTROLQMLENUM_H
+#pragma once
 
 #include <QObject>
 
@@ -22,6 +21,3 @@ class ControlHelper : public QObject {
         };
         Q_ENUM( State )
 };
-
-#endif // CONTROLQMLENUM_H
-

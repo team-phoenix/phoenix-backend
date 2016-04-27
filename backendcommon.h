@@ -1,5 +1,4 @@
-#ifndef BACKENDCOMMON_H
-#define BACKENDCOMMON_H
+#pragma once
 
 #ifdef __cplusplus
 
@@ -11,5 +10,4 @@ Q_DECLARE_METATYPE( QStringMap )
 
 #endif
 
-#endif // BACKENDCOMMON_H
 

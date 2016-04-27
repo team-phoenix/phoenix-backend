@@ -1,5 +1,4 @@
-#ifndef PRODUCER_H
-#define PRODUCER_H
+#pragma once
 
 #include <QAudioFormat>
 #include <QImage>
@@ -117,5 +116,3 @@ class Producer {
         QMutex producerMutex;
 
 };
-
-#endif // PRODUCER_H

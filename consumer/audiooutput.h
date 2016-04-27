@@ -1,5 +1,4 @@
-#ifndef AUDIOOUTPUT_H
-#define AUDIOOUTPUT_H
+#pragma once
 
 #include "consumer.h"
 #include "controllable.h"
@@ -108,5 +107,3 @@ class AudioOutput : public QObject, public Consumer, public Controllable {
         //
 
 };
-
-#endif

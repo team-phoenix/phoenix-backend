@@ -1,5 +1,4 @@
-#ifndef LIBRETROVARIABLE_H
-#define LIBRETROVARIABLE_H
+#pragma once
 
 #include "backendcommon.h"
 #include "libretro.h"
@@ -44,5 +43,3 @@ class LibretroVariable {
 };
 
 QDebug operator<<( QDebug debug, const LibretroVariable &var );
-
-#endif // LIBRETROVARIABLE_H

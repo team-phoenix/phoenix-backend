@@ -1,5 +1,4 @@
-#ifndef QMLINPUTDEVICE_H
-#define QMLINPUTDEVICE_H
+#pragma once
 
 #include "inputdevice.h"
 
@@ -133,5 +132,3 @@ class QMLInputDevice : public InputDevice {
         }
 
 };
-
-#endif // QMLINPUTDEVICE_H

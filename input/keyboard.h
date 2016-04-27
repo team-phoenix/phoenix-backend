@@ -1,5 +1,4 @@
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#pragma once
 
 #include "inputdevice.h"
 #include "inputdeviceevent.h"
@@ -40,5 +39,3 @@ class Keyboard : public InputDevice {
         InputDeviceMapping mDeviceMapping;
 
 };
-
-#endif // KEYBOARD_H
