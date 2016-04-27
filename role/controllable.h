@@ -1,5 +1,4 @@
-#ifndef CONTROLLABLE_H
-#define CONTROLLABLE_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -31,5 +30,3 @@ class Controllable {
         Control::State currentState;
 
 };
-
-#endif // CONTROLLABLE_H

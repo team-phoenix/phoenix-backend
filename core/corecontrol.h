@@ -1,5 +1,4 @@
-#ifndef CORECONTROL_H
-#define CORECONTROL_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -173,5 +172,3 @@ class CoreControl : public QObject, public Control {
 
         void initLibretroCore();
 };
-
-#endif // CORECONTROL_H

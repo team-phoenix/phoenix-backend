@@ -1,5 +1,4 @@
-#ifndef SDLEVENTLOOP_H
-#define SDLEVENTLOOP_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -45,5 +44,3 @@ class SDLEventLoop : public QObject {
         void quitSDL();
 
 };
-
-#endif // SDLEVENTLOOP_H

@@ -38,8 +38,7 @@
 **
 ****************************************************************************/
 
-#ifndef AUDIOBUFFER_H
-#define AUDIOBUFFER_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -63,5 +62,3 @@ class AudioBuffer : public QIODevice {
         QByteArray buffer;
 
 };
-
-#endif // AUDIOBUFFER_H

@@ -1,5 +1,4 @@
-#ifndef CMDLINEARGS_H
-#define CMDLINEARGS_H
+#pragma once
 
 #include <QObject>
 
@@ -46,5 +45,3 @@ public slots:
 private:
 
 };
-
-#endif // CMDLINEARGS_H

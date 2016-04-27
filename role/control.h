@@ -1,5 +1,4 @@
-#ifndef CONTROL_H
-#define CONTROL_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -59,5 +58,3 @@ class Control {
         State state;
 
 };
-
-#endif // CONTROL_H

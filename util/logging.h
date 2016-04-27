@@ -1,5 +1,4 @@
-#ifndef LOGGING_H
-#define LOGGING_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -17,5 +16,3 @@ Q_DECLARE_LOGGING_CATEGORY( phxVideo )
 Q_DECLARE_LOGGING_CATEGORY( phxAudioOutput )
 Q_DECLARE_LOGGING_CATEGORY( phxInput )
 Q_DECLARE_LOGGING_CATEGORY( phxLibrary )
-
-#endif

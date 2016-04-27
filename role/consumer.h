@@ -1,5 +1,4 @@
-#ifndef CONSUMER_H
-#define CONSUMER_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -56,5 +55,3 @@ class Consumer {
         void printFPSStatistics( int printEvery = 60 );
 
 };
-
-#endif // CONSUMER_H

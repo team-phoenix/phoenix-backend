@@ -1,5 +1,4 @@
-#ifndef INPUTMANAGER_H
-#define INPUTMANAGER_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -123,6 +122,3 @@ class InputManager : public QObject, public Producer, public Controllable {
         int16_t libretroGetInputStateHelper( unsigned controllerPort, unsigned retroDeviceType, unsigned analogIndex, unsigned buttonID );
 
 };
-
-
-#endif // INPUTMANAGER_H

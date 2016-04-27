@@ -1,5 +1,4 @@
-#ifndef VIDEOOUTPUT_H
-#define VIDEOOUTPUT_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -85,5 +84,3 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
         int greatestCommonDivisor( int m, int n );
 };
-
-#endif // VIDEOOUTPUT_H

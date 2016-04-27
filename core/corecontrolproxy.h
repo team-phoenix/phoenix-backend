@@ -1,5 +1,4 @@
-#ifndef CORECONTROLPROXY_H
-#define CORECONTROLPROXY_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -170,5 +169,3 @@ class CoreControlProxy : public QObject {
         qreal getVolume() const;
         bool getVsync() const;
 };
-
-#endif // CORECONTROLPROXY_H

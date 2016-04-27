@@ -1,5 +1,4 @@
-#ifndef LIBRETROSYMBOLS_H
-#define LIBRETROSYMBOLS_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -83,5 +82,3 @@ class LibretroSymbols {
         }
 
 };
-
-#endif // LIBRETROSYMBOLS_H

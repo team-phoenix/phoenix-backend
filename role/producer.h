@@ -1,5 +1,4 @@
-#ifndef PRODUCER_H
-#define PRODUCER_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -115,5 +114,3 @@ class Producer {
         QMutex producerMutex;
 
 };
-
-#endif // PRODUCER_H

@@ -1,5 +1,4 @@
-#ifndef JOYSTICK_H
-#define JOYSTICK_H
+#pragma once
 
 #include "backendcommon.h"
 
@@ -85,5 +84,3 @@ class Joystick : public InputDevice {
         void fillSDLArrays( const QString &key, const int &numberValue );
 
 };
-
-#endif // JOYSTICK_H
