@@ -69,10 +69,8 @@
     role/producer.h \
     util/controlhelper.h \
     util/logging.h \
-    util/looper.h \
-    cmdlineargs.h
-
-    PRECOMPILED_HEADER += backendcommon.h
+    util/looper.h\
+    backendcommon.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -96,8 +94,7 @@
     role/control.cpp \
     role/producer.cpp \
     util/logging.cpp \
-    util/looper.cpp \
-    cmdlineargs.cpp
+    util/looper.cpp
 
     RESOURCES += input/controllerdb.qrc
 
