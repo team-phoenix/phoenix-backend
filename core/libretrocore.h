@@ -42,19 +42,8 @@ class LibretroCore : public Core {
         void libretroCoreNTSC( bool NTSC );
 
     public slots:
-        void consumerFormat( ProducerFormat consumerFmt ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
-
-        // FIXME: For testing only. Delete once InputManagerProxy is working
-        void testDoFrame();
-
-        // Properties
-        void setVolume( qreal volume ) override;
-
-        // State changers
-        void load() override;
-        void stop() override;
-
+        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
 
@@ -95,18 +84,18 @@ class LibretroCore : public Core {
         QByteArray gamePathByteArray;
         QByteArray systemPathByteArray;
         QByteArray savePathByteArray;
-        const char *corePathCString;
-        const char *gameFileCString;
-        const char *gamePathCString;
-        const char *systemPathCString;
-        const char *savePathCString;
+        const char *corePathCString{ nullptr };
+        const char *gameFileCString{ nullptr };
+        const char *gamePathCString{ nullptr };
+        const char *systemPathCString{ nullptr };
+        const char *savePathCString{ nullptr };
 
         // Raw ROM/ISO data, empty if (systemInfo->need_fullpath)
         QByteArray gameData;
 
         // SRAM
 
-        void *saveDataBuf;
+        void *saveDataBuf{ nullptr };
         void loadSaveData();
         void storeSaveData();
 
@@ -122,20 +111,29 @@ class LibretroCore : public Core {
         // Value is a human-readable description
         QMap<QString, QString> inputDescriptors;
 
+        // Node data
+        State currentState;
+
         // Producer data (for consumers like AudioOutput, VideoOutput...)
 
+        // Format going out to the consumers
+        ProducerFormat producerFmt;
+
+        // Mutex for consumers (ensures reads/writes to/from the buffer pool are atomic)
+        QMutex producerMutex;
+
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
-        int16_t *audioBufferPool[ POOL_SIZE ];
-        int audioPoolCurrentBuffer;
+        int16_t *audioBufferPool[ POOL_SIZE ]{ nullptr };
+        int audioPoolCurrentBuffer{ 0 };
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
         // Each frame, exactly ( sampleRate * 4 ) bytes should be copied to
         // audioBufferPool[ audioBufferPoolIndex ][ audioBufferCurrentByte ] in total
         // FIXME: In practice, that's not always the case? Some cores only hit that *on average*
-        int audioBufferCurrentByte;
+        int audioBufferCurrentByte{ 0 };
 
-        uint8_t *videoBufferPool[ POOL_SIZE ];
-        int videoPoolCurrentBuffer;
+        uint8_t *videoBufferPool[ POOL_SIZE ]{ nullptr };
+        int videoPoolCurrentBuffer{ 0 };
 
         // Get AV info from the core and pass along to consumers
         void getAVInfo( retro_system_av_info *avInfo );
@@ -146,10 +144,10 @@ class LibretroCore : public Core {
         // Consumer data (from producers like InputManager)
 
         ProducerFormat consumerFmt;
-        int16_t inputStates[ 16 ];
+        int16_t inputStates[ 16 ]{ 0 };
         QPointF touchCoords;
-        bool touchState;
-        bool variablesHaveChanged;
+        bool touchState{ false };
+        bool variablesHaveChanged{ false };
 
         // Callbacks
 

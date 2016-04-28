@@ -5,7 +5,7 @@
 #include <QVariant>
 #include <QDateTime>
 
-// FIXME: start using once producer.h is no longer needed
+// FIXME: start using once producer.h/control.h is no longer needed
 // #include "pipelinecommon.h"
 
 /*
@@ -20,6 +20,7 @@ class Node : public QObject {
 
         enum class Command {
             // State setters
+            // FIXME: Redundant?
             Stop,
             Load,
             Play,
@@ -28,7 +29,7 @@ class Node : public QObject {
             Reset,
 
             // Called just before app quits
-            Quit,
+            KillTimer,
 
             // Run pipeline for a frame
             Heartbeat,
@@ -40,6 +41,33 @@ class Node : public QObject {
             AudioFormat,
             VideoFormat,
             InputFormat,
+
+            // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
+            // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
+            // bool
+            SetPausable,
+
+            // Multiplier of the system's native framerate, if any. If rewindable, it can be any real number. Otherwise, it must
+            // be positive and nonzero
+            // qreal
+            SetPlaybackSpeed,
+
+            // Core subclass-defined info specific to this session (ex. Libretro: core, game, system and save paths)
+            // QVariantMap
+            SetSource,
+
+            // Is this Core instance resettable? If true, this usually means you can "soft reset" instead of fully resetting
+            // the state machine by cycling through the deinit then init states
+            // Read-only
+            SetResettable,
+
+            // Is this Core instance rewindable? If true, playbackSpeed may go to and below 0 to make the game move backwards
+            // bool
+            SetRewindable,
+
+            // Set volume. Range: [0.0, 1.0]
+            // qreal
+            SetVolume,
         };
         Q_ENUM( Command )
 
@@ -47,8 +75,19 @@ class Node : public QObject {
             Video,
             Audio,
             Input,
+            TouchInput,
         };
         Q_ENUM( DataType )
+
+        // FIXME: Redundant?
+        enum class State {
+            Stopped,
+            Loading,
+            Playing,
+            Paused,
+            Unloading,
+        };
+        Q_ENUM( State )
 
     signals:
         void controlOut( Command command, QVariant data, qint64 timeStamp );

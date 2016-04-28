@@ -1,5 +1,5 @@
 #include "gamepadmanager.h"
 
-GamepadManager::GamepadManager( QObject *parent ) : QObject( parent ) {
+GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
 
 }

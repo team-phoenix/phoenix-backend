@@ -1,15 +1,6 @@
 #include "videooutput.h"
 
-VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(), Controllable(),
-    framebuffer( nullptr ),
-    framebufferSize( 0 ),
-    texture( nullptr ),
-    aspectRatio( 1.0 ),
-    linearFiltering( false ),
-    television( false ),
-    ntsc( true ),
-    widescreen( false ) {
-
+VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     // Mandatory for our own drawing code to do anything
     setFlag( QQuickItem::ItemHasContents, true );
 
@@ -19,10 +10,9 @@ VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(
     emit ntscChanged( ntsc );
     emit widescreenChanged( widescreen );
 
-    size_t newSize = consumerFmt.videoSize.width() * consumerFmt.videoSize.height() * consumerFmt.videoBytesPerPixel;
+    size_t newSize = this->format.videoSize.width() * this->format.videoSize.height() * this->format.videoBytesPerPixel;
     framebuffer = new uchar[ newSize ]();
     framebufferSize = newSize;
-
 }
 
 VideoOutput::~VideoOutput() {
@@ -31,14 +21,18 @@ VideoOutput::~VideoOutput() {
     }
 }
 
-void VideoOutput::consumerFormat( ProducerFormat format ) {
+void VideoOutput::setState( Node::State state ) {
+    this->state = state;
+}
+
+void VideoOutput::setFormat( ProducerFormat format ) {
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
-    if( aspectRatio != newRatio || format.videoSize.width() != consumerFmt.videoSize.width() || format.videoSize.height() != consumerFmt.videoSize.height() ) {
+    if( aspectRatio != newRatio || format.videoSize.width() != this->format.videoSize.width() || format.videoSize.height() != this->format.videoSize.height() ) {
         // Pretty-print the old and new aspect ratio (ex. "4:3")
-        int oldAspectRatioX = consumerFmt.videoSize.height() * aspectRatio;
-        int oldAspectRatioY = consumerFmt.videoSize.width() / aspectRatio;
+        int oldAspectRatioX = this->format.videoSize.height() * aspectRatio;
+        int oldAspectRatioY = this->format.videoSize.width() / aspectRatio;
         int newAspectRatioX = format.videoSize.height() * newRatio;
         int newAspectRatioY = format.videoSize.width() / newRatio;
         int oldGCD = greatestCommonDivisor( oldAspectRatioX, oldAspectRatioY );
@@ -68,19 +62,12 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
         framebufferSize = newSize;
     }
 
-    consumerFmt = format;
+    this->format = format;
 }
 
-void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-    Q_UNUSED( mutex )
-    Q_UNUSED( bytes )
-    Q_UNUSED( timestamp )
-
+void VideoOutput::data( void *data, size_t bytes, qint64 timestamp ) {
     // Copy framebuffer to our own buffer for later drawing
-    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
-        // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
-        // QMutexLocker locker( mutex );
-
+    if( state == Node::State::Playing ) {
         qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
         // Discard data that's too far from the past to matter anymore
@@ -99,16 +86,16 @@ void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t 
         const uchar *newFramebuffer = ( const uchar * )data;
 
         // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-        for( int i = 0; i < consumerFmt.videoSize.height(); i++ ) {
+        for( int i = 0; i < this->format.videoSize.height(); i++ ) {
             // Don't read past the end of the given buffer
-            Q_ASSERT( i * consumerFmt.videoBytesPerLine < bytes );
+            Q_ASSERT( i * this->format.videoBytesPerLine < bytes );
 
             // Don't write past the end of our framebuffer
-            Q_ASSERT( i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel < framebufferSize );
+            Q_ASSERT( i * this->format.videoSize.width() * this->format.videoBytesPerPixel < framebufferSize );
 
-            memcpy( framebuffer + i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel,
-                    newFramebuffer + i * consumerFmt.videoBytesPerLine,
-                    consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel
+            memcpy( framebuffer + i * this->format.videoSize.width() * this->format.videoBytesPerPixel,
+                    newFramebuffer + i * this->format.videoBytesPerLine,
+                    this->format.videoSize.width() * this->format.videoBytesPerPixel
                   );
         }
 
@@ -125,7 +112,7 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     emit windowUpdate( QDateTime::currentMSecsSinceEpoch() );
 
     // Don't draw unless emulation is active
-    if( currentState != Control::PLAYING && currentState != Control::PAUSED ) {
+    if( state != Node::State::Playing && state != Node::State::Paused ) {
         return 0;
     }
 
@@ -143,8 +130,8 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     }
 
     // Create new Image that holds a reference to our framebuffer
-    QImage image( ( const uchar * )framebuffer, consumerFmt.videoSize.width(), consumerFmt.videoSize.height(),
-                  consumerFmt.videoPixelFormat );
+    QImage image( ( const uchar * )framebuffer, this->format.videoSize.width(), this->format.videoSize.height(),
+                  this->format.videoPixelFormat );
 
     // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
     texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
@@ -176,21 +163,21 @@ qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
 void VideoOutput::setTelevision( bool television ) {
     if( this->television != television ) {
         this->television = television;
-        consumerFormat( consumerFmt );
+        setFormat( this->format );
     }
 }
 
 void VideoOutput::setNtsc( bool ntsc ) {
     if( this->ntsc != ntsc ) {
         this->ntsc = ntsc;
-        consumerFormat( consumerFmt );
+        setFormat( this->format );
     }
 }
 
 void VideoOutput::setWidescreen( bool widescreen ) {
     if( this->widescreen != widescreen ) {
         this->widescreen = widescreen;
-        consumerFormat( consumerFmt );
+        setFormat( this->format );
     }
 }
 

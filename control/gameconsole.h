@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QQmlParserStatus>
 #include <QThread>
 #include <QVariant>
 
@@ -11,19 +12,21 @@
 #include "gamepadmanager.h"
 #include "globalgamepad.h"
 #include "libretrocore.h"
-#include "metaoutput.h"
+#include "controloutput.h"
 #include "microtimer.h"
 #include "remapper.h"
 #include "videooutput.h"
+#include "videooutputnode.h"
 
 #include "controlhelper.h"
 
-class GameConsole : public Node {
+class GameConsole : public Node, public QQmlParserStatus {
         Q_OBJECT
+        Q_INTERFACES( QQmlParserStatus )
 
-        Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad )
-        Q_PROPERTY( MetaOutput *metaOutput MEMBER metaOutput )
-        Q_PROPERTY( VideoOutput *videoOutput MEMBER videoOutput )
+        Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
+        Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
+        Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
         Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
@@ -38,16 +41,8 @@ class GameConsole : public Node {
         explicit GameConsole( Node *parent = 0 );
         ~GameConsole();
 
-    signals:
-        // Properties
-        void pausableChanged();
-        void playbackSpeedChanged();
-        void resettableChanged();
-        void rewindableChanged();
-        void sourceChanged();
-        void stateChanged();
-        void volumeChanged();
-        void vsyncChanged();
+        void classBegin() override;
+        void componentComplete() override;
 
     public slots:
         void load();
@@ -55,10 +50,12 @@ class GameConsole : public Node {
         void pause();
         void stop();
         void reset();
+        void unload();
 
     private:
         // API-specific loaders
         void loadLibretro();
+        void unloadLibretro();
 
         // Emulation thread
         QThread *gameThread;
@@ -73,8 +70,14 @@ class GameConsole : public Node {
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties
         GlobalGamepad *globalGamepad{ nullptr };
-        MetaOutput *metaOutput{ nullptr };
-        VideoOutput *videoOutput{ nullptr };
+        ControlOutput *controlOutput{ nullptr };
+        VideoOutputNode *videoOutput{ nullptr };
+
+        // Keeps track of session connections so they may be disconnected once emulation ends
+        QList<QMetaObject::Connection> sessionConnections;
+
+        // Used to stop the game thread on app quit
+        bool quitFlag{ false };
 
         // Properties
         bool pausable;
@@ -97,4 +100,18 @@ class GameConsole : public Node {
         bool vsync;
         bool getVsync();
         void setVsync( bool vsync );
+
+    signals:
+        // Signals for properties
+        void globalGamepadChanged();
+        void controlOutputChanged();
+        void videoOutputChanged();
+        void pausableChanged();
+        void playbackSpeedChanged();
+        void resettableChanged();
+        void rewindableChanged();
+        void sourceChanged();
+        void stateChanged();
+        void volumeChanged();
+        void vsyncChanged();
 };

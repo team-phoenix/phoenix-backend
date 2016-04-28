@@ -2,11 +2,13 @@
 
 #include <QObject>
 
-class GamepadManager : public QObject {
+#include "node.h"
+
+class GamepadManager : public Node {
         Q_OBJECT
 
     public:
-        explicit GamepadManager( QObject *parent = 0 );
+        explicit GamepadManager( Node *parent = 0 );
 
     signals:
 

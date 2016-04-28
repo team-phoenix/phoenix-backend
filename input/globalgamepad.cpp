@@ -1,5 +1,5 @@
 #include "globalgamepad.h"
 
-GlobalGamepad::GlobalGamepad( QObject *parent ) : QObject( parent ) {
+GlobalGamepad::GlobalGamepad( Node *parent ) : Node( parent ) {
 
 }

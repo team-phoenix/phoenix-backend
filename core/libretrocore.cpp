@@ -1,31 +1,12 @@
 #include "libretrocore.h"
 
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
-    // Protected
-    symbols(),
-    openGLContext(),
-
     // Private
-    coreFile(), gameFile(),
-    contentPath(), systemPath(), savePath(),
-    coreFileInfo(), gameFileInfo(), systemPathInfo(), savePathInfo(),
-    corePathByteArray(), gameFileByteArray(), gamePathByteArray(), systemPathByteArray(), savePathByteArray(),
-    corePathCString( nullptr ), gameFileCString( nullptr ), gamePathCString( nullptr ), systemPathCString( nullptr ), savePathCString( nullptr ),
-    gameData(),
-    saveDataBuf( nullptr ),
-    systemInfo( new retro_system_info() ),
-    inputDescriptors(),
-    audioBufferPool{ nullptr }, audioPoolCurrentBuffer( 0 ), audioBufferCurrentByte( 0 ),
-    videoBufferPool{ nullptr }, videoPoolCurrentBuffer( 0 ),
-    consumerFmt(), inputStates{ 0 }, touchCoords(), touchState( false ), variablesHaveChanged( false ),
-    variables() {
+    systemInfo( new retro_system_info() ) {
     core = this;
 
     // All Libretro cores are pausable, just stop calling retro_run()
     pausable = true;
-
-    currentState = Control::STOPPED;
-    allPropertiesChanged();
 }
 
 LibretroCore::~LibretroCore() {
@@ -37,257 +18,296 @@ LibretroCore::~LibretroCore() {
 
 // Slots
 
-void LibretroCore::load() {
-    Core::setState( Control::LOADING );
+void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp ) {
+    // Command is not relayed to children automatically
 
-    // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
-    coreFileInfo.setFile( source[ "core" ] );
-    gameFileInfo.setFile( source[ "game" ] );
-    systemPathInfo.setFile( source[ "systemPath" ] );
-    savePathInfo.setFile( source[ "savePath" ] );
+    switch( command ) {
 
-    coreFile.setFileName( coreFileInfo.absoluteFilePath() );
-    gameFile.setFileName( gameFileInfo.absoluteFilePath() );
+        case Command::Load: {
+            qCDebug( phxCore ) << command;
+            state = State::Loading;
+            emit controlOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 
-    contentPath.setPath( gameFileInfo.absolutePath() );
-    systemPath.setPath( systemPathInfo.absolutePath() );
-    savePath.setPath( savePathInfo.absolutePath() );
+            // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
+            coreFileInfo.setFile( source[ "core" ] );
+            gameFileInfo.setFile( source[ "game" ] );
+            systemPathInfo.setFile( source[ "systemPath" ] );
+            savePathInfo.setFile( source[ "savePath" ] );
 
-    // Convert to C-style ASCII strings (needed by the API)
-    corePathByteArray = coreFileInfo.absolutePath().toLocal8Bit();
-    gameFileByteArray = gameFileInfo.absoluteFilePath().toLocal8Bit();
-    gamePathByteArray = gameFileInfo.absolutePath().toLocal8Bit();
-    systemPathByteArray = systemPathInfo.absolutePath().toLocal8Bit();
-    savePathByteArray = savePathInfo.absolutePath().toLocal8Bit();
-    corePathCString = corePathByteArray.constData();
-    gameFileCString = gameFileByteArray.constData();
-    gamePathCString = gamePathByteArray.constData();
-    systemPathCString = systemPathByteArray.constData();
-    savePathCString = savePathByteArray.constData();
+            coreFile.setFileName( coreFileInfo.absoluteFilePath() );
+            gameFile.setFileName( gameFileInfo.absoluteFilePath() );
 
-    qDebug() << "";
-    qCDebug( phxCore ) << "Now loading:";
-    qCDebug( phxCore ) << "Core        :" << source[ "core" ];
-    qCDebug( phxCore ) << "Game        :" << source[ "game" ];
-    qCDebug( phxCore ) << "System path :" << source["systemPath"];
-    qCDebug( phxCore ) << "Save path   :" << source["savePath"];
-    qDebug() << "";
+            contentPath.setPath( gameFileInfo.absolutePath() );
+            systemPath.setPath( systemPathInfo.absolutePath() );
+            savePath.setPath( savePathInfo.absolutePath() );
 
-    // Set defaults that'll get overwritten as the core loads if necessary
-    {
-        // Pixel format is set to QImage::Format_RGB16 by default by the struct ProducerFormat constructor
-        // However, for Libretro the default is RGB1555 aka QImage::Format_RGB555
-        producerFmt.videoPixelFormat = QImage::Format_RGB555;
-    }
+            // Convert to C-style ASCII strings (needed by the API)
+            corePathByteArray = coreFileInfo.absolutePath().toLocal8Bit();
+            gameFileByteArray = gameFileInfo.absoluteFilePath().toLocal8Bit();
+            gamePathByteArray = gameFileInfo.absolutePath().toLocal8Bit();
+            systemPathByteArray = systemPathInfo.absolutePath().toLocal8Bit();
+            savePathByteArray = savePathInfo.absolutePath().toLocal8Bit();
+            corePathCString = corePathByteArray.constData();
+            gameFileCString = gameFileByteArray.constData();
+            gamePathCString = gamePathByteArray.constData();
+            systemPathCString = systemPathByteArray.constData();
+            savePathCString = savePathByteArray.constData();
 
-    // Load core
-    {
-        qCDebug( phxCore ) << "Loading core:" << coreFileInfo.absoluteFilePath();
+            qDebug() << "";
+            qCDebug( phxCore ) << "Now loading:";
+            qCDebug( phxCore ) << "Core        :" << source[ "core" ];
+            qCDebug( phxCore ) << "Game        :" << source[ "game" ];
+            qCDebug( phxCore ) << "System path :" << source["systemPath"];
+            qCDebug( phxCore ) << "Save path   :" << source["savePath"];
+            qDebug() << "";
 
-        coreFile.load();
-
-        // Resolve symbols
-        resolved_sym( retro_set_environment );
-        resolved_sym( retro_set_video_refresh );
-        resolved_sym( retro_set_audio_sample );
-        resolved_sym( retro_set_audio_sample_batch );
-        resolved_sym( retro_set_input_poll );
-        resolved_sym( retro_set_input_state );
-        resolved_sym( retro_init );
-        resolved_sym( retro_deinit );
-        resolved_sym( retro_api_version );
-        resolved_sym( retro_get_system_info );
-        resolved_sym( retro_get_system_av_info );
-        resolved_sym( retro_set_controller_port_device );
-        resolved_sym( retro_reset );
-        resolved_sym( retro_run );
-        resolved_sym( retro_serialize );
-        resolved_sym( retro_serialize_size );
-        resolved_sym( retro_unserialize );
-        resolved_sym( retro_cheat_reset );
-        resolved_sym( retro_cheat_set );
-        resolved_sym( retro_load_game );
-        resolved_sym( retro_load_game_special );
-        resolved_sym( retro_unload_game );
-        resolved_sym( retro_get_region );
-        resolved_sym( retro_get_memory_data );
-        resolved_sym( retro_get_memory_size );
-
-        // Set callbacks
-        symbols.retro_set_environment( environmentCallback );
-        symbols.retro_set_audio_sample( audioSampleCallback );
-        symbols.retro_set_audio_sample_batch( audioSampleBatchCallback );
-        symbols.retro_set_input_poll( inputPollCallback );
-        symbols.retro_set_input_state( inputStateCallback );
-        symbols.retro_set_video_refresh( videoRefreshCallback );
-
-        // Init the core
-        symbols.retro_init();
-
-        // Get some info about the game
-        symbols.retro_get_system_info( systemInfo );
-    }
-
-    // Load game
-    {
-        qCDebug( phxCore ) << "Loading game:" << gameFileInfo.absoluteFilePath();
-
-        // Argument struct for symbols.retro_load_game()
-        retro_game_info gameInfo;
-
-        // Full path needed, simply pass the game's file path to the core
-        if( systemInfo->need_fullpath ) {
-            qCDebug( phxCore ) << "Passing file path to core...";
-            gameInfo.path = gameFileCString;
-            gameInfo.data = nullptr;
-            gameInfo.size = 0;
-            gameInfo.meta = "";
-        }
-
-        // Full path not needed, read the file to memory and pass that to the core
-        else {
-            qCDebug( phxCore ) << "Copying game contents to memory...";
-            gameFile.open( QIODevice::ReadOnly );
-
-            // read into memory
-            gameData = gameFile.readAll();
-
-            gameInfo.path = nullptr;
-            gameInfo.data = gameData.constData();
-            gameInfo.size = gameFile.size();
-            gameInfo.meta = "";
-        }
-
-        symbols.retro_load_game( &gameInfo );
-    }
-
-    // Load save data
-    loadSaveData();
-
-    // Get audio/video timing and send to consumers, allocate buffer pool
-    {
-        // Get info from the core
-        retro_system_av_info *avInfo = new retro_system_av_info();
-        symbols.retro_get_system_av_info( avInfo );
-        getAVInfo( avInfo );
-        allocateBufferPool( avInfo );
-        emit libretroCoreNativeFramerate( avInfo->timing.fps );
-        delete avInfo;
-    }
-    // Set all variables to their defaults, mark all variables as dirty
-    {
-        for( auto key : variables.keys() ) {
-            LibretroVariable &variable = variables[ key ];
-
-            if( !variable.choices().size() ) {
-                continue;
+            // Set defaults that'll get overwritten as the core loads if necessary
+            {
+                // Pixel format is set to QImage::Format_RGB16 by default by the struct ProducerFormat constructor
+                // However, for Libretro the default is RGB1555 aka QImage::Format_RGB555
+                producerFmt.videoPixelFormat = QImage::Format_RGB555;
             }
 
-            // Assume the defualt choice to be the first option offered
-            std::string defaultChoice = variable.choices().at( 0 );
+            // Load core
+            {
+                qCDebug( phxCore ) << "Loading core:" << coreFileInfo.absoluteFilePath();
 
-            if( !strlen( defaultChoice.c_str() ) ) {
-                continue;
+                coreFile.load();
+
+                // Resolve symbols
+                resolved_sym( retro_set_environment );
+                resolved_sym( retro_set_video_refresh );
+                resolved_sym( retro_set_audio_sample );
+                resolved_sym( retro_set_audio_sample_batch );
+                resolved_sym( retro_set_input_poll );
+                resolved_sym( retro_set_input_state );
+                resolved_sym( retro_init );
+                resolved_sym( retro_deinit );
+                resolved_sym( retro_api_version );
+                resolved_sym( retro_get_system_info );
+                resolved_sym( retro_get_system_av_info );
+                resolved_sym( retro_set_controller_port_device );
+                resolved_sym( retro_reset );
+                resolved_sym( retro_run );
+                resolved_sym( retro_serialize );
+                resolved_sym( retro_serialize_size );
+                resolved_sym( retro_unserialize );
+                resolved_sym( retro_cheat_reset );
+                resolved_sym( retro_cheat_set );
+                resolved_sym( retro_load_game );
+                resolved_sym( retro_load_game_special );
+                resolved_sym( retro_unload_game );
+                resolved_sym( retro_get_region );
+                resolved_sym( retro_get_memory_data );
+                resolved_sym( retro_get_memory_size );
+
+                // Set callbacks
+                symbols.retro_set_environment( environmentCallback );
+                symbols.retro_set_audio_sample( audioSampleCallback );
+                symbols.retro_set_audio_sample_batch( audioSampleBatchCallback );
+                symbols.retro_set_input_poll( inputPollCallback );
+                symbols.retro_set_input_state( inputStateCallback );
+                symbols.retro_set_video_refresh( videoRefreshCallback );
+
+                // Init the core
+                symbols.retro_init();
+
+                // Get some info about the game
+                symbols.retro_get_system_info( systemInfo );
+
+                qDebug() << "";
             }
 
-            // Assign
-            variable.setValue( defaultChoice );
+            // Load game
+            {
+                qCDebug( phxCore ) << "Loading game:" << gameFileInfo.absoluteFilePath();
 
+                // Argument struct for symbols.retro_load_game()
+                retro_game_info gameInfo;
+
+                // Full path needed, simply pass the game's file path to the core
+                if( systemInfo->need_fullpath ) {
+                    qCDebug( phxCore ) << "Passing file path to core...";
+                    gameInfo.path = gameFileCString;
+                    gameInfo.data = nullptr;
+                    gameInfo.size = 0;
+                    gameInfo.meta = "";
+                }
+
+                // Full path not needed, read the file to memory and pass that to the core
+                else {
+                    qCDebug( phxCore ) << "Copying game contents to memory...";
+                    gameFile.open( QIODevice::ReadOnly );
+
+                    // read into memory
+                    gameData = gameFile.readAll();
+
+                    gameInfo.path = nullptr;
+                    gameInfo.data = gameData.constData();
+                    gameInfo.size = gameFile.size();
+                    gameInfo.meta = "";
+                }
+
+                symbols.retro_load_game( &gameInfo );
+
+                qDebug() << "";
+            }
+
+            // Load save data
+            loadSaveData();
+
+            // Get audio/video timing and send to consumers, allocate buffer pool
+            {
+                // Get info from the core
+                retro_system_av_info *avInfo = new retro_system_av_info();
+                symbols.retro_get_system_av_info( avInfo );
+                getAVInfo( avInfo );
+                allocateBufferPool( avInfo );
+                emit libretroCoreNativeFramerate( avInfo->timing.fps );
+                emit controlOut( Command::HeartbeatRate, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
+                delete avInfo;
+            }
+            // Set all variables to their defaults, mark all variables as dirty
+            {
+                for( auto key : variables.keys() ) {
+                    LibretroVariable &variable = variables[ key ];
+
+                    if( !variable.choices().size() ) {
+                        continue;
+                    }
+
+                    // Assume the defualt choice to be the first option offered
+                    std::string defaultChoice = variable.choices().at( 0 );
+
+                    if( !strlen( defaultChoice.c_str() ) ) {
+                        continue;
+                    }
+
+                    // Assign
+                    variable.setValue( defaultChoice );
+
+                }
+
+                variablesHaveChanged = true;
+            }
+
+            pausable = true;
+            emit controlOut( Command::SetPausable, true, QDateTime::currentMSecsSinceEpoch() );
+
+            state = State::Paused;
+            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            break;
         }
 
-        variablesHaveChanged = true;
-    }
-
-    Core::setPausable( true );
-
-    Core::setState( Control::PAUSED );
-}
-
-void LibretroCore::stop() {
-    Core::setState( Control::UNLOADING );
-
-    // Write SRAM
-
-    qCInfo( phxCore ) << "=======Saving game...=======";
-    storeSaveData();
-    qCInfo( phxCore ) << "============================";
-
-    // Unload core
-
-    // symbols.retro_api_version is reasonably expected to be defined if the core is loaded
-    if( symbols.retro_api_version ) {
-        symbols.retro_unload_game();
-        symbols.retro_deinit();
-        symbols.clear();
-        coreFile.unload();
-        qCDebug( phxCore ) << "Unloaded core successfully";
-    } else {
-        qCCritical( phxCore ) << "stop() called on an unloaded core!";
-    }
-
-    Core::setState( Control::STOPPED );
-}
-
-void LibretroCore::consumerFormat( ProducerFormat format ) {
-    qCDebug( phxCore ) << Q_FUNC_INFO;
-    consumerFmt = format;
-
-    // Update all consumers if the audio ratio changes
-    if( producerFmt.audioRatio != consumerFmt.videoFramerate / producerFmt.videoFramerate ) {
-        // hostFPS / coreFPS
-        producerFmt.audioRatio = consumerFmt.videoFramerate / producerFmt.videoFramerate;
-        // qCDebug( phxCore ).nospace() << "Updating consumers with new coreFPS... (firstFrame = " << producerFmt.firstFrame << ")";
-        emit producerFormat( producerFmt );
-    }
-}
-
-void LibretroCore::consumerData( QString type, QMutex *mutex, void *data, size_t bytes , qint64 timestamp ) {
-    Q_UNUSED( data )
-    Q_UNUSED( bytes )
-
-    if( type == QStringLiteral( "input" ) ) {
-
-        // Discard data that's too far from the past to matter anymore
-        if( QDateTime::currentMSecsSinceEpoch() - timestamp > 100 ) {
-            // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
-            return;
+        case Command::Play: {
+            qCDebug( phxCore ) << command;
+            state = State::Playing;
+            emit controlOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            break;
         }
 
-        QMutexLocker locker( mutex );
-
-        // Copy incoming input data
-        int16_t *newInputStates = ( int16_t * )data;
-
-        for( int i = 0; i < 16; i++ ) {
-            inputStates[ i ] = newInputStates[ i ];
+        case Command::Pause: {
+            qCDebug( phxCore ) << command;
+            state = State::Paused;
+            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            break;
         }
 
-        // Run the emulator for a frame if we're supposed to
-        if( currentState == Control::PLAYING ) {
-            // printFPSStatistics();
-            symbols.retro_run();
+        case Command::Stop: {
+            qCDebug( phxCore ) << command;
+            state = State::Unloading;
+            emit controlOut( Command::Unload, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+
+            // Write SRAM
+
+            qCInfo( phxCore ) << "=======Saving game...=======";
+            storeSaveData();
+            qCInfo( phxCore ) << "============================";
+
+            // Unload core
+
+            // symbols.retro_api_version is reasonably expected to be defined if the core is loaded
+            if( symbols.retro_api_version ) {
+                symbols.retro_unload_game();
+                symbols.retro_deinit();
+                symbols.clear();
+                coreFile.unload();
+                qCDebug( phxCore ) << "Unloaded core successfully";
+            } else {
+                qCCritical( phxCore ) << "stop() called on an unloaded core!";
+            }
+
+            state = State::Stopped;
+            emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            break;
         }
 
-    }
+        case Command::Heartbeat: {
+            Node::controlOut( command, data, timeStamp );
 
-    if( type == QStringLiteral( "touchinput" ) ) {
-        QMutexLocker locker( mutex );
-        touchCoords = *( QPointF * )data;
-        touchState = ( bool )bytes;
+            // Run the emulator for a frame if we're supposed to
+            if( state == State::Playing ) {
+                symbols.retro_run();
+            }
+
+            break;
+        }
+
+        case Command::SetSource: {
+            qCDebug( phxCore ) << command;
+            Node::controlOut( command, data, timeStamp );
+
+            QMap<QString, QVariant> map = data.toMap();
+            QStringMap stringMap;
+
+            for( QString key : map.keys() ) {
+                stringMap[ key ] = map[ key ].toString();
+            }
+
+            this->source = stringMap;
+            break;
+        }
+
+        default:
+            Node::controlOut( command, data, timeStamp );
+            break;
     }
 }
 
-void LibretroCore::testDoFrame() {
-    // Run the emulator for a frame if we're supposed to
-    if( currentState == Control::PLAYING ) {
-        // printFPSStatistics();
-        symbols.retro_run();
-    }
-}
+void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
+    Node::dataIn( type, mutex, data, bytes, timeStamp );
 
-void LibretroCore::setVolume( qreal volume ) {
-    Core::setVolume( volume );
-    emit producerData( QStringLiteral( "audiovolume" ), &producerMutex, &( this->volume ), sizeof( qreal ), QDateTime::currentMSecsSinceEpoch() );
+    switch( type ) {
+        // FIXME: Probably want to nuke all of this, replace with newer input stuff
+        case DataType::Input: {
+            // Discard data that's too far from the past to matter anymore
+            if( QDateTime::currentMSecsSinceEpoch() - timeStamp > 100 ) {
+                // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
+                return;
+            }
+
+            QMutexLocker locker( mutex );
+
+            // Copy incoming input data
+            int16_t *newInputStates = ( int16_t * )data;
+
+            for( int i = 0; i < 16; i++ ) {
+                inputStates[ i ] = newInputStates[ i ];
+            }
+
+            break;
+        }
+
+        case DataType::TouchInput: {
+            QMutexLocker locker( mutex );
+            touchCoords = *( QPointF * )data;
+            touchState = ( bool )bytes;
+            break;
+        }
+
+        default:
+            break;
+    }
 }
 
 // Protected
@@ -295,11 +315,11 @@ void LibretroCore::setVolume( qreal volume ) {
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    // emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emit dataOut( DataType::Audio, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
-
     // Cores can change the size of the video they output (within the bounds they set on load) at any time
     if( producerFmt.videoSize != QSize( width, height ) || producerFmt.videoBytesPerLine != pitch ) {
 
@@ -311,12 +331,15 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         producerFmt.videoSize.setWidth( width );
         producerFmt.videoSize.setHeight( height );
 
-        emit producerFormat( producerFmt );
-
+        //emit producerFormat( producerFmt );
+        QVariant variant;
+        variant.setValue( producerFmt );
+        emit controlOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+        emit controlOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
     }
 
-    emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
-
+    // emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emit dataOut( DataType::Video, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 // Private
@@ -402,7 +425,11 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
-    emit producerFormat( producerFmt );
+    // emit producerFormat( producerFmt );
+    QVariant variant;
+    variant.setValue( producerFmt );
+    emit controlOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+    emit controlOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {

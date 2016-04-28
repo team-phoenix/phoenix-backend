@@ -1,11 +1,10 @@
-
 #include "audiooutput.h"
 
 // FIXME: Stop assuming stereo?
 const auto samplesPerFrame = 2;
 // const auto framesPerSample = 0.5;
 
-AudioOutput::AudioOutput( QObject *parent ): QObject( parent ), Consumer(), Controllable(),
+AudioOutput::AudioOutput( Node *parent ): Node( parent ),
     resamplerState( nullptr ),
     sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
     inputDataShort( nullptr ), inputDataFloat( nullptr ),
@@ -27,105 +26,132 @@ AudioOutput::~AudioOutput() {
 
 // Public slots
 
-void AudioOutput::consumerFormat( ProducerFormat format ) {
-    // Currently, we assume that the audio format will only be set once per session, during loading
-    if( currentState == Control::LOADING ) {
-        this->consumerFmt = format;
-
-        this->sampleRate = consumerFmt.audioFormat.sampleRate();
-        this->coreFPS = consumerFmt.videoFramerate;
-        this->hostFPS = coreFPS;
-
-        qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
-
-        inputAudioFormat.setSampleSize( 16 );
-        inputAudioFormat.setSampleRate( sampleRate );
-        inputAudioFormat.setChannelCount( 2 );
-        inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
-        inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
-        inputAudioFormat.setCodec( "audio/pcm" );
-
-        // Try using the nearest supported format
-        QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
-        outputAudioFormat = info.nearestFormat( inputAudioFormat );
-
-        // If that got us a format with a worse sample rate, use preferred format
-        if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
-            outputAudioFormat = info.preferredFormat();
+void AudioOutput::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    switch( command ) {
+        case Command::Play: {
+            state = State::Playing;
+            setAudioActive( true );
+            break;
         }
 
-        // Force 16-bit audio (for now)
-        outputAudioFormat.setSampleSize( 16 );
+        case Command::Stop: {
+            state = State::Stopped;
+            setAudioActive( false );
+            break;
+        }
 
-        sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
+        case Command::Load: {
+            state = State::Loading;
+            setAudioActive( false );
+            break;
+        }
 
-        qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
-        qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
-        qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
-        qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
-                 outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
+        case Command::Pause: {
+            state = State::Paused;
+            setAudioActive( false );
+            break;
+        }
 
-        resetAudio();
-        allocateMemory();
+        case Command::Unload: {
+            state = State::Unloading;
+            setAudioActive( false );
+            shutdown();
+        }
 
-        outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
-    }
-}
+        case Command::HeartbeatRate: {
+            hostFPS = data.toReal();
+            qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
+            break;
+        }
 
-void AudioOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-    Q_UNUSED( mutex );
-    Q_UNUSED( timestamp );
+        case Command::AudioFormat: {
+            // Currently, we assume that the audio format will only be set once per session, during loading
+            if( state == State::Loading ) {
+                this->format = qvariant_cast<ProducerFormat>( data );
 
-    if( type == QStringLiteral( "audio" ) && currentState == Control::PLAYING ) {
-        qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+                this->sampleRate = format.audioFormat.sampleRate();
+                this->coreFPS = format.videoFramerate;
+                this->hostFPS = coreFPS;
 
-        // Discard data that's too far from the past to matter anymore
-        if( currentTime - timestamp > 500 ) {
-            static qint64 lastMessage = 0;
+                qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
 
-            if( currentTime - lastMessage > 1000 ) {
-                lastMessage = currentTime;
-                // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
-                //                           currentTime - timestamp << "ms ago";
+                inputAudioFormat.setSampleSize( 16 );
+                inputAudioFormat.setSampleRate( sampleRate );
+                inputAudioFormat.setChannelCount( 2 );
+                inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
+                inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
+                inputAudioFormat.setCodec( "audio/pcm" );
+
+                // Try using the nearest supported format
+                QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
+                outputAudioFormat = info.nearestFormat( inputAudioFormat );
+
+                // If that got us a format with a worse sample rate, use preferred format
+                if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
+                    outputAudioFormat = info.preferredFormat();
+                }
+
+                // Force 16-bit audio (for now)
+                outputAudioFormat.setSampleSize( 16 );
+
+                sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
+
+                qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
+                qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
+                qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
+                qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
+                         outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
+
+                resetAudio();
+                allocateMemory();
+
+                outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
             }
 
-            return;
+            break;
         }
 
-        // Make a copy so the data won't be changed later
-        memcpy( inputDataShort, data, bytes );
+        case Command::SetVolume: {
+            if( outputAudioInterface ) {
+                outputAudioInterface->setVolume( data.toReal() );
+            }
 
-        audioData( inputDataShort, bytes );
+            break;
+        }
+
+        default:
+            break;
     }
 
-    else if( type == QStringLiteral( "audiovolume" ) ) {
-        if( outputAudioInterface ) {
-            outputAudioInterface->setVolume( *( qreal * )data );
+    Node::controlIn( command, data, timeStamp );
+}
+
+void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
+    if( type == DataType::Audio ) {
+        if( state == State::Playing ) {
+            qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+
+            // Discard data that's too far from the past to matter anymore
+            if( currentTime - timeStamp > 500 ) {
+                static qint64 lastMessage = 0;
+
+                if( currentTime - lastMessage > 1000 ) {
+                    lastMessage = currentTime;
+                    // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
+                    //                           currentTime - timestamp << "ms ago";
+                }
+
+                return;
+            }
+
+            // Make a copy so the data won't be changed later
+            memcpy( inputDataShort, data, bytes );
+
+            audioData( inputDataShort, bytes );
         }
     }
-}
 
-void AudioOutput::setState( Control::State state ) {
-    // We only care about the transition to PLAYING, PAUSED or UNLOADING
-    if( this->currentState != Control::PLAYING && state == Control::PLAYING ) {
-        setAudioActive( true );
-    }
-
-    if( this->currentState != Control::PAUSED && state == Control::PAUSED ) {
-        setAudioActive( false );
-    }
-
-    if( this->currentState != Control::UNLOADING && state == Control::UNLOADING ) {
-        setAudioActive( false );
-        shutdown();
-    }
-
-    this->currentState = state;
-}
-
-void AudioOutput::libretroSetFramerate( qreal hostFPS ) {
-    qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
-    this->hostFPS = hostFPS;
+    Node::dataIn( type, mutex, data, bytes, timeStamp );
 }
 
 // Private slots

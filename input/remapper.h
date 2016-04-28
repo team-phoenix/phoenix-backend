@@ -2,11 +2,13 @@
 
 #include <QObject>
 
-class Remapper : public QObject {
+#include "node.h"
+
+class Remapper : public Node {
         Q_OBJECT
 
     public:
-        explicit Remapper( QObject *parent = 0 );
+        explicit Remapper( Node *parent = 0 );
 
     signals:
 

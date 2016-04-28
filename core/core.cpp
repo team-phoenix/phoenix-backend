@@ -1,85 +1,70 @@
 #include "core.h"
 
-Core::Core( QObject *parent ) : QObject( parent ), Producer(), Consumer(), Controllable(),
-    pausable( false ),
-    playbackSpeed( 1.0 ),
-    resettable( false ),
-    rewindable( false ),
-    source(),
-    volume( 1.0 ) {
+Core::Core( Node *parent ) : Node( parent ) {
 }
 
 Core::~Core() {
-
 }
 
 // Slots
 
-void Core::setPlaybackSpeed( qreal playbackSpeed ) {
-    this->playbackSpeed = playbackSpeed;
-    emit playbackSpeedChanged( playbackSpeed );
-}
+void Core::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    Node::controlIn( command, data, timeStamp );
 
-void Core::setSource( QStringMap source ) {
-    this->source = source;
-    emit sourceChanged( source );
-}
+    switch( command ) {
+        case Command::Play: {
+            state = State::Playing;
+            break;
+        }
 
-void Core::setVolume( qreal volume ) {
-    this->volume = volume;
-    emit volumeChanged( volume );
-}
+        case Command::Stop: {
+            state = State::Stopped;
+            break;
+        }
 
-void Core::load() {
-    setState( Control::LOADING );
-    setState( Control::PAUSED );
-}
+        case Command::Load: {
+            state = State::Loading;
+            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            state = State::Paused;
+            break;
+        }
 
-void Core::play() {
-    setState( Control::PLAYING );
-}
+        case Command::Pause: {
+            state = State::Paused;
+            break;
+        }
 
-void Core::pause() {
-    setState( Control::PAUSED );
-}
+        case Command::Unload: {
+            state = State::Unloading;
+            emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            state = State::Stopped;
+            break;
+        }
 
-void Core::reset() {
-}
+        case Command::SetPlaybackSpeed: {
+            playbackSpeed = data.toReal();
+            break;
+        }
 
-void Core::stop() {
-    setState( Control::UNLOADING );
-    setState( Control::STOPPED );
-}
+        case Command::SetVolume: {
+            volume = data.toReal();
+            break;
+        }
 
-// Protected
+        case Command::SetSource: {
+            QMap<QString, QVariant> map = data.toMap();
+            QStringMap stringMap;
 
-void Core::allPropertiesChanged() {
-    emit pausableChanged( pausable );
-    emit playbackSpeedChanged( playbackSpeed );
-    emit resettableChanged( resettable );
-    emit rewindableChanged( rewindable );
-    emit sourceChanged( source );
-    emit stateChanged( currentState );
-    emit volumeChanged( volume );
-}
+            for( QString key : map.keys() ) {
+                stringMap[ key ] = map[ key ].toString();
+            }
 
-void Core::setPausable( bool pausable ) {
-    this->pausable = pausable;
-    emit pausableChanged( pausable );
-}
+            this->source = stringMap;
+            break;
+        }
 
-void Core::setResettable( bool resettable ) {
-    this->resettable = resettable;
-    emit resettableChanged( resettable );
-}
-
-void Core::setRewindable( bool rewindable ) {
-    this->rewindable = rewindable;
-    emit rewindableChanged( rewindable );
-}
-
-void Core::setState( Control::State state ) {
-    qCDebug( phxCore ) << Q_FUNC_INFO << "State changed to" << ( ControlHelper::State )state;
-    this->currentState = state;
-    emit stateChanged( state );
+        default: {
+            break;
+        }
+    }
 }

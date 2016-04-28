@@ -2,16 +2,18 @@
 
 #include "backendcommon.h"
 
-#include "controllable.h"
-#include "consumer.h"
 #include "logging.h"
+#include "node.h"
+
+// FIXME: Remove once switched over to pipelinecommon.h
+#include "producer.h"
 
 /*
  * VideoOutput is a consumer of video data as provided by Core via CoreControl. As it's a QML item, it will always live
  * in the QML thread.
  */
 
-class VideoOutput : public QQuickItem, public Consumer, public Controllable {
+class VideoOutput : public QQuickItem {
         Q_OBJECT
 
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
@@ -23,6 +25,10 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
     public:
         explicit VideoOutput( QQuickItem *parent = 0 );
         ~VideoOutput();
+
+        void setState( Node::State state );
+        void setFormat( ProducerFormat consumerFmt );
+        void data( void *data, size_t bytes, qint64 timestamp );
 
     signals:
         // Properties
@@ -36,18 +42,17 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         // Note that although it fires at vsync rate, it may not fire 100% of the time
         void windowUpdate( qint64 timestamp );
 
-    public slots:
-        void consumerFormat( ProducerFormat consumerFmt ) override;
-        void consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) override;
-        CONTROLLABLE_SLOT_SETSTATE_DEFAULT
-
     private:
+        // Current state. Used to ignore data that arrives after already being told we're no longer playing
+        Node::State state{ Node::State::Stopped };
+        ProducerFormat format;
+
         // The framebuffer that holds the latest frame from Core
-        uchar *framebuffer;
-        size_t framebufferSize;
+        uchar *framebuffer{ nullptr };
+        size_t framebufferSize{ 0 };
 
         // Holds a pointer to the framebuffer via its underlying QImage, used by renderer to upload framebuffer to GPU
-        QSGTexture *texture;
+        QSGTexture *texture{ nullptr };
 
         // Called by render thread whenever it's time to render and needs an update from us
         // We'll assign the current texture to the stored node given to us, creating this stored node if it does not
@@ -57,23 +62,23 @@ class VideoOutput : public QQuickItem, public Consumer, public Controllable {
         QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData *paintData ) override;
 
         // The correct aspect ratio to display this picture in
-        qreal aspectRatio;
+        qreal aspectRatio{ 1.0 };
         qreal calculateAspectRatio( ProducerFormat format );
 
         // Linear vs nearest-neighbor filtering
-        bool linearFiltering;
+        bool linearFiltering{ false };
 
         // Controls whether to use analog television mode or not (false = digital TV or handheld games, etc... anything
         // with a square PAR)
-        bool television;
+        bool television{ false };
 
         // Do we expect 480 vertical lines (NTSC, true) or 576 vertical lines (PAL, false)?
         // Ignored if television is false
-        bool ntsc;
+        bool ntsc{ true };
 
         // Is this standard 4:3 (false) or is the image anamorphic widescreen (16:9 packed into a 4:3 frame, true)?
         // Ignored if television is false
-        bool widescreen;
+        bool widescreen{ false };
 
         // Setters for the above 3 properties, will force a recheck of the aspect ratio if any are called
         void setTelevision( bool television );

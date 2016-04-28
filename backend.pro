@@ -52,8 +52,6 @@
     consumer/videooutput.h \
     consumer/videooutputnode.h \
     core/core.h \
-    core/corecontrol.h \
-    core/corecontrolproxy.h \
     core/libretro.h \
     core/libretrocore.h \
     core/libretrosymbols.h \
@@ -76,9 +74,9 @@
     util/microtimer.h \
     control/gameconsole.h \
     input/gamepadmanager.h \
-    util/metaoutput.h \
     input/globalgamepad.h \
-    input/remapper.h
+    input/remapper.h \
+    util/controloutput.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -86,8 +84,6 @@
     consumer/videooutput.cpp \
     consumer/videooutputnode.cpp \
     core/core.cpp \
-    core/corecontrol.cpp \
-    core/corecontrolproxy.cpp \
     core/libretrocore.cpp \
     core/libretrosymbols.cpp \
     core/libretrovariable.cpp \
@@ -107,9 +103,9 @@
     util/microtimer.cpp \
     control/gameconsole.cpp \
     input/gamepadmanager.cpp \
-    util/metaoutput.cpp \
     input/globalgamepad.cpp \
-    input/remapper.cpp
+    input/remapper.cpp \
+    util/controloutput.cpp
 
     RESOURCES += input/controllerdb.qrc
 

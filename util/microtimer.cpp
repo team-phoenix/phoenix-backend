@@ -19,6 +19,7 @@
 
 #include "microtimer.h"
 
+#include <QDateTime>
 #include <QDebug>
 #include <QEvent>
 
@@ -56,6 +57,7 @@ bool MicroTimer::event( QEvent *e ) {
                 emit missedTimeouts( counter - 1 );
             }
 
+            emit controlOut( Command::Heartbeat, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             emit timeout();
         }
     }
@@ -126,8 +128,7 @@ void MicroTimer::controlIn( Node::Command command, QVariant data, qint64 timeSta
 
     switch( command ) {
         // Stop generating events so the event queue will flush on exit
-        case Command::Quit: {
-            qCDebug( phxControl ) << "stop";
+        case Command::KillTimer: {
             stop();
             break;
         }
