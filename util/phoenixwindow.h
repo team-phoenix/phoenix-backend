@@ -34,7 +34,7 @@ class PhoenixWindow : public QQuickWindow {
         void vsyncChanged( bool vsync );
 
     public slots:
-        void vsyncChangedHandler( bool vsync );
+        void setVsync( bool vsync );
 
     private:
         void resetPlatformWindow( QSurfaceFormat fmt );

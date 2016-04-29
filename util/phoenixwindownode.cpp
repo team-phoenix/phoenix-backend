@@ -18,8 +18,7 @@ void PhoenixWindowNode::commandIn( Node::Command command, QVariant data, qint64 
     switch( command ) {
         case Command::SetVsync: {
             Q_ASSERT( phoenixWindow );
-            phoenixWindow->vsync = data.toBool();
-            phoenixWindow->vsyncChangedHandler( data.toBool() );
+            phoenixWindow->setVsync( data.toBool() );
         }
 
         default: {

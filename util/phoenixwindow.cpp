@@ -28,7 +28,7 @@
 #include <memory>
 
 PhoenixWindow::PhoenixWindow( QWindow *parent ) : QQuickWindow( parent ) {
-    connect( this, &PhoenixWindow::vsyncChanged, this, &PhoenixWindow::vsyncChangedHandler );
+    connect( this, &PhoenixWindow::vsyncChanged, this, &PhoenixWindow::setVsync );
 
     // Reinitalize the scene graph when the OpenGL context gets destroyed
     // Needed because only when the context gets recreated is the format read
@@ -55,7 +55,13 @@ PhoenixWindow::PhoenixWindow( QWindow *parent ) : QQuickWindow( parent ) {
 
 }
 
-void PhoenixWindow::vsyncChangedHandler( bool vsync ) {
+void PhoenixWindow::setVsync( bool vsync ) {
+    if( this->vsync == vsync ) {
+        return;
+    }
+
+    this->vsync = vsync;
+
     QSurfaceFormat fmt = format();
 
     // Grab OpenGL context surface format if it's ready to go, it's more filled out than the window one

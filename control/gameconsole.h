@@ -90,16 +90,16 @@ class GameConsole : public Node, public QQmlParserStatus {
         void applyPendingPropertyChanges();
 
     private: // Property getters/setters
-        qreal playbackSpeed;
+        qreal playbackSpeed{ 1.0 };
         qreal getPlaybackSpeed();
         void setPlaybackSpeed( qreal playbackSpeed );
         QVariantMap source;
         QVariantMap getSource();
         void setSource( QVariantMap source );
-        qreal volume;
+        qreal volume{ 1.0 };
         qreal getVolume();
         void setVolume( qreal volume );
-        bool vsync;
+        bool vsync{ true };
         bool getVsync();
         void setVsync( bool vsync );
 
