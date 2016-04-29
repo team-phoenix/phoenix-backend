@@ -113,13 +113,6 @@ void MicroTimer::stop() {
 
 void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
-        // Stop generating events so the event queue will flush on exit
-        // FIXME: Necessary? Aren't we just waiting for the core to stop before killing off the thread?
-        case Command::KillTimer: {
-            stop();
-            break;
-        }
-
         // Eat this heartbeat if we're to emit heartbeats of our own (vsync off)
         case Command::Heartbeat: {
             if( emitHeartbeats ) {

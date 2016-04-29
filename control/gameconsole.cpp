@@ -46,11 +46,14 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
         qDebug() << "";
 
-        // Tell the pipeline to stop then quit
-        quitFlag = true;
-        // FIXME: Remove if this doesn't matter (also remove the command)
-        //emit commandOut( Command::KillTimer, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-        emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        // Tell the pipeline to stop then quit if loaded
+        if( dynamicPipelineReady() ) {
+            quitFlag = true;
+            emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        } else {
+            qCInfo( phxControl ) << "No core loaded";
+            gameThread->quit();
+        }
 
         // Wait up to 30 seconds to let the pipeline finish its events
         gameThread->wait( 30 * 1000 );

@@ -28,9 +28,6 @@ class Node : public QObject {
             Unload,
             Reset,
 
-            // Called just before app quits
-            KillTimer,
-
             // Run pipeline for a frame
             Heartbeat,
 
