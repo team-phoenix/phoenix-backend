@@ -93,11 +93,14 @@ void GameConsole::load() {
     emit commandOut( Command::HostFPS, ( qreal )( phoenixWindow->phoenixWindow->screen()->refreshRate() ),
                      QDateTime::currentMSecsSinceEpoch() );
 
-    if( source[ "type" ] == QStringLiteral( "libretro" ) ) {
+    if( source[ "type" ] == QStringLiteral( "libretro" ) ||
+        pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
-        emit commandOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
+        qCDebug( phxControl ) << "Dynamic pipeline ready";
+        applyPendingPropertyChanges();
         emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-    } else if( source[ "type" ].toString().isEmpty() ) {
+    } else if( source[ "type" ].toString().isEmpty() ||
+               pendingPropertyChanges[ "source" ].toMap()[ "type" ].toString().isEmpty() ) {
         qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
     } else {
         qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
@@ -193,9 +196,30 @@ bool GameConsole::dynamicPipelineReady() {
     return ( globalPipelineReady() && !sessionConnections.empty() );
 }
 
-bool GameConsole::getPausable() {
-    return pausable;
+void GameConsole::applyPendingPropertyChanges() {
+    if( !pendingPropertyChanges.isEmpty() ) {
+        qCDebug( phxControl ) << "Applying pending property changes";
+    }
+
+    // Call each setter again if a pending change was set
+    if( pendingPropertyChanges.contains( "playbackSpeed" ) ) {
+        setPlaybackSpeed( pendingPropertyChanges["playbackSpeed"].toReal() );
+    }
+
+    if( pendingPropertyChanges.contains( "source" ) ) {
+        setSource( pendingPropertyChanges["source"].toMap() );
+    }
+
+    if( pendingPropertyChanges.contains( "volume" ) ) {
+        setVolume( pendingPropertyChanges["volume"].toReal() );
+    }
+
+    if( pendingPropertyChanges.contains( "vsync" ) ) {
+        setVsync( pendingPropertyChanges["vsync"].toBool() );
+    }
 }
+
+// Private (property getters/setters)
 
 qreal GameConsole::getPlaybackSpeed() {
     return playbackSpeed;
@@ -203,21 +227,14 @@ qreal GameConsole::getPlaybackSpeed() {
 
 void GameConsole::setPlaybackSpeed( qreal playbackSpeed ) {
     if( !dynamicPipelineReady() ) {
-        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << playbackSpeed << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
-        qDebug() << "";
+        qCDebug( phxControl ) << Q_FUNC_INFO << ": Dynamic pipeline not yet fully hooked up, caching change for later...";
+        pendingPropertyChanges[ "playbackSpeed" ] = playbackSpeed;
+        return;
     }
 
     this->playbackSpeed = playbackSpeed;
     emit commandOut( Command::SetPlaybackSpeed, playbackSpeed, QDateTime::currentMSecsSinceEpoch() );
     emit playbackSpeedChanged();
-}
-
-bool GameConsole::getResettable() {
-    return resettable;
-}
-
-bool GameConsole::getRewindable() {
-    return rewindable;
 }
 
 QVariantMap GameConsole::getSource() {
@@ -226,17 +243,14 @@ QVariantMap GameConsole::getSource() {
 
 void GameConsole::setSource( QVariantMap source ) {
     if( !dynamicPipelineReady() ) {
-        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << source << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
-        qDebug() << "";
+        qCDebug( phxControl ) << Q_FUNC_INFO << ": Dynamic pipeline not yet fully hooked up, caching change for later...";
+        pendingPropertyChanges[ "source" ] = source;
+        return;
     }
 
     this->source = source;
     emit commandOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
     emit sourceChanged();
-}
-
-ControlHelper::State GameConsole::getState() {
-    return state;
 }
 
 qreal GameConsole::getVolume() {
@@ -245,8 +259,9 @@ qreal GameConsole::getVolume() {
 
 void GameConsole::setVolume( qreal volume ) {
     if( !dynamicPipelineReady() ) {
-        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << volume << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
-        qDebug() << "";
+        qCDebug( phxControl ) << Q_FUNC_INFO << ": Dynamic pipeline not yet fully hooked up, caching change for later...";
+        pendingPropertyChanges[ "volume" ] = volume;
+        return;
     }
 
     this->volume = volume;
@@ -260,8 +275,9 @@ bool GameConsole::getVsync() {
 
 void GameConsole::setVsync( bool vsync ) {
     if( !dynamicPipelineReady() ) {
-        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << vsync << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
-        qDebug() << "";
+        qCDebug( phxControl ) << Q_FUNC_INFO << ": Dynamic pipeline not yet fully hooked up, caching change for later...";
+        pendingPropertyChanges[ "vsync" ] = vsync;
+        return;
     }
 
     this->vsync = vsync;

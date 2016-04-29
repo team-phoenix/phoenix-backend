@@ -31,13 +31,8 @@ class GameConsole : public Node, public QQmlParserStatus {
         Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
         Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
-        // FIXME: Should these properties even be readable? Isn't that ControlOutput's job?
-        Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
-        Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
-        Q_PROPERTY( bool rewindable READ getRewindable NOTIFY rewindableChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
-        Q_PROPERTY( ControlHelper::State state READ getState NOTIFY stateChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
         Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
 
@@ -90,21 +85,17 @@ class GameConsole : public Node, public QQmlParserStatus {
         // Used to stop the game thread on app quit
         bool quitFlag{ false };
 
-        // Properties
-        bool pausable;
-        bool getPausable();
+        // QVariantMap that holds property changes that were set before the global pipeline loaded
+        QVariantMap pendingPropertyChanges;
+        void applyPendingPropertyChanges();
+
+    private: // Property getters/setters
         qreal playbackSpeed;
         qreal getPlaybackSpeed();
         void setPlaybackSpeed( qreal playbackSpeed );
-        bool resettable;
-        bool getResettable();
-        bool rewindable;
-        bool getRewindable();
         QVariantMap source;
         QVariantMap getSource();
         void setSource( QVariantMap source );
-        ControlHelper::State state;
-        ControlHelper::State getState();
         qreal volume;
         qreal getVolume();
         void setVolume( qreal volume );
@@ -119,12 +110,8 @@ class GameConsole : public Node, public QQmlParserStatus {
         void phoenixWindowChanged();
         void videoOutputChanged();
 
-        void pausableChanged();
         void playbackSpeedChanged();
-        void resettableChanged();
-        void rewindableChanged();
         void sourceChanged();
-        void stateChanged();
         void volumeChanged();
         void vsyncChanged();
 };
