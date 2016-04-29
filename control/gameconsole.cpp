@@ -48,19 +48,22 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
         // Tell the pipeline to stop then quit
         quitFlag = true;
-        emit commandOut( Command::KillTimer, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        // FIXME: Remove if this doesn't matter (also remove the command)
+        //emit commandOut( Command::KillTimer, QVariant(), QDateTime::currentMSecsSinceEpoch() );
         emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 
         // Wait up to 30 seconds to let the pipeline finish its events
         gameThread->wait( 30 * 1000 );
         gameThread->deleteLater();
 
-        // Destroy our global pipeline objects
-        audioOutput->deleteLater();
-        gamepadManager->deleteLater();
-        libretroCore->deleteLater();
-        microTimer->deleteLater();
-        remapper->deleteLater();
+        // Destroy our global pipeline objects *from the bottom up* (depending on core type)
+        if( source[ "type" ] == QStringLiteral( "libretro" ) ||
+            pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
+            deleteLibretro();
+        }
+
+        // Send a second set of delete calls for all other objects (redundant calls will be ignored)
+        deleteMembers();
 
         qDebug() << "";
         qCInfo( phxControl ) << ">>>>>>>> Fully unloaded, quitting!";
@@ -69,12 +72,6 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 }
 
 GameConsole::~GameConsole() {
-}
-
-void GameConsole::classBegin() {
-}
-
-void GameConsole::componentComplete() {
 }
 
 // Public slots
@@ -140,7 +137,7 @@ void GameConsole::unload() {
     }
 }
 
-// Private
+// Private (Startup)
 
 void GameConsole::loadLibretro() {
     // Ensure that the properties were set in QML
@@ -155,9 +152,11 @@ void GameConsole::loadLibretro() {
     sessionConnections << connectNodes( libretroCore, videoOutput );
     sessionConnections << connectNodes( libretroCore, controlOutput );
 
-    // Hook controlOutput so we know when commands have reached LibretroCore
-    // FIXME: Rework the design so this doesn't have to be done this way
-    sessionConnections << connect( controlOutput, &ControlOutput::commandOut, controlOutput, [ & ]( Command command, QVariant data, qint64 ) {
+    // Hook LibretroCore so we know when commands have reached it
+    // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
+    // We care about this happening as LibretroCore needs to save its running game before quitting
+    // We also need CoreFPS from LibretroCore so MicroTimer knows how fast to emit heartbeats
+    sessionConnections << connect( libretroCore, &ControlOutput::commandOut, libretroCore, [ & ]( Command command, QVariant data, qint64 ) {
         switch( command ) {
             case Command::Stop: {
                 unloadLibretro();
@@ -174,18 +173,6 @@ void GameConsole::loadLibretro() {
             }
         }
     } );
-}
-
-void GameConsole::unloadLibretro() {
-    for( QMetaObject::Connection connection : sessionConnections ) {
-        disconnect( connection );
-    }
-
-    sessionConnections.clear();
-
-    if( quitFlag ) {
-        gameThread->quit();
-    }
 }
 
 bool GameConsole::globalPipelineReady() {
@@ -217,6 +204,36 @@ void GameConsole::applyPendingPropertyChanges() {
     if( pendingPropertyChanges.contains( "vsync" ) ) {
         setVsync( pendingPropertyChanges["vsync"].toBool() );
     }
+}
+
+// Private (Cleanup)
+
+void GameConsole::unloadLibretro() {
+    for( QMetaObject::Connection connection : sessionConnections ) {
+        disconnect( connection );
+    }
+
+    sessionConnections.clear();
+
+    if( quitFlag ) {
+        gameThread->quit();
+    }
+}
+
+void GameConsole::deleteLibretro() {
+    audioOutput->deleteLater();
+    libretroCore->deleteLater();
+    remapper->deleteLater();
+    gamepadManager->deleteLater();
+    microTimer->deleteLater();
+}
+
+void GameConsole::deleteMembers() {
+    audioOutput->deleteLater();
+    gamepadManager->deleteLater();
+    libretroCore->deleteLater();
+    microTimer->deleteLater();
+    remapper->deleteLater();
 }
 
 // Private (property getters/setters)

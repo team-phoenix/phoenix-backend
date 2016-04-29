@@ -22,9 +22,8 @@
 
 #include "controlhelper.h"
 
-class GameConsole : public Node, public QQmlParserStatus {
+class GameConsole : public Node {
         Q_OBJECT
-        Q_INTERFACES( QQmlParserStatus )
 
         Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
         Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
@@ -40,9 +39,6 @@ class GameConsole : public Node, public QQmlParserStatus {
         explicit GameConsole( Node *parent = 0 );
         ~GameConsole();
 
-        void classBegin() override;
-        void componentComplete() override;
-
     public slots:
         void load();
         void play();
@@ -51,15 +47,41 @@ class GameConsole : public Node, public QQmlParserStatus {
         void reset();
         void unload();
 
-    private:
+    private: // Startup
         // API-specific loaders
         void loadLibretro();
+
+        // Return true if all global pipeline members from QML are set
+        bool globalPipelineReady();
+
+        // Return true if a core is loaded and its dynamic pipeline is hooked to the global one
+        bool dynamicPipelineReady();
+
+        // QVariantMap that holds property changes that were set before the global pipeline loaded
+        QVariantMap pendingPropertyChanges;
+        void applyPendingPropertyChanges();
+
+    private: // Cleanup
+        // Keeps track of session connections so they may be disconnected once emulation ends
+        QList<QMetaObject::Connection> sessionConnections;
+
+        // Used to stop the game thread on app quit
+        bool quitFlag{ false };
+
+        // API-specific unloaders
         void unloadLibretro();
+        void deleteLibretro();
+
+        // Sends deferred delete events to everything, safe (also required) to call after calling your API-specific deleter
+        void deleteMembers();
+
+        // Members
 
         // Emulation thread
         QThread *gameThread;
 
         // Pipeline nodes owned by this class (game thread)
+        // Remember to add to deleteMembers() if adding a new one no matter what pipeline it belongs to
         AudioOutput *audioOutput{ nullptr };
         GamepadManager *gamepadManager{ nullptr };
         LibretroCore *libretroCore{ nullptr };
@@ -72,22 +94,6 @@ class GameConsole : public Node, public QQmlParserStatus {
         GlobalGamepad *globalGamepad{ nullptr };
         PhoenixWindowNode *phoenixWindow{ nullptr };
         VideoOutputNode *videoOutput{ nullptr };
-
-        // Keeps track of session connections so they may be disconnected once emulation ends
-        QList<QMetaObject::Connection> sessionConnections;
-
-        // Return true if all global pipeline members from QML are set
-        bool globalPipelineReady();
-
-        // Return true if a core is loaded and its dynamic pipeline is hooked to the global one
-        bool dynamicPipelineReady();
-
-        // Used to stop the game thread on app quit
-        bool quitFlag{ false };
-
-        // QVariantMap that holds property changes that were set before the global pipeline loaded
-        QVariantMap pendingPropertyChanges;
-        void applyPendingPropertyChanges();
 
     private: // Property getters/setters
         qreal playbackSpeed{ 1.0 };
@@ -103,8 +109,7 @@ class GameConsole : public Node, public QQmlParserStatus {
         bool getVsync();
         void setVsync( bool vsync );
 
-    signals:
-        // Signals for properties
+    signals: // Property changed notifiers
         void controlOutputChanged();
         void globalGamepadChanged();
         void phoenixWindowChanged();
