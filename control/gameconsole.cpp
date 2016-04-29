@@ -10,29 +10,35 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     microTimer( new MicroTimer() ),
     remapper( new Remapper() ) {
     // Move all our stuff to the game thread
-    //audioOutput->moveToThread( gameThread );
-    //gamepadManager->moveToThread( gameThread );
-    //libretroCore->moveToThread( gameThread );
-    //microTimer->moveToThread( gameThread );
-    //remapper->moveToThread( gameThread );
+    audioOutput->moveToThread( gameThread );
+    gamepadManager->moveToThread( gameThread );
+    libretroCore->moveToThread( gameThread );
+    microTimer->moveToThread( gameThread );
+    remapper->moveToThread( gameThread );
 
     gameThread->setObjectName( "Game thread" );
     gameThread->start();
 
-    // Connect global pipeline
-    connectNodes( this, microTimer );
+    // Connect global pipeline (at least the parts that can be connected at this point)
     connectNodes( microTimer, gamepadManager );
     connectNodes( gamepadManager, remapper );
 
     // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
     connect( this, &GameConsole::globalGamepadChanged, this, [ = ]() {
         if( globalGamepad ) {
+            qCDebug( phxControl ) << "GlobalGamepad" << Q_FUNC_INFO << globalPipelineReady();
             connectNodes( remapper, globalGamepad );
         }
     } );
 
-    // Begin timer so it may poll for input
-    emit controlOut( Command::HeartbeatRate, 60.0, QDateTime::currentMSecsSinceEpoch() );
+    // Connect PhoenixWindow (which lives in QML) to the global pipeline as soon as it's set
+    connect( this, &GameConsole::phoenixWindowChanged, this, [ = ]() {
+        if( phoenixWindow ) {
+            qCDebug( phxControl ) << "PhoenixWindow" << Q_FUNC_INFO << globalPipelineReady();
+            connectNodes( this, phoenixWindow );
+            connectNodes( phoenixWindow, microTimer );
+        }
+    } );
 
     // Handle app quitting
     connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
@@ -42,8 +48,8 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
         // Tell the pipeline to stop then quit
         quitFlag = true;
-        emit controlOut( Command::KillTimer, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-        emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::KillTimer, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 
         // Wait up to 30 seconds to let the pipeline finish its events
         gameThread->wait( 30 * 1000 );
@@ -74,10 +80,23 @@ void GameConsole::componentComplete() {
 // Public slots
 
 void GameConsole::load() {
+    if( !globalPipelineReady() ) {
+        qCCritical( phxControl ).nospace() << QStringLiteral( "load() called before global pipeline has been set up!" );
+    }
+
+    // TODO: Hook QWindow::screenChanged()
+    // TODO: Find a better place for this than load()... somewhere where the QScreen is guarantied to be valid
+    // FIXME: Don't assume PhoenixWindowNode::phoenixWindow or GameConsole::phoenixWindow set at this point?
+    Q_ASSERT( phoenixWindow );
+    Q_ASSERT( phoenixWindow->phoenixWindow );
+    Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
+    emit commandOut( Command::HostFPS, ( qreal )( phoenixWindow->phoenixWindow->screen()->refreshRate() ),
+                     QDateTime::currentMSecsSinceEpoch() );
+
     if( source[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
-        emit controlOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
-        emit controlOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
     } else if( source[ "type" ].toString().isEmpty() ) {
         qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
     } else {
@@ -87,22 +106,27 @@ void GameConsole::load() {
 }
 
 void GameConsole::play() {
-    emit controlOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 }
 
 void GameConsole::pause() {
-    emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 }
 
 void GameConsole::stop() {
-    emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 }
 
 void GameConsole::reset() {
-    emit controlOut( Command::Reset, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Reset, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 }
 
 void GameConsole::unload() {
+    if( !dynamicPipelineReady() ) {
+        qCCritical( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << ": unload() called on an unloaded core!";
+        qDebug() << "";
+    }
+
     if( source[ "type" ] == QStringLiteral( "libretro" ) ) {
         unloadLibretro();
     } else if( source[ "type" ].toString().isEmpty() ) {
@@ -124,17 +148,22 @@ void GameConsole::loadLibretro() {
     sessionConnections << connectNodes( remapper, libretroCore );
 
     // Connect LibretroCore to its children
+    sessionConnections << connectNodes( libretroCore, audioOutput );
+    sessionConnections << connectNodes( libretroCore, videoOutput );
     sessionConnections << connectNodes( libretroCore, controlOutput );
-    //sessionConnections << connectNodes( libretroCore, audioOutput );
-    //sessionConnections << connectNodes( libretroCore, videoOutput );
 
-    // Hook controlOutput so we know when Command::Stop has reached LibretroCore
+    // Hook controlOutput so we know when commands have reached LibretroCore
     // FIXME: Rework the design so this doesn't have to be done this way
-    sessionConnections << connect( controlOutput, &ControlOutput::controlOut, controlOutput, [ & ]( Command command, QVariant, qint64 ) {
+    sessionConnections << connect( controlOutput, &ControlOutput::commandOut, controlOutput, [ & ]( Command command, QVariant data, qint64 ) {
         switch( command ) {
             case Command::Stop: {
                 unloadLibretro();
                 break;
+            }
+
+            // Incoming from LibretroCore! Send it back in to the pipeline, LibretroCore will ensure it won't loop
+            case Command::CoreFPS: {
+                emit commandOut( command, data, QDateTime::currentMSecsSinceEpoch() );
             }
 
             default: {
@@ -145,7 +174,6 @@ void GameConsole::loadLibretro() {
 }
 
 void GameConsole::unloadLibretro() {
-    qCDebug( phxControl ) << Q_FUNC_INFO;
     for( QMetaObject::Connection connection : sessionConnections ) {
         disconnect( connection );
     }
@@ -157,6 +185,14 @@ void GameConsole::unloadLibretro() {
     }
 }
 
+bool GameConsole::globalPipelineReady() {
+    return ( globalGamepad && phoenixWindow && phoenixWindow->phoenixWindow && phoenixWindow->phoenixWindow->screen() );
+}
+
+bool GameConsole::dynamicPipelineReady() {
+    return ( globalPipelineReady() && !sessionConnections.empty() );
+}
+
 bool GameConsole::getPausable() {
     return pausable;
 }
@@ -166,7 +202,13 @@ qreal GameConsole::getPlaybackSpeed() {
 }
 
 void GameConsole::setPlaybackSpeed( qreal playbackSpeed ) {
+    if( !dynamicPipelineReady() ) {
+        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << playbackSpeed << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
+        qDebug() << "";
+    }
+
     this->playbackSpeed = playbackSpeed;
+    emit commandOut( Command::SetPlaybackSpeed, playbackSpeed, QDateTime::currentMSecsSinceEpoch() );
     emit playbackSpeedChanged();
 }
 
@@ -183,8 +225,13 @@ QVariantMap GameConsole::getSource() {
 }
 
 void GameConsole::setSource( QVariantMap source ) {
+    if( !dynamicPipelineReady() ) {
+        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << source << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
+        qDebug() << "";
+    }
+
     this->source = source;
-    emit controlOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
     emit sourceChanged();
 }
 
@@ -197,7 +244,13 @@ qreal GameConsole::getVolume() {
 }
 
 void GameConsole::setVolume( qreal volume ) {
+    if( !dynamicPipelineReady() ) {
+        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << volume << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
+        qDebug() << "";
+    }
+
     this->volume = volume;
+    emit commandOut( Command::SetVolume, volume, QDateTime::currentMSecsSinceEpoch() );
     emit volumeChanged();
 }
 
@@ -206,6 +259,12 @@ bool GameConsole::getVsync() {
 }
 
 void GameConsole::setVsync( bool vsync ) {
+    if( !dynamicPipelineReady() ) {
+        qCWarning( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << vsync << ": Dynamic pipeline not yet fully hooked up, this setter may not work correctly";
+        qDebug() << "";
+    }
+
     this->vsync = vsync;
+    emit commandOut( Command::SetVsync, vsync, QDateTime::currentMSecsSinceEpoch() );
     emit vsyncChanged();
 }

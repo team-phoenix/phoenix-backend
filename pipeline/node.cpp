@@ -4,8 +4,8 @@ Node::Node( QObject *parent ) : QObject( parent ) {
 
 }
 
-void Node::controlIn( Command command, QVariant data, qint64 timeStamp ) {
-    emit controlOut( command, data, timeStamp );
+void Node::commandIn( Command command, QVariant data, qint64 timeStamp ) {
+    emit commandOut( command, data, timeStamp );
 }
 
 void Node::dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
@@ -18,7 +18,7 @@ QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child ) {
 
     return {
         QObject::connect( t_parent, &Node::dataOut, t_child, &Node::dataIn ),
-        QObject::connect( t_parent, &Node::controlOut, t_child, &Node::controlIn )
+        QObject::connect( t_parent, &Node::commandOut, t_child, &Node::commandIn )
     };
 }
 
@@ -30,7 +30,7 @@ bool disconnectNodes( Node *t_parent, Node *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
     return ( QObject::disconnect( t_parent, &Node::dataOut, t_child, &Node::dataIn ) &&
-             QObject::disconnect( t_parent, &Node::controlOut, t_child, &Node::controlIn )
+             QObject::disconnect( t_parent, &Node::commandOut, t_child, &Node::commandIn )
            );
 }
 

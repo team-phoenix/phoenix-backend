@@ -19,7 +19,7 @@ class VideoOutputNode : public Node {
         void videoOutputChanged();
 
     public slots:
-        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
         void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
 
     private:

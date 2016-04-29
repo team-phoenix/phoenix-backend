@@ -18,15 +18,14 @@ LibretroCore::~LibretroCore() {
 
 // Slots
 
-void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp ) {
+void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
 
     switch( command ) {
-
         case Command::Load: {
             qCDebug( phxCore ) << command;
             state = State::Loading;
-            emit controlOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 
             // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
             coreFileInfo.setFile( source[ "core" ] );
@@ -57,8 +56,8 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
             qCDebug( phxCore ) << "Now loading:";
             qCDebug( phxCore ) << "Core        :" << source[ "core" ];
             qCDebug( phxCore ) << "Game        :" << source[ "game" ];
-            qCDebug( phxCore ) << "System path :" << source["systemPath"];
-            qCDebug( phxCore ) << "Save path   :" << source["savePath"];
+            qCDebug( phxCore ) << "System path :" << source[ "systemPath" ];
+            qCDebug( phxCore ) << "Save path   :" << source[ "savePath" ];
             qDebug() << "";
 
             // Set defaults that'll get overwritten as the core loads if necessary
@@ -163,10 +162,10 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
                 symbols.retro_get_system_av_info( avInfo );
                 getAVInfo( avInfo );
                 allocateBufferPool( avInfo );
-                emit libretroCoreNativeFramerate( avInfo->timing.fps );
-                emit controlOut( Command::HeartbeatRate, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
+                emit commandOut( Command::CoreFPS, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
                 delete avInfo;
             }
+
             // Set all variables to their defaults, mark all variables as dirty
             {
                 for( auto key : variables.keys() ) {
@@ -192,31 +191,31 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
             }
 
             pausable = true;
-            emit controlOut( Command::SetPausable, true, QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::SetPausable, true, QDateTime::currentMSecsSinceEpoch() );
 
             state = State::Paused;
-            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             break;
         }
 
         case Command::Play: {
             qCDebug( phxCore ) << command;
             state = State::Playing;
-            emit controlOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             break;
         }
 
         case Command::Pause: {
             qCDebug( phxCore ) << command;
             state = State::Paused;
-            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             break;
         }
 
         case Command::Stop: {
             qCDebug( phxCore ) << command;
             state = State::Unloading;
-            emit controlOut( Command::Unload, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Unload, QVariant(), QDateTime::currentMSecsSinceEpoch() );
 
             // Write SRAM
 
@@ -238,14 +237,19 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
             }
 
             state = State::Stopped;
-            emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             break;
         }
 
+        // Run the emulator for a frame if we're supposed to
         case Command::Heartbeat: {
-            Node::controlOut( command, data, timeStamp );
+            // Drop any heartbeats from too far in the past
+            if( QDateTime::currentMSecsSinceEpoch() - timeStamp > 50 ) {
+                return;
+            }
 
-            // Run the emulator for a frame if we're supposed to
+            Node::commandOut( command, data, timeStamp );
+
             if( state == State::Playing ) {
                 symbols.retro_run();
             }
@@ -253,9 +257,14 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
             break;
         }
 
+        // Eat this command, it came from us
+        case Command::CoreFPS: {
+            break;
+        }
+
         case Command::SetSource: {
             qCDebug( phxCore ) << command;
-            Node::controlOut( command, data, timeStamp );
+            Node::commandOut( command, data, timeStamp );
 
             QMap<QString, QVariant> map = data.toMap();
             QStringMap stringMap;
@@ -268,9 +277,10 @@ void LibretroCore::controlIn( Command command, QVariant data, qint64 timeStamp )
             break;
         }
 
-        default:
-            Node::controlOut( command, data, timeStamp );
+        default: {
+            Node::commandOut( command, data, timeStamp );
             break;
+        }
     }
 }
 
@@ -315,14 +325,12 @@ void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t byte
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    // emit producerData( QStringLiteral( "audio" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
     emit dataOut( DataType::Audio, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
     // Cores can change the size of the video they output (within the bounds they set on load) at any time
     if( producerFmt.videoSize != QSize( width, height ) || producerFmt.videoBytesPerLine != pitch ) {
-
         qCDebug( phxCore ) << "Video resized!";
         qCDebug( phxCore ) << "Old video size:" << producerFmt.videoSize;
         qCDebug( phxCore ) << "New video size:" << QSize( width, height );
@@ -334,11 +342,10 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         //emit producerFormat( producerFmt );
         QVariant variant;
         variant.setValue( producerFmt );
-        emit controlOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-        emit controlOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
     }
 
-    // emit producerData( QStringLiteral( "video" ), &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
     emit dataOut( DataType::Video, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
@@ -425,11 +432,10 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
-    // emit producerFormat( producerFmt );
     QVariant variant;
     variant.setValue( producerFmt );
-    emit controlOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-    emit controlOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
@@ -445,15 +451,15 @@ void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
 void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     LibretroCore *core = LibretroCore::core;
 
-    QMutexLocker locker( &core->producerMutex );
-
     // Sanity check
     Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
+    core->producerMutex.lock();
     core->audioBufferPool[ core->audioPoolCurrentBuffer ][ core->audioBufferCurrentByte / 2 ] = left;
     core->audioBufferPool[ core->audioPoolCurrentBuffer ][ core->audioBufferCurrentByte / 2 + 1 ] = right;
+    core->producerMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += 4;
@@ -469,11 +475,6 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
 size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frames ) {
     LibretroCore *core = LibretroCore::core;
 
-    // qCDebug( phxCore ) << frames;
-    // qCDebug( phxCore ) << ( double )( core->producerFmt.audioFormat.durationForFrames( frames ) ) / 1000.0;
-
-    QMutexLocker locker( &core->producerMutex );
-
     // Sanity check
     Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
                 "audio batch callback",
@@ -484,7 +485,9 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     int16_t *dst = dst_init + ( core->audioBufferCurrentByte / 2 );
 
     // Copy the incoming data
+    core->producerMutex.lock();
     memcpy( dst, data, frames * 4 );
+    core->producerMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += frames * 4;
@@ -573,7 +576,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             for( retro_input_descriptor *descriptor = ( retro_input_descriptor * )data; descriptor->description; descriptor++ ) {
                 QString key = core->inputTupleToString( descriptor->port, descriptor->device, descriptor->index, descriptor->id );
                 core->inputDescriptors[ key ] = QString( descriptor->description );
-                qCDebug( phxCore ) << "\t\t" << key << descriptor->description;
+                //qCDebug( phxCore ) << "\t\t" << key << descriptor->description;
             }
 
             return true;
@@ -631,7 +634,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
                     retroVariable->value = var.value().c_str();
 
                     if( strlen( var.value().c_str() ) ) {
-                        qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
+                        //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
                         return true;
                     }
                 }
@@ -651,7 +654,7 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
                     core->variables.insert( v.key(), v );
                 }
 
-                qCDebug( phxCore ) << "        " << v;
+                //qCDebug( phxCore ) << "        " << v;
             }
 
             return true;

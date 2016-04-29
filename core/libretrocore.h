@@ -38,12 +38,12 @@ class LibretroCore : public Core {
         ~LibretroCore();
 
     signals:
-        void libretroCoreNativeFramerate( qreal framerate );
         void libretroCoreNTSC( bool NTSC );
 
     public slots:
-        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
         void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
+
     protected:
         // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
 
@@ -141,7 +141,7 @@ class LibretroCore : public Core {
         // Should only be called on load time (consumers expect buffers to be valid while Core is active)
         void allocateBufferPool( retro_system_av_info *avInfo );
 
-        // Consumer data (from producers like InputManager)
+        // Consumer data (from input producers)
 
         ProducerFormat consumerFmt;
         int16_t inputStates[ 16 ]{ 0 };

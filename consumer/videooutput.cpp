@@ -98,21 +98,14 @@ void VideoOutput::data( void *data, size_t bytes, qint64 timestamp ) {
                     this->format.videoSize.width() * this->format.videoBytesPerPixel
                   );
         }
-
-        // Schedule a call to updatePaintNode() for this Item
-        update();
     }
 }
 
-QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData *paintData ) {
-    Q_UNUSED( paintData );
-
-    // Let anyone who cares know that we've been asked for an update
-    // FIXME: Remove this, hook custom render loop instead or some other vsync'd source
-    emit windowUpdate( QDateTime::currentMSecsSinceEpoch() );
-
+QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData * ) {
     // Don't draw unless emulation is active
     if( state != Node::State::Playing && state != Node::State::Paused ) {
+        // Schedule a call to updatePaintNode() for this Item anyway
+        update();
         return 0;
     }
 
@@ -147,6 +140,8 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
 
     storedTextureNode->markDirty( QSGNode::DirtyMaterial );
 
+    // Schedule a call to updatePaintNode() for this Item
+    update();
     return storedTextureNode;
 }
 

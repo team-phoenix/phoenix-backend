@@ -21,7 +21,7 @@ class ControlOutput : public Node {
         void stateChanged( State state );
 
     public slots:
-        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
     private:
         State state;

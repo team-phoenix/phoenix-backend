@@ -53,12 +53,14 @@ bool MicroTimer::event( QEvent *e ) {
             }
 
             if( counter > 1 ) {
-                // qWarning().nospace() << "Skipped a timeout (" << counter - 1 << ")!";
+                //qCWarning( phxTimer ).nospace() << "Skipped " << counter - 1 << " frame(s)!";
                 emit missedTimeouts( counter - 1 );
             }
 
-            emit controlOut( Command::Heartbeat, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-            emit timeout();
+            if( emitHeartbeats ) {
+                commandOut( Command::Heartbeat, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+                emit timeout();
+            }
         }
     }
 
@@ -109,40 +111,45 @@ void MicroTimer::stop() {
     killTimers();
 }
 
-void MicroTimer::setState( Control::State state ) {
-    // We only care about the transition to or away from PLAYING
-    if( ( this->currentState == Control::PLAYING && state != Control::PLAYING ) ||
-        ( this->currentState != Control::PLAYING && state == Control::PLAYING ) ) {
-        if( state == Control::PLAYING ) {
-            startFreq( frequency );
-        } else {
-            stop();
-        }
-    }
-
-    this->currentState = state;
-}
-
-void MicroTimer::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::controlIn( command, data, timeStamp );
-
+void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         // Stop generating events so the event queue will flush on exit
+        // FIXME: Necessary? Aren't we just waiting for the core to stop before killing off the thread?
         case Command::KillTimer: {
             stop();
             break;
         }
 
-        // Update heartbeat rate
-        case Command::HeartbeatRate: {
-            qCDebug( phxControl ).nospace() << "Began timer at " << data.toReal() << "Hz";
+        // Eat this heartbeat if we're to emit heartbeats of our own (vsync off)
+        case Command::Heartbeat: {
+            if( emitHeartbeats ) {
+                return;
+            } else {
+                Node::commandIn( command, data, timeStamp );
+            }
+
+            break;
+        }
+
+        case Command::CoreFPS: {
+            Node::commandIn( command, data, timeStamp );
+            qCDebug( phxTimer ).nospace() << "Began timer at " << data.toReal() << "Hz (vsync: " << !emitHeartbeats << ")";
             startFreq( data.toReal() );
             break;
         }
 
+        // Invert vsync value to get what we should do
+        case Command::SetVsync: {
+            Node::commandIn( command, data, timeStamp );
+            emitHeartbeats = !( data.toBool() );
+            break;
+        }
+
         default:
+            Node::commandIn( command, data, timeStamp );
             break;
     }
+
 }
 
 void MicroTimer::killTimers() {

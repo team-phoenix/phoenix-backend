@@ -5,8 +5,8 @@
 VideoOutputNode::VideoOutputNode( Node *parent ) : Node( parent ) {
 }
 
-void VideoOutputNode::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::controlIn( command, data, timeStamp );
+void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    Node::commandIn( command, data, timeStamp );
 
     if( videoOutput ) {
         if( command == Command::VideoFormat ) {

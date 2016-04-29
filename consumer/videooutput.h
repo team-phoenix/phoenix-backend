@@ -38,10 +38,6 @@ class VideoOutput : public QQuickItem {
         void ntscChanged( bool ntsc );
         void widescreenChanged( bool widescreen );
 
-        // A signal that can be hooked to drive frame production
-        // Note that although it fires at vsync rate, it may not fire 100% of the time
-        void windowUpdate( qint64 timestamp );
-
     private:
         // Current state. Used to ignore data that arrives after already being told we're no longer playing
         Node::State state{ Node::State::Stopped };
@@ -59,7 +55,7 @@ class VideoOutput : public QQuickItem {
         // already exist
         // Main thread (our thread) is guarantied to be suspended while this function executes, the rest run normally
         // paintData is a pointer to a QSGTransformNode which contains the transformation matrix (unused)
-        QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData *paintData ) override;
+        QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData * ) override;
 
         // The correct aspect ratio to display this picture in
         qreal aspectRatio{ 1.0 };

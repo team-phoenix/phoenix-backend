@@ -14,6 +14,8 @@
 #include "libretrocore.h"
 #include "controloutput.h"
 #include "microtimer.h"
+#include "phoenixwindow.h"
+#include "phoenixwindownode.h"
 #include "remapper.h"
 #include "videooutput.h"
 #include "videooutputnode.h"
@@ -24,10 +26,12 @@ class GameConsole : public Node, public QQmlParserStatus {
         Q_OBJECT
         Q_INTERFACES( QQmlParserStatus )
 
-        Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
         Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
+        Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
+        Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
         Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
+        // FIXME: Should these properties even be readable? Isn't that ControlOutput's job?
         Q_PROPERTY( bool pausable READ getPausable NOTIFY pausableChanged )
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
         Q_PROPERTY( bool resettable READ getResettable NOTIFY resettableChanged )
@@ -69,12 +73,19 @@ class GameConsole : public Node, public QQmlParserStatus {
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties
-        GlobalGamepad *globalGamepad{ nullptr };
         ControlOutput *controlOutput{ nullptr };
+        GlobalGamepad *globalGamepad{ nullptr };
+        PhoenixWindowNode *phoenixWindow{ nullptr };
         VideoOutputNode *videoOutput{ nullptr };
 
         // Keeps track of session connections so they may be disconnected once emulation ends
         QList<QMetaObject::Connection> sessionConnections;
+
+        // Return true if all global pipeline members from QML are set
+        bool globalPipelineReady();
+
+        // Return true if a core is loaded and its dynamic pipeline is hooked to the global one
+        bool dynamicPipelineReady();
 
         // Used to stop the game thread on app quit
         bool quitFlag{ false };
@@ -103,9 +114,11 @@ class GameConsole : public Node, public QQmlParserStatus {
 
     signals:
         // Signals for properties
-        void globalGamepadChanged();
         void controlOutputChanged();
+        void globalGamepadChanged();
+        void phoenixWindowChanged();
         void videoOutputChanged();
+
         void pausableChanged();
         void playbackSpeedChanged();
         void resettableChanged();

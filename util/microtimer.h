@@ -34,14 +34,12 @@
 #include <Qt>
 #include <QtGlobal>
 
-#include "controllable.h"
 #include "logging.h"
 #include "node.h"
 
 class QEvent;
 
-// FIXME: stop being Controllable
-class MicroTimer : public Node, public Controllable {
+class MicroTimer : public Node {
         Q_OBJECT
         Q_PROPERTY( bool singleShot READ isSingleShot WRITE setSingleShot )
         Q_PROPERTY( qreal interval READ interval WRITE setInterval )
@@ -66,15 +64,17 @@ class MicroTimer : public Node, public Controllable {
         void startFreq( qreal frequency );
         void stop();
 
-        // FIXME: Remove once we stop using Control
-        void setState( Control::State currentState ) override;
-
-        void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
         // Make sure to connect to this slot to safely clean up once thread finishes
         void killTimers();
 
     private:
+        // If true, do not emit heartbeats
+        // If false, let heartbeats that come to this pass
+        // In other words, !vsync
+        bool emitHeartbeats{ false };
+
         // Property setters/getters
         bool isSingleShot();
         void setSingleShot( bool );

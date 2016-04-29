@@ -11,7 +11,7 @@
 #include "node.h"
 
 /*
- * Superclass for all core plugins used by Phoenix. A very basic controlIn() override is provided. You'll probably want
+ * Superclass for all core plugins used by Phoenix. A very basic commandIn() override is provided. You'll probably want
  * to override that in your subclass and not use this one at all. Core subclasses are not expected to have extensive
  * error checking or validation of the commands given to them. For example, they should not have to expect Command::Pause
  * when pausable is false.
@@ -31,7 +31,7 @@ class Core : public Node {
         virtual ~Core();
 
     public slots:
-        virtual void controlIn( Command command, QVariant data, qint64 timeStamp ) override;
+        virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
     protected:
         // Properties

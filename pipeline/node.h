@@ -37,6 +37,12 @@ class Node : public QObject {
             // Inform consumers about heartbeat rate
             HeartbeatRate,
 
+            // FPS of the monitor. Used for when vsync is on (track with SetVsync)
+            HostFPS,
+
+            // FPS of the core in this pipeline. May not exist!
+            CoreFPS,
+
             // Change consumer format
             AudioFormat,
             VideoFormat,
@@ -68,6 +74,9 @@ class Node : public QObject {
             // Set volume. Range: [0.0, 1.0]
             // qreal
             SetVolume,
+
+            // Set vsync mode
+            SetVsync,
         };
         Q_ENUM( Command )
 
@@ -90,12 +99,14 @@ class Node : public QObject {
         Q_ENUM( State )
 
     signals:
-        void controlOut( Command command, QVariant data, qint64 timeStamp );
+        void commandOut( Command command, QVariant data, qint64 timeStamp );
         void dataOut( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 
     public slots:
         // By default, these slots will relay the signals given to them to their children
-        virtual void controlIn( Command command, QVariant data, qint64 timeStamp );
+
+        // FIXME: Use these or make an explicit "repeat command" function for classes that override these?
+        virtual void commandIn( Command command, QVariant data, qint64 timeStamp );
         virtual void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 };
 

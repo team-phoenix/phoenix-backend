@@ -76,7 +76,9 @@
     input/gamepadmanager.h \
     input/globalgamepad.h \
     input/remapper.h \
-    util/controloutput.h
+    util/controloutput.h \
+    util/phoenixwindow.h \
+    util/phoenixwindownode.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -105,7 +107,9 @@
     input/gamepadmanager.cpp \
     input/globalgamepad.cpp \
     input/remapper.cpp \
-    util/controloutput.cpp
+    util/controloutput.cpp \
+    util/phoenixwindow.cpp \
+    util/phoenixwindownode.cpp
 
     RESOURCES += input/controllerdb.qrc
 

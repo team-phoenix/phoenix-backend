@@ -8,8 +8,8 @@ Core::~Core() {
 
 // Slots
 
-void Core::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::controlIn( command, data, timeStamp );
+void Core::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    Node::commandIn( command, data, timeStamp );
 
     switch( command ) {
         case Command::Play: {
@@ -24,7 +24,7 @@ void Core::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
 
         case Command::Load: {
             state = State::Loading;
-            emit controlOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             state = State::Paused;
             break;
         }
@@ -36,7 +36,7 @@ void Core::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
 
         case Command::Unload: {
             state = State::Unloading;
-            emit controlOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
             state = State::Stopped;
             break;
         }

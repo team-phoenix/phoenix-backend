@@ -5,15 +5,7 @@ const auto samplesPerFrame = 2;
 // const auto framesPerSample = 0.5;
 
 AudioOutput::AudioOutput( Node *parent ): Node( parent ),
-    resamplerState( nullptr ),
-    sampleRate( 0 ), hostFPS( 60.0 ), coreFPS( 60.0 ), sampleRateRatio( 1.0 ),
-    inputDataShort( nullptr ), inputDataFloat( nullptr ),
-    outputDataFloat( nullptr ), outputDataShort( nullptr ),
-    coreIsRunning( false ),
-    outputAudioInterface( nullptr ),
-    outputCurrentByte( 0 ),
-    outputBuffer( this ),
-    outputLengthMs( 200 ), outputTargetMs( 40 ), maxDeviation( 0.005 ) {
+    outputBuffer( this ) {
 
     outputBuffer.start();
 }
@@ -26,41 +18,71 @@ AudioOutput::~AudioOutput() {
 
 // Public slots
 
-void AudioOutput::controlIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    Node::commandIn( command, data, timeStamp );
+
     switch( command ) {
         case Command::Play: {
+            qCDebug( phxAudioOutput ) << command;
             state = State::Playing;
-            setAudioActive( true );
+            pipelineStateChanged();
             break;
         }
 
         case Command::Stop: {
+            qCDebug( phxAudioOutput ) << command;
             state = State::Stopped;
-            setAudioActive( false );
+            pipelineStateChanged();
             break;
         }
 
         case Command::Load: {
+            qCDebug( phxAudioOutput ) << command;
             state = State::Loading;
-            setAudioActive( false );
+            pipelineStateChanged();
             break;
         }
 
         case Command::Pause: {
+            qCDebug( phxAudioOutput ) << command;
             state = State::Paused;
-            setAudioActive( false );
+            pipelineStateChanged();
             break;
         }
 
         case Command::Unload: {
+            qCDebug( phxAudioOutput ) << command;
             state = State::Unloading;
-            setAudioActive( false );
+            pipelineStateChanged();
             shutdown();
         }
 
-        case Command::HeartbeatRate: {
+        // For debugging. Prints number of heartbeats it gets each second (it can only check how much time has passed
+        // each time it gets a heartbeat)
+        case Command::Heartbeat: {
+            static int counter = 0;
+            static qint64 secondLater = QDateTime::currentMSecsSinceEpoch() + 1000;
+
+            counter++;
+
+            if( timeStamp > secondLater ) {
+                //qCDebug( phxAudioOutput ) << counter;
+                counter = 0;
+                secondLater = timeStamp + 1000;
+            }
+
+            break;
+        }
+
+        case Command::HostFPS: {
             hostFPS = data.toReal();
-            qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps";
+            qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps, vsync: " << vsync;
+            break;
+        }
+
+        case Command::CoreFPS: {
+            coreFPS = data.toReal();
+            qCDebug( phxAudioOutput ).nospace() << "coreFPS = " << coreFPS << "fps, vsync: " << vsync;
             break;
         }
 
@@ -102,7 +124,7 @@ void AudioOutput::controlIn( Node::Command command, QVariant data, qint64 timeSt
                 qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
                          outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
 
-                resetAudio();
+                resetAudio( );
                 allocateMemory();
 
                 outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
@@ -119,11 +141,14 @@ void AudioOutput::controlIn( Node::Command command, QVariant data, qint64 timeSt
             break;
         }
 
+        case Command::SetVsync: {
+            vsync = data.toBool();
+            qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync;
+        }
+
         default:
             break;
     }
-
-    Node::controlIn( command, data, timeStamp );
 }
 
 void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
@@ -133,21 +158,125 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
 
             // Discard data that's too far from the past to matter anymore
             if( currentTime - timeStamp > 500 ) {
-                static qint64 lastMessage = 0;
+                static qint64 lastMessage = QDateTime::currentMSecsSinceEpoch();
 
                 if( currentTime - lastMessage > 1000 ) {
                     lastMessage = currentTime;
                     // qCWarning( phxAudioOutput ) << "Discarding" << bytes << "bytes of old audio data from" <<
-                    //                           currentTime - timestamp << "ms ago";
+                    //   currentTime - timestamp << "ms ago";
                 }
 
                 return;
             }
 
             // Make a copy so the data won't be changed later
+            mutex->lock();
             memcpy( inputDataShort, data, bytes );
+            mutex->unlock();
 
-            audioData( inputDataShort, bytes );
+            // Handle the situation where there is an error opening the audio device
+            if( outputAudioInterface->error() == QAudio::OpenError ) {
+                // qWarning( phxAudioOutput ) << "QAudio::OpenError, attempting reset...";
+                resetAudio();
+            }
+
+            int inputBytes = bytes;
+            int inputFrames = inputAudioFormat.framesForBytes( inputBytes );
+            int inputSamples = inputFrames * samplesPerFrame;
+
+            // What do we have to work with?
+            int outputTotalBytes = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
+            outputCurrentByte = outputBuffer.bytesAvailable();
+            int outputFreeBytes = outputTotalBytes - outputCurrentByte;
+            int outputFreeFrames = outputAudioFormat.framesForBytes( outputFreeBytes );
+            int outputFreeSamples = outputFreeFrames * samplesPerFrame;
+            Q_UNUSED( outputTotalBytes );
+            Q_UNUSED( outputFreeSamples );
+
+            // Calculate how much the read data should be scaled (shrunk or stretched) to keep the buffer on target
+            // The vector is negative if beyond the target and positive if behind
+            int outputTargetByte = outputAudioFormat.bytesForDuration( outputTargetMs * 1000 );
+            int outputEstimatedBytes = outputAudioFormat.bytesForDuration( inputAudioFormat.durationForBytes( inputBytes ) );
+            int outputVectorTargetToCurrent = outputTargetByte - outputCurrentByte + outputEstimatedBytes;
+            // double unclampedDRCScale = ( double )outputVectorTargetToCurrent / outputTargetByte;
+            double unclampedDRCScale = ( double )outputVectorTargetToCurrent + outputEstimatedBytes / outputEstimatedBytes;
+
+            // Calculate the final DRC ratio
+            double DRCScale = qMax( -maxDeviation, qMin( unclampedDRCScale, maxDeviation ) );
+            double hostRatio = vsync ? hostFPS / coreFPS : 1.0;
+            double adjustedSampleRateRatio = sampleRateRatio * ( 1.0 + DRCScale ) * hostRatio;
+
+            // libsamplerate works in floats, must convert to floats for processing
+            src_short_to_float_array( ( short * )inputDataShort, inputDataFloat, inputSamples );
+
+            // Set up a struct containing parameters for the resampler
+            SRC_DATA srcData;
+            srcData.data_in = inputDataFloat;
+            srcData.data_out = outputDataFloat;
+            srcData.end_of_input = 0;
+            srcData.input_frames = inputFrames;
+            srcData.output_frames = outputFreeFrames; // Max size
+            srcData.src_ratio = adjustedSampleRateRatio;
+
+            // Perform resample
+            src_set_ratio( resamplerState, adjustedSampleRateRatio );
+            auto errorCode = src_process( resamplerState, &srcData );
+
+            if( errorCode ) {
+                qCWarning( phxAudioOutput ) << "libresample error: " << src_strerror( errorCode ) ;
+            }
+
+            auto outputFramesConverted = srcData.output_frames_gen;
+            auto outputBytesConverted = outputAudioFormat.bytesForFrames( outputFramesConverted );
+            auto outputSamplesConverted = outputFramesConverted * samplesPerFrame;
+
+            // Convert float data back to shorts
+            src_float_to_short_array( outputDataFloat, outputDataShort, outputSamplesConverted );
+
+            // Send the converted data out
+            int outputBytesWritten = outputBuffer.write( ( char * ) outputDataShort, outputBytesConverted );
+            outputCurrentByte += outputBytesWritten;
+
+#if defined( DRC_LOGGING )
+            qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
+            static qint64 lastMessage = 0;
+
+            qint64 inputBytesPerMSec = inputAudioFormat.bytesForDuration( 1000 );
+            qint64 outputBytesPerMSec = outputAudioFormat.bytesForDuration( 1000 );
+
+            if( currentTime - lastMessage > 1000 ) {
+                lastMessage = currentTime;
+                qCDebug( phxAudioOutput ) << "Input:" << inputBytes / inputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "Output is" << ( ( ( double )( ( outputTotalBytes - outputFreeBytes ) ) /
+                                          outputTotalBytes ) * 100 )
+                                          << "% full," << ( outputTotalBytes - outputFreeBytes ) / outputBytesPerMSec << "ms (target:" << outputTargetMs << "ms /"
+                                          << ( ( double )outputTargetMs / outputLengthMs ) * 100 << "%)";
+                qCDebug( phxAudioOutput ) << "\tunclampedDRCScale =" << unclampedDRCScale << "DRCScale =" << DRCScale
+                                          << "outputAudioInterface->bufferSize()" << outputAudioInterface->bufferSize() / outputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "\toutputTotalBytes =" << outputTotalBytes / outputBytesPerMSec << "ms"
+                                          << "outputCurrentByte =" << outputCurrentByte / outputBytesPerMSec << "ms"
+                                          << " outputFreeBytes =" << outputFreeBytes / outputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "\tOutput buffer is" << outputLengthMs
+                                          << "ms, target =" << outputTargetMs
+                                          << "ms (" << ( double )100.0 * ( ( double )outputTargetMs / (
+                                                      ( double )( outputAudioFormat.durationForBytes(
+                                                              outputTotalBytes ) ) / 1000.0 ) )
+                                          << "%)";
+                qCDebug( phxAudioOutput ) << "\tOutput: needed" << outputVectorTargetToCurrent / outputBytesPerMSec << "ms, wrote"
+                                          << outputBytesWritten / outputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "\toutputTargetByte =" << outputTargetByte / outputBytesPerMSec << "ms"
+                                          << "outputVectorTargetToCurrent =" << outputVectorTargetToCurrent / outputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "\toutputAudioInterface->bufferSize() =" << outputAudioInterface->bufferSize() / outputBytesPerMSec << "ms"
+                                          << "outputAudioInterface->bytesFree() =" << outputAudioInterface->bytesFree() / outputBytesPerMSec << "ms"
+                                          << "outputBuffer.bytesToWrite() =" << outputBuffer.bytesToWrite() / outputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "\toutputBuffer.bytesAvailable() =" << outputBuffer.bytesAvailable() / outputBytesPerMSec << "ms"
+                                          << "outputBuffer.size() =" << outputBuffer.size() / outputBytesPerMSec << "ms"
+                                          << "outputBuffer.pos() =" << outputBuffer.pos() / outputBytesPerMSec << "ms";
+                // qCDebug( phxAudioOutput ) << "\tState:" << outputAudioInterface->state()
+                //   << " error: " << outputAudioInterface->error();
+            }
+
+#endif
         }
     }
 
@@ -156,19 +285,19 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
 
 // Private slots
 
-void AudioOutput::handleStateChanged( QAudio::State s ) {
-    if( s == QAudio::IdleState && outputAudioInterface->error() == QAudio::UnderrunError ) {
+void AudioOutput::outputStateChanged( QAudio::State outputState ) {
+    if( outputState == QAudio::IdleState && outputAudioInterface->error() == QAudio::UnderrunError ) {
         // Schedule the audio to be reset at some point in the future, giving the buffer some time to fill
-        QTimer::singleShot( 50, this, &AudioOutput::handleUnderflow );
+        QTimer::singleShot( 50, this, &AudioOutput::outputUnderflow );
     }
 
-    if( s == QAudio::SuspendedState ) {
-        qCDebug( phxAudioOutput ) << "State changed:" << s;
+    if( outputState == QAudio::SuspendedState ) {
+        qCDebug( phxAudioOutput ) << "Output state changed:" << outputState;
     }
 }
 
-void AudioOutput::handleUnderflow() {
-    if( outputAudioInterface && coreIsRunning ) {
+void AudioOutput::outputUnderflow() {
+    if( outputAudioInterface && state == State::Playing ) {
         // qCWarning( phxAudioOutput ) << "Audio buffer underflow";
         outputAudioInterface->start( &outputBuffer );
     }
@@ -182,118 +311,12 @@ void AudioOutput::handleUnderflow() {
 
 // Private
 
-void AudioOutput::audioData( int16_t *inputDataShort, int inputBytes ) {
-    // Handle the situation where there is an error opening the audio device
-    if( outputAudioInterface->error() == QAudio::OpenError ) {
-        // qWarning( phxAudioOutput ) << "QAudio::OpenError, attempting reset...";
-        resetAudio();
-    }
-
-    int inputFrames = inputAudioFormat.framesForBytes( inputBytes );
-    int inputSamples = inputFrames * samplesPerFrame;
-
-    // What do we have to work with?
-    int outputTotalBytes = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
-    outputCurrentByte = outputBuffer.bytesAvailable();
-    int outputFreeBytes = outputTotalBytes - outputCurrentByte;
-    int outputFreeFrames = outputAudioFormat.framesForBytes( outputFreeBytes );
-    int outputFreeSamples = outputFreeFrames * samplesPerFrame;
-    Q_UNUSED( outputTotalBytes );
-    Q_UNUSED( outputFreeSamples );
-
-    // Calculate how much the read data should be scaled (shrunk or stretched) to keep the buffer on target
-    // The vector is negative if beyond the target and positive if behind
-    int outputTargetByte = outputAudioFormat.bytesForDuration( outputTargetMs * 1000 );
-    int outputEstimatedBytes = outputAudioFormat.bytesForDuration( inputAudioFormat.durationForBytes( inputBytes ) );
-    int outputVectorTargetToCurrent = outputTargetByte - outputCurrentByte + outputEstimatedBytes;
-    // double unclampedDRCScale = ( double )outputVectorTargetToCurrent / outputTargetByte;
-    double unclampedDRCScale = ( double )outputVectorTargetToCurrent + outputEstimatedBytes / outputEstimatedBytes;
-
-    // Calculate the final DRC ratio
-    double DRCScale = qMax( -maxDeviation, qMin( unclampedDRCScale, maxDeviation ) );
-    double adjustedSampleRateRatio = sampleRateRatio * ( 1.0 + DRCScale ) * ( hostFPS / coreFPS );
-
-    // libsamplerate works in floats, must convert to floats for processing
-    src_short_to_float_array( ( short * )inputDataShort, inputDataFloat, inputSamples );
-
-    // Set up a struct containing parameters for the resampler
-    SRC_DATA srcData;
-    srcData.data_in = inputDataFloat;
-    srcData.data_out = outputDataFloat;
-    srcData.end_of_input = 0;
-    srcData.input_frames = inputFrames;
-    srcData.output_frames = outputFreeFrames; // Max size
-    srcData.src_ratio = adjustedSampleRateRatio;
-
-    // Perform resample
-    src_set_ratio( resamplerState, adjustedSampleRateRatio );
-    auto errorCode = src_process( resamplerState, &srcData );
-
-    if( errorCode ) {
-        qCWarning( phxAudioOutput ) << "libresample error: " << src_strerror( errorCode ) ;
-    }
-
-    auto outputFramesConverted = srcData.output_frames_gen;
-    auto outputBytesConverted = outputAudioFormat.bytesForFrames( outputFramesConverted );
-    auto outputSamplesConverted = outputFramesConverted * samplesPerFrame;
-
-    // Convert float data back to shorts
-    src_float_to_short_array( outputDataFloat, outputDataShort, outputSamplesConverted );
-
-    // Send the converted data out
-    int outputBytesWritten = outputBuffer.write( ( char * ) outputDataShort, outputBytesConverted );
-    outputCurrentByte += outputBytesWritten;
-
-#if defined( DRC_LOGGING )
-    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-    static qint64 lastMessage = 0;
-
-    qint64 inputBytesPerMSec = inputAudioFormat.bytesForDuration( 1000 );
-    qint64 outputBytesPerMSec = outputAudioFormat.bytesForDuration( 1000 );
-
-    if( currentTime - lastMessage > 1000 ) {
-        lastMessage = currentTime;
-        qCDebug( phxAudioOutput ) << "Input:" << inputBytes / inputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "Output is" << ( ( ( double )( ( outputTotalBytes - outputFreeBytes ) ) /
-                                  outputTotalBytes ) * 100 )
-                                  << "% full," << ( outputTotalBytes - outputFreeBytes ) / outputBytesPerMSec << "ms (target:" << outputTargetMs << "ms /"
-                                  << ( ( double )outputTargetMs / outputLengthMs ) * 100 << "%)";
-        qCDebug( phxAudioOutput ) << "\tunclampedDRCScale =" << unclampedDRCScale << "DRCScale =" << DRCScale
-                                  << "outputAudioInterface->bufferSize()" << outputAudioInterface->bufferSize() / outputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "\toutputTotalBytes =" << outputTotalBytes / outputBytesPerMSec << "ms"
-                                  << "outputCurrentByte =" << outputCurrentByte / outputBytesPerMSec << "ms"
-                                  << " outputFreeBytes =" << outputFreeBytes / outputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "\tOutput buffer is" << outputLengthMs
-                                  << "ms, target =" << outputTargetMs
-                                  << "ms (" << ( double )100.0 * ( ( double )outputTargetMs / (
-                                              ( double )( outputAudioFormat.durationForBytes(
-                                                      outputTotalBytes ) ) / 1000.0 ) )
-                                  << "%)";
-        qCDebug( phxAudioOutput ) << "\tOutput: needed" << outputVectorTargetToCurrent / outputBytesPerMSec << "ms, wrote"
-                                  << outputBytesWritten / outputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "\toutputTargetByte =" << outputTargetByte / outputBytesPerMSec << "ms"
-                                  << "outputVectorTargetToCurrent =" << outputVectorTargetToCurrent / outputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "\toutputAudioInterface->bufferSize() =" << outputAudioInterface->bufferSize() / outputBytesPerMSec << "ms"
-                                  << "outputAudioInterface->bytesFree() =" << outputAudioInterface->bytesFree() / outputBytesPerMSec << "ms"
-                                  << "outputBuffer.bytesToWrite() =" << outputBuffer.bytesToWrite() / outputBytesPerMSec << "ms";
-        qCDebug( phxAudioOutput ) << "\toutputBuffer.bytesAvailable() =" << outputBuffer.bytesAvailable() / outputBytesPerMSec << "ms"
-                                  << "outputBuffer.size() =" << outputBuffer.size() / outputBytesPerMSec << "ms"
-                                  << "outputBuffer.pos() =" << outputBuffer.pos() / outputBytesPerMSec << "ms";
-        // qCDebug( phxAudioOutput ) << "\tState:" << outputAudioInterface->state()
-        //                           << " error: " << outputAudioInterface->error();
-    }
-
-#endif
-}
-
-void AudioOutput::setAudioActive( bool coreIsRunning ) {
-    this->coreIsRunning = coreIsRunning;
-
+void AudioOutput::pipelineStateChanged() {
     if( !outputAudioInterface ) {
         return;
     }
 
-    if( !coreIsRunning ) {
+    if( !( state == State::Playing ) ) {
         if( outputAudioInterface->state() != QAudio::SuspendedState ) {
             qCDebug( phxAudioOutput ) << "Paused";
             outputAudioInterface->suspend();
@@ -309,7 +332,7 @@ void AudioOutput::setAudioActive( bool coreIsRunning ) {
 }
 
 void AudioOutput::shutdown() {
-    qCDebug( phxAudioOutput ) << "slotShutdown() start";
+    qCDebug( phxAudioOutput ) << "shutdown() start";
 
     if( outputAudioInterface ) {
         outputAudioInterface->stop();
@@ -340,7 +363,7 @@ void AudioOutput::shutdown() {
     outputCurrentByte = 0;
     outputBuffer.clear();
 
-    qCDebug( phxAudioOutput ) << "slotShutdown() end";
+    qCDebug( phxAudioOutput ) << "shutdown() end";
 }
 
 void AudioOutput::resetAudio() {
@@ -369,12 +392,12 @@ void AudioOutput::resetAudio() {
     outputAudioInterface = new QAudioOutput( outputAudioFormat, this );
     Q_CHECK_PTR( outputAudioInterface );
 
-    connect( outputAudioInterface, &QAudioOutput::stateChanged, this, &AudioOutput::handleStateChanged );
+    connect( outputAudioInterface, &QAudioOutput::stateChanged, this, &AudioOutput::outputStateChanged );
     outputAudioInterface->start( &outputBuffer );
     // QAudio::State state = outputAudioInterface->state();
     // qCDebug( phxAudioOutput ) << state;
 
-    if( !coreIsRunning ) {
+    if( !( state == State::Playing ) ) {
         outputAudioInterface->suspend();
     }
 }
