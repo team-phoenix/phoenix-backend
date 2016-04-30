@@ -49,14 +49,14 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             SDL_Joystick *joystickHandle = SDL_GameControllerGetJoystick( gamecontrollerHandle );
                             int instanceID = SDL_JoystickInstanceID( joystickHandle );
 
-                            gamepads.insert( instanceID, Gamepad() );
-                            Gamepad *gamepad = &gamepads[ instanceID ];
-                            gamepad->joystickID = joystickID;
-                            gamepad->connected = true;
-                            gamepad->GUID = SDL_JoystickGetGUID( joystickHandle );
-                            gamepadHandles.insert( instanceID, gamecontrollerHandle );
+                            gamepads[ instanceID ].joystickID = joystickID;
+                            gamepads[ instanceID ].connected = true;
+                            gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
+                            gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
-                            qCDebug( phxInput ) << "Added controller:" << joystickID << instanceID;
+                            qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"
+                                                << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
+                                                << "total instanceIDs:" << gamepads.size();
                             emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
 
                             break;
@@ -70,7 +70,9 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             SDL_GameControllerClose( gamecontrollerHandle );
                             gamepads[ instanceID ].connected = false;
 
-                            qCDebug( phxInput ) << "Removed controller:" << joystickID << instanceID;
+                            qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
+                                                << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
+                                                << "total instanceIDs:" << gamepads.size();
                             emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
 
                             break;
@@ -78,18 +80,18 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
 
                         case SDL_CONTROLLERBUTTONUP:
                         case SDL_CONTROLLERBUTTONDOWN: {
-                            SDL_JoystickID intstanceID = sdlEvent.cbutton.which;
+                            SDL_JoystickID instanceID = sdlEvent.cbutton.which;
                             Uint8 buttonID = sdlEvent.cbutton.button;
                             Uint8 state = sdlEvent.cbutton.state;
-                            gamepads[ intstanceID ].button[ buttonID ] = state;
+                            gamepads[ instanceID ].button[ buttonID ] = state;
                             break;
                         }
 
                         case SDL_CONTROLLERAXISMOTION: {
-                            SDL_JoystickID intstanceID = sdlEvent.cbutton.which;
+                            SDL_JoystickID instanceID = sdlEvent.cbutton.which;
                             Uint8 axis = sdlEvent.caxis.axis;
                             Sint16 value = sdlEvent.caxis.value;
-                            gamepads[ intstanceID ].axis[ axis ] = value;
+                            gamepads[ instanceID ].axis[ axis ] = value;
                             break;
                         }
 
@@ -105,7 +107,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                 for( Gamepad gamepad : gamepads ) {
                     if( gamepad.connected ) {
                         mutex.lock();
-                        memcpy( &( gamepadBuffer[ gamepadBufferIndex ] ), &gamepad, sizeof( Gamepad ) );
+                        gamepadBuffer[ gamepadBufferIndex ] = gamepad;
                         mutex.unlock();
                         emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
                         gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;

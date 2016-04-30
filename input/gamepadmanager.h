@@ -2,7 +2,7 @@
 
 #include <QObject>
 #include <QMutex>
-#include <QList>
+#include <QHash>
 
 #include "gamepad.h"
 #include "node.h"
@@ -25,8 +25,8 @@ class GamepadManager : public Node {
         QMutex mutex;
 
         // A list of stored button states, indexed by instanceID
-        QList<Gamepad> gamepads;
-        QList<SDL_GameController *> gamepadHandles;
+        QHash<int, Gamepad> gamepads;
+        QHash<int, SDL_GameController *> gamepadHandles;
 
         // A circular buffer that holds gamepad state updates
         // A value of 100 should be sufficient for most purposes

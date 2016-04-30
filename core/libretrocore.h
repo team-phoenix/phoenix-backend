@@ -2,6 +2,8 @@
 
 #include "backendcommon.h"
 
+#include <QHash>
+
 #include "core.h"
 #include "gamepad.h"
 #include "libretro.h"
@@ -153,7 +155,7 @@ class LibretroCore : public Core {
         // 16 bits/buttons for 16 controllers
         int16_t inputStates[ 16 ]{ 0 };
 
-        QList<Gamepad> gamepads;
+        QHash<int, Gamepad> gamepads;
 
         QPointF touchCoords;
         bool touchState{ false };
