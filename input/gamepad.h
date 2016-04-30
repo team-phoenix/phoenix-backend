@@ -8,6 +8,10 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+// Gamepad is a small struct designed to hold the metadata and states of a single controller made available using
+// SDL2's game controller API. An example of how to use this as a consumer to store input states for all controllers
+// can be found in LibretroCore. An example of how to use this as a consumer and producer to transform controller
+// states can be found in Remapper.
 struct Gamepad {
     bool connected{ true };
 
