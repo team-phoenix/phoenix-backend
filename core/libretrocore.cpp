@@ -251,6 +251,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
             Node::commandOut( command, data, timeStamp );
 
             if( state == State::Playing ) {
+                // Invoke libretro core
                 symbols.retro_run();
             }
 
@@ -277,6 +278,16 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
             break;
         }
 
+        case Command::ControllerAdded: {
+            int instanceID = data.toInt();
+            gamepads.insert( instanceID, Gamepad() );
+        }
+
+        case Command::ControllerRemoved: {
+            int instanceID = data.toInt();
+            gamepads[ instanceID ].connected = false;
+        }
+
         default: {
             Node::commandOut( command, data, timeStamp );
             break;
@@ -288,30 +299,17 @@ void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t byte
     Node::dataIn( type, mutex, data, bytes, timeStamp );
 
     switch( type ) {
-        // FIXME: Probably want to nuke all of this, replace with newer input stuff
+        // Make a copy of the data into our own gamepad list
         case DataType::Input: {
-            // Discard data that's too far from the past to matter anymore
-            if( QDateTime::currentMSecsSinceEpoch() - timeStamp > 100 ) {
-                // qCWarning( phxCore ) << "Core is running too slow, discarding signal (printing this probably isn't helping...)";
-                return;
-            }
-
-            QMutexLocker locker( mutex );
-
-            // Copy incoming input data
-            int16_t *newInputStates = ( int16_t * )data;
-
-            for( int i = 0; i < 16; i++ ) {
-                inputStates[ i ] = newInputStates[ i ];
-            }
-
+            Gamepad *gamepad = ( Gamepad * )data;
+            mutex->lock();
+            int instanceID = gamepad->instanceID;
+            gamepads[ instanceID ] = *gamepad;
+            mutex->unlock();
             break;
         }
 
         case DataType::TouchInput: {
-            QMutexLocker locker( mutex );
-            touchCoords = *( QPointF * )data;
-            touchState = ( bool )bytes;
             break;
         }
 
@@ -935,12 +933,70 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
         return 0;
     }
 
-    int16_t value = ( ( core->inputStates[ port ] >> id ) & 0x01 );
+    int16_t value = 0;
 
-    if( port == 0 ) {
-        //qCDebug( phxCore ) << "Valid input request" << port << device << index << id << "Value:" << value << "Raw:" << core->inputStates[ port ];
+    // TODO: Don't OR all controllers together!
+    for( Gamepad gamepad : core->gamepads ) {
+        if( gamepad.connected ) {
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_B ] && id == RETRO_DEVICE_ID_JOYPAD_B ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_X ] && id == RETRO_DEVICE_ID_JOYPAD_X ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_Y ] && id == RETRO_DEVICE_ID_JOYPAD_Y ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_L ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_R ) {
+                value |= 1;
+            }
+
+            // TODO: L2? R2?
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_L3 ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_R3 ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] && id == RETRO_DEVICE_ID_JOYPAD_UP ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] && id == RETRO_DEVICE_ID_JOYPAD_DOWN ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] && id == RETRO_DEVICE_ID_JOYPAD_LEFT ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] && id == RETRO_DEVICE_ID_JOYPAD_RIGHT ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_BACK ] && id == RETRO_DEVICE_ID_JOYPAD_SELECT ) {
+                value |= 1;
+            }
+
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_START ] && id == RETRO_DEVICE_ID_JOYPAD_START ) {
+                value |= 1;
+            }
+        }
     }
-
     return value;
 }
 

@@ -78,7 +78,8 @@
     input/remapper.h \
     util/controloutput.h \
     util/phoenixwindow.h \
-    util/phoenixwindownode.h
+    util/phoenixwindownode.h \
+    input/gamepad.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \

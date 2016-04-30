@@ -212,6 +212,7 @@ void GameConsole::applyPendingPropertyChanges() {
 // Private (Cleanup)
 
 void GameConsole::unloadLibretro() {
+    qCDebug( phxControl ) << Q_FUNC_INFO;
     for( QMetaObject::Connection connection : sessionConnections ) {
         disconnect( connection );
     }

@@ -3,10 +3,15 @@
 #include "backendcommon.h"
 
 #include "core.h"
+#include "gamepad.h"
 #include "libretro.h"
 #include "libretrosymbols.h"
 #include "libretrovariable.h"
 #include "logging.h"
+#include "node.h"
+
+#include "SDL.h"
+#include "SDL_gamecontroller.h"
 
 // Since each buffer holds one frame, depending on core, 30 frames = ~500ms
 #define POOL_SIZE 30
@@ -144,7 +149,12 @@ class LibretroCore : public Core {
         // Consumer data (from input producers)
 
         ProducerFormat consumerFmt;
+
+        // 16 bits/buttons for 16 controllers
         int16_t inputStates[ 16 ]{ 0 };
+
+        QList<Gamepad> gamepads;
+
         QPointF touchCoords;
         bool touchState{ false };
         bool variablesHaveChanged{ false };

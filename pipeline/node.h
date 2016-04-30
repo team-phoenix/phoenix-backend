@@ -34,10 +34,10 @@ class Node : public QObject {
             // Inform consumers about heartbeat rate
             HeartbeatRate,
 
-            // FPS of the monitor. Used for when vsync is on (track with SetVsync)
+            // Set FPS of the monitor. Used for when vsync is on (track with SetVsync)
             HostFPS,
 
-            // FPS of the core in this pipeline. May not exist!
+            // Set FPS of the core in this pipeline. May not exist!
             CoreFPS,
 
             // Change consumer format
@@ -74,6 +74,11 @@ class Node : public QObject {
 
             // Set vsync mode
             SetVsync,
+
+            // Handle a new controller being added/removed (instanceID provided)
+            // int
+            ControllerAdded,
+            ControllerRemoved
         };
         Q_ENUM( Command )
 
