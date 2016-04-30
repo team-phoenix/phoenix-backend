@@ -13,7 +13,7 @@ PhoenixWindowNode::PhoenixWindowNode( Node *parent ) : Node( parent ) {
 }
 
 void PhoenixWindowNode::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::commandIn( command, data, timeStamp );
+    emit commandOut( command, data, timeStamp );
 
     switch( command ) {
         case Command::SetVsync: {

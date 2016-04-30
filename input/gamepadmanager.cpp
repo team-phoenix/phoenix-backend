@@ -30,10 +30,7 @@ GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
 void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         case Command::Heartbeat: {
-            // Inject heartbeat into child nodes' event queues *first*
-            emit commandOut( command, data, timeStamp );
-
-            // Check connect/disconnect events
+            // Check input and connect/disconnect events, update accordingly
             {
                 SDL_Event sdlEvent;
 
@@ -50,7 +47,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             int instanceID = SDL_JoystickInstanceID( joystickHandle );
 
                             gamepads[ instanceID ].joystickID = joystickID;
-                            gamepads[ instanceID ].connected = true;
+                            gamepads[ instanceID ].instanceID = instanceID;
                             gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
                             gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
@@ -68,18 +65,17 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
 
                             SDL_GameControllerClose( gamecontrollerHandle );
-                            gamepads[ instanceID ].connected = false;
 
                             qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
                                                 << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
                                                 << "total instanceIDs:" << gamepads.size();
-                            emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
+                            emit commandOut( Command::ControllerRemoved, instanceID, QDateTime::currentMSecsSinceEpoch() );
 
                             break;
                         }
 
-                        case SDL_CONTROLLERBUTTONUP:
-                        case SDL_CONTROLLERBUTTONDOWN: {
+                        case SDL_CONTROLLERBUTTONDOWN:
+                        case SDL_CONTROLLERBUTTONUP: {
                             SDL_JoystickID instanceID = sdlEvent.cbutton.which;
                             Uint8 buttonID = sdlEvent.cbutton.button;
                             Uint8 state = sdlEvent.cbutton.state;
@@ -102,18 +98,19 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                 }
             }
 
-            // Emit an update for all controllers that are still connected
+            // Emit an update for all controllers known to us
             {
                 for( Gamepad gamepad : gamepads ) {
-                    if( gamepad.connected ) {
-                        mutex.lock();
-                        gamepadBuffer[ gamepadBufferIndex ] = gamepad;
-                        mutex.unlock();
-                        emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
-                        gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
-                    }
+                    mutex.lock();
+                    gamepadBuffer[ gamepadBufferIndex ] = gamepad;
+                    mutex.unlock();
+                    emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
+                    gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
                 }
             }
+
+            // Inject heartbeat into child nodes' event queues *after* input data
+            emit commandOut( command, data, timeStamp );
 
             break;
         }

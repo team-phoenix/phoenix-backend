@@ -26,6 +26,8 @@ class GamepadManager : public Node {
 
         // A list of stored button states, indexed by instanceID
         QHash<int, Gamepad> gamepads;
+
+        // Handles to the underlying game controller API handle, indexed by instanceID
         QHash<int, SDL_GameController *> gamepadHandles;
 
         // A circular buffer that holds gamepad state updates

@@ -118,14 +118,14 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
             if( emitHeartbeats ) {
                 return;
             } else {
-                Node::commandIn( command, data, timeStamp );
+                emit commandOut( command, data, timeStamp );
             }
 
             break;
         }
 
         case Command::CoreFPS: {
-            Node::commandIn( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
             qCDebug( phxTimer ).nospace() << "Began timer at " << data.toReal() << "Hz (vsync: " << !emitHeartbeats << ")";
             startFreq( data.toReal() );
             break;
@@ -133,13 +133,13 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
 
         // Invert vsync value to get what we should do
         case Command::SetVsync: {
-            Node::commandIn( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
             emitHeartbeats = !( data.toBool() );
             break;
         }
 
         default:
-            Node::commandIn( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
             break;
     }
 

@@ -19,7 +19,7 @@ AudioOutput::~AudioOutput() {
 // Public slots
 
 void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::commandIn( command, data, timeStamp );
+    emit commandOut( command, data, timeStamp );
 
     switch( command ) {
         case Command::Play: {
@@ -280,7 +280,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
         }
     }
 
-    Node::dataIn( type, mutex, data, bytes, timeStamp );
+    emit dataOut( type, mutex, data, bytes, timeStamp );
 }
 
 // Private slots

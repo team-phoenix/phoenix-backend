@@ -13,8 +13,6 @@
 // can be found in LibretroCore. An example of how to use this as a consumer and producer to transform controller
 // states can be found in Remapper.
 struct Gamepad {
-    bool connected{ true };
-
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 

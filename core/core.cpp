@@ -9,7 +9,7 @@ Core::~Core() {
 // Slots
 
 void Core::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::commandIn( command, data, timeStamp );
+    emit commandOut( command, data, timeStamp );
 
     switch( command ) {
         case Command::Play: {

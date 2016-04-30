@@ -6,7 +6,7 @@ VideoOutputNode::VideoOutputNode( Node *parent ) : Node( parent ) {
 }
 
 void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    Node::commandIn( command, data, timeStamp );
+    emit commandOut( command, data, timeStamp );
 
     if( videoOutput ) {
         if( command == Command::VideoFormat ) {
@@ -45,7 +45,7 @@ void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 ti
 }
 
 void VideoOutputNode::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
-    Node::dataIn( type, mutex, data, bytes, timeStamp );
+    emit dataOut( type, mutex, data, bytes, timeStamp );
 
     if( videoOutput ) {
         if( type == DataType::Video ) {

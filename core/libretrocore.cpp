@@ -248,7 +248,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
                 return;
             }
 
-            Node::commandOut( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
 
             if( state == State::Playing ) {
                 // Invoke libretro core
@@ -265,7 +265,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
 
         case Command::SetSource: {
             qCDebug( phxCore ) << command;
-            Node::commandOut( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
 
             QMap<QString, QVariant> map = data.toMap();
             QStringMap stringMap;
@@ -278,35 +278,30 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
             break;
         }
 
-        case Command::ControllerAdded: {
-            int instanceID = data.toInt();
-            gamepads[ instanceID ].connected = true;
-        }
-
         case Command::ControllerRemoved: {
             int instanceID = data.toInt();
-            gamepads[ instanceID ].connected = false;
+            gamepads.remove( instanceID );
+            emit commandOut( command, data, timeStamp );
         }
 
         default: {
-            Node::commandOut( command, data, timeStamp );
+        emit commandOut( command, data, timeStamp );
             break;
         }
     }
 }
 
 void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
-    Node::dataIn( type, mutex, data, bytes, timeStamp );
+    emit dataOut( type, mutex, data, bytes, timeStamp );
 
     switch( type ) {
         // Make a copy of the data into our own gamepad list
         case DataType::Input: {
-            Gamepad *gamepadPointer = ( Gamepad * )data;
             mutex->lock();
-            Gamepad gamepad = *gamepadPointer;
-            mutex->unlock();
+            Gamepad gamepad = *( Gamepad * )data;
             int instanceID = gamepad.instanceID;
             gamepads[ instanceID ] = gamepad;
+            mutex->unlock();
             break;
         }
 
@@ -938,65 +933,62 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
 
     // TODO: Don't OR all controllers together!
     for( Gamepad gamepad : core->gamepads ) {
-        qCDebug( phxCore ) << "Check instanceID";
-        if( gamepad.connected ) {
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
-                value |= 1;
-            }
+        if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_B ] && id == RETRO_DEVICE_ID_JOYPAD_B ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_B ] && id == RETRO_DEVICE_ID_JOYPAD_B ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_X ] && id == RETRO_DEVICE_ID_JOYPAD_X ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_X ] && id == RETRO_DEVICE_ID_JOYPAD_X ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_Y ] && id == RETRO_DEVICE_ID_JOYPAD_Y ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_Y ] && id == RETRO_DEVICE_ID_JOYPAD_Y ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_L ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_L ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_R ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_R ) {
+            value |= 1;
+        }
 
-            // TODO: L2? R2?
+        // TODO: L2? R2?
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_L3 ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_L3 ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_R3 ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_R3 ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] && id == RETRO_DEVICE_ID_JOYPAD_UP ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] && id == RETRO_DEVICE_ID_JOYPAD_UP ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] && id == RETRO_DEVICE_ID_JOYPAD_DOWN ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] && id == RETRO_DEVICE_ID_JOYPAD_DOWN ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] && id == RETRO_DEVICE_ID_JOYPAD_LEFT ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] && id == RETRO_DEVICE_ID_JOYPAD_LEFT ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] && id == RETRO_DEVICE_ID_JOYPAD_RIGHT ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] && id == RETRO_DEVICE_ID_JOYPAD_RIGHT ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_BACK ] && id == RETRO_DEVICE_ID_JOYPAD_SELECT ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_BACK ] && id == RETRO_DEVICE_ID_JOYPAD_SELECT ) {
+            value |= 1;
+        }
 
-            if( gamepad.button[ SDL_CONTROLLER_BUTTON_START ] && id == RETRO_DEVICE_ID_JOYPAD_START ) {
-                value |= 1;
-            }
+        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_START ] && id == RETRO_DEVICE_ID_JOYPAD_START ) {
+            value |= 1;
         }
     }
 
