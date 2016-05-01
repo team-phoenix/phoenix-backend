@@ -31,7 +31,7 @@ MicroTimer::MicroTimer( Node *parent ) : Node( parent ) {
 
 MicroTimer::~MicroTimer() {
     if( timer.isValid() || registeredTimers.size() ) {
-        qWarning() << "MicroTimer: Destroyed while timer still running";
+        stop();
     }
 }
 

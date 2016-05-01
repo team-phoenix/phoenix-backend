@@ -30,7 +30,6 @@ GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
 void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         case Command::Heartbeat: {
-
             // Check input and connect/disconnect events, update accordingly
             SDL_Event sdlEvent;
 
@@ -66,6 +65,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
 
                         SDL_GameControllerClose( gamecontrollerHandle );
+                        gamepads.remove( instanceID );
 
                         qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
                                             << instanceID << "total joystickIDs:" << SDL_NumJoysticks()

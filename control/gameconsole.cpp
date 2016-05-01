@@ -159,7 +159,7 @@ void GameConsole::loadLibretro() {
     // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
     // We care about this happening as LibretroCore needs to save its running game before quitting
     // We also need CoreFPS from LibretroCore so MicroTimer knows how fast to emit heartbeats
-    sessionConnections << connect( libretroCore, &ControlOutput::commandOut, libretroCore, [ & ]( Command command, QVariant data, qint64 ) {
+    sessionConnections << connect( libretroCore, &Node::commandOut, libretroCore, [ & ]( Command command, QVariant data, qint64 ) {
         switch( command ) {
             case Command::Stop: {
                 unloadLibretro();
