@@ -10,6 +10,11 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+/*
+ * GamepadManager is a Node whose job is to produce input data from physical controllers connected to the system running
+ * Phoenix. The polling of controllers for their existence and input data is driven by heartbeats from this node's parent.
+ */
+
 class GamepadManager : public Node {
         Q_OBJECT
 

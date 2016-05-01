@@ -17,13 +17,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// MicroTimer is an improved version of QTimer with potential microsecond accuracy and the ability to specify
-// the interval as a qreal. You also gain the ability to specify the frequency (which is how the interval's internally stored)
-// and to activate a max accuracy mode which further boosts the accuracy from microseconds to sub microseconds.
-// Testing on Windows 10 and OS X 10.11 has shown this timer to be as accurate as +-0.1us on low system load. Your mileage may vary!
-// Note that max accuracy mode causes significant CPU usage. It's recommended to place MicroTimer in its own thread,
-// unless you have a thread in your program that offers a richer (larger/more frequent) set of events to work off of.
-// In that case, you'd be best off using that thread and leaving max accuracy mode off. Experiment to find out what works best!
+/*
+ * MicroTimer is an improved version of QTimer with potential microsecond accuracy and the ability to specify
+ * the interval as a qreal. You also gain the ability to specify the frequency (which is how the interval's internally stored)
+ * and to activate a max accuracy mode which further boosts the accuracy from microseconds to sub microseconds.
+ *
+ * Testing on Windows 10 and OS X 10.11 has shown this timer to be as accurate as +-0.1us on low system load. Your mileage may vary!
+ * Note that max accuracy mode causes significant CPU usage. It's recommended to place MicroTimer in its own thread,
+ * unless you have a thread in your program that offers a richer (larger/more frequent) set of events to work off of.
+ * In that case, you'd be best off using that thread and leaving max accuracy mode off. Experiment to find out what works best!
+ *
+ * The Phoenix port of this class turns this into a Node. The emitting of heartbeat signals can be controlled by
+ * sending Command::SetVsync to this node. In addition, the rate can be controlled by sending it Command::CoreFPS.
+ */
 
 #pragma once
 

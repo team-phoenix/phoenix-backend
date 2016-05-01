@@ -30,83 +30,90 @@ GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
 void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         case Command::Heartbeat: {
+
             // Check input and connect/disconnect events, update accordingly
-            {
-                SDL_Event sdlEvent;
+            SDL_Event sdlEvent;
 
-                // Only filter SDL_CONTROLLERDEVICEADDED and SDL_CONTROLLERDEVICEREMOVED
-                while( SDL_PollEvent( &sdlEvent ) ) {
-                    switch( sdlEvent.type ) {
-                        case SDL_CONTROLLERDEVICEADDED: {
-                            int joystickID = sdlEvent.cdevice.which;
+            while( SDL_PollEvent( &sdlEvent ) ) {
+                switch( sdlEvent.type ) {
+                    // Grab all the info we can about the controller, add this info to an entry in the gamepads hash table
+                    case SDL_CONTROLLERDEVICEADDED: {
+                        int joystickID = sdlEvent.cdevice.which;
 
-                            Q_ASSERT( SDL_IsGameController( joystickID ) );
+                        Q_ASSERT( SDL_IsGameController( joystickID ) );
 
-                            SDL_GameController *gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
-                            SDL_Joystick *joystickHandle = SDL_GameControllerGetJoystick( gamecontrollerHandle );
-                            int instanceID = SDL_JoystickInstanceID( joystickHandle );
+                        SDL_GameController *gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
+                        SDL_Joystick *joystickHandle = SDL_GameControllerGetJoystick( gamecontrollerHandle );
+                        int instanceID = SDL_JoystickInstanceID( joystickHandle );
 
-                            gamepads[ instanceID ].joystickID = joystickID;
-                            gamepads[ instanceID ].instanceID = instanceID;
-                            gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
-                            gamepadHandles[ instanceID ] = gamecontrollerHandle;
+                        gamepads[ instanceID ].joystickID = joystickID;
+                        gamepads[ instanceID ].instanceID = instanceID;
+                        gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
+                        gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
-                            qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"
-                                                << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
-                                                << "total instanceIDs:" << gamepads.size();
-                            emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
+                        qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"
+                                            << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
+                                            << "total instanceIDs:" << gamepads.size();
+                        emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
 
-                            break;
-                        }
+                        break;
+                    }
 
-                        case SDL_CONTROLLERDEVICEREMOVED: {
-                            int instanceID = sdlEvent.cdevice.which;
-                            int joystickID = gamepads[ instanceID ].joystickID;
-                            SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
+                    // Remove the removed gamepad's entry from the gamepads hash table
+                    case SDL_CONTROLLERDEVICEREMOVED: {
+                        int instanceID = sdlEvent.cdevice.which;
+                        int joystickID = gamepads[ instanceID ].joystickID;
+                        SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
 
-                            SDL_GameControllerClose( gamecontrollerHandle );
+                        SDL_GameControllerClose( gamecontrollerHandle );
 
-                            qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
-                                                << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
-                                                << "total instanceIDs:" << gamepads.size();
-                            emit commandOut( Command::ControllerRemoved, instanceID, QDateTime::currentMSecsSinceEpoch() );
+                        qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
+                                            << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
+                                            << "total instanceIDs:" << gamepads.size();
 
-                            break;
-                        }
+                        // All children of this node that use input (consumers of this class's input data) will
+                        // mirror this change to the hash table
+                        emit commandOut( Command::ControllerRemoved, instanceID, QDateTime::currentMSecsSinceEpoch() );
 
-                        case SDL_CONTROLLERBUTTONDOWN:
-                        case SDL_CONTROLLERBUTTONUP: {
-                            SDL_JoystickID instanceID = sdlEvent.cbutton.which;
-                            Uint8 buttonID = sdlEvent.cbutton.button;
-                            Uint8 state = sdlEvent.cbutton.state;
-                            gamepads[ instanceID ].button[ buttonID ] = state;
-                            break;
-                        }
+                        break;
+                    }
 
-                        case SDL_CONTROLLERAXISMOTION: {
-                            SDL_JoystickID instanceID = sdlEvent.cbutton.which;
-                            Uint8 axis = sdlEvent.caxis.axis;
-                            Sint16 value = sdlEvent.caxis.value;
-                            gamepads[ instanceID ].axis[ axis ] = value;
-                            break;
-                        }
+                    // Update our button state
+                    case SDL_CONTROLLERBUTTONDOWN:
+                    case SDL_CONTROLLERBUTTONUP: {
+                        SDL_JoystickID instanceID = sdlEvent.cbutton.which;
+                        Uint8 buttonID = sdlEvent.cbutton.button;
+                        Uint8 state = sdlEvent.cbutton.state;
+                        gamepads[ instanceID ].button[ buttonID ] = state;
+                        break;
+                    }
 
-                        default: {
-                            break;
-                        }
+                    case SDL_CONTROLLERAXISMOTION: {
+                        SDL_JoystickID instanceID = sdlEvent.cbutton.which;
+                        Uint8 axis = sdlEvent.caxis.axis;
+                        Sint16 value = sdlEvent.caxis.value;
+                        gamepads[ instanceID ].axis[ axis ] = value;
+                        break;
+                    }
+
+                    default: {
+                        break;
                     }
                 }
             }
 
-            // Emit an update for all controllers known to us
-            {
-                for( Gamepad gamepad : gamepads ) {
-                    mutex.lock();
-                    gamepadBuffer[ gamepadBufferIndex ] = gamepad;
-                    mutex.unlock();
-                    emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
-                    gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
-                }
+            // Emit an update for all connected controllers
+            for( Gamepad gamepad : gamepads ) {
+                // Copy current gamepad into buffer
+                mutex.lock();
+                gamepadBuffer[ gamepadBufferIndex ] = gamepad;
+                mutex.unlock();
+
+                // Send buffer on its way
+                emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
+
+                // Increment the index
+                gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
             }
 
             // Inject heartbeat into child nodes' event queues *after* input data

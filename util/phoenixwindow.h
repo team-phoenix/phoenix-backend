@@ -17,6 +17,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * PhoenixWindow extends QQuickWindow by allowing the user to toggle whether the window uses VSync (blocking on buffer swap)
+ * or not (immediately returning when calling swapBuffers()).
+ */
+
 #pragma once
 
 #include <QObject>

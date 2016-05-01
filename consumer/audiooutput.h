@@ -10,11 +10,12 @@
 
 #include "logging.h"
 
-/* The AudioOutput class writes data to the default output device. Its internal buffers must be set by invoking
+/*
+ * The AudioOutput class writes data to the default output device. Its internal buffers must be set by invoking
  * commandIn() with the proper arguments before any data can be passed to it via dataIn(). Set the volume (from 0 to 1
  * inclusive) with slotSetVolume().
  *
- * For clarity, assuming 16-bit stereo audio:
+ * Comments in this class use the words "frames" and "samples". For clarity, assuming 16-bit stereo audio:
  * 1 frame = 4 bytes (L, L, R, R)
  * 1 sample = 2 bytes (L, L) or (R, R)
  */

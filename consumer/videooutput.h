@@ -9,8 +9,7 @@
 #include "producer.h"
 
 /*
- * VideoOutput is a consumer of video data as provided by Core via CoreControl. As it's a QML item, it will always live
- * in the QML thread.
+ * VideoOutput is a QQuickItem that consumes video data. It is meant to be instantiated from QML.
  */
 
 class VideoOutput : public QQuickItem {

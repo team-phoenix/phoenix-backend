@@ -76,6 +76,8 @@ class Node : public QObject {
             SetVsync,
 
             // Handle a new controller being added/removed (instanceID provided)
+            // Usually you'll only want to bother hooking the removal so you can remove your copy of the controller data
+            // The UI would be interested in showing to the user a game controller being plugged in
             // int
             ControllerAdded,
             ControllerRemoved
