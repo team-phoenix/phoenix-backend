@@ -10,11 +10,11 @@
 
     # Undefine this (for some reason it's on by default on Windows)
     CONFIG -= debug_and_release debug_and_release_target
-    CONFIG += staticlib static
+    CONFIG += plugin qt
 
     TEMPLATE = lib
 
-    QT += qml quick sql multimedia
+    QT += qml quick multimedia
 
     TARGET = phoenix-backend
 
@@ -79,7 +79,8 @@
     util/controloutput.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
-    input/gamepad.h
+    input/gamepad.h \
+    backendplugin.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -110,7 +111,8 @@
     input/remapper.cpp \
     util/controloutput.cpp \
     util/phoenixwindow.cpp \
-    util/phoenixwindownode.cpp
+    util/phoenixwindownode.cpp \
+    backendplugin.cpp
 
     RESOURCES += input/controllerdb.qrc
 
@@ -122,9 +124,7 @@
     ## Library paths
     ##
 
-    # Use mingw64 prefix for static builds (uses mingw64/qt5-static prefix by default)
-    QMAKE_LFLAGS += -Wl,-Bstatic
-    LIBS += C:/msys64/mingw64/lib
+    win32: LIBS += -LC:/msys64/mingw64/lib
 
     # Externals
     LIBS += -L../externals/quazip/quazip
