@@ -46,7 +46,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
         qDebug() << "";
 
-        // Tell the pipeline to stop then quit if loaded
+        // Tell the pipeline to stop if loaded
         if( dynamicPipelineReady() ) {
             quitFlag = true;
             emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
@@ -158,7 +158,7 @@ void GameConsole::loadLibretro() {
     // Hook LibretroCore so we know when commands have reached it
     // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
     // We care about this happening as LibretroCore needs to save its running game before quitting
-    // We also need CoreFPS from LibretroCore so MicroTimer knows how fast to emit heartbeats
+    // We also need CoreFPS from LibretroCore so MicroTimer knows how quickly it should emit heartbeats
     sessionConnections << connect( libretroCore, &Node::commandOut, libretroCore, [ & ]( Command command, QVariant data, qint64 ) {
         switch( command ) {
             case Command::Stop: {

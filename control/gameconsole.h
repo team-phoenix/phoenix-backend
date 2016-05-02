@@ -75,8 +75,7 @@ class GameConsole : public Node {
         // Sends deferred delete events to everything, safe (also required) to call after calling your API-specific deleter
         void deleteMembers();
 
-        // Members
-
+    private: // Members
         // Emulation thread
         QThread *gameThread;
 

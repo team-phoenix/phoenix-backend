@@ -148,12 +148,13 @@ class LibretroCore : public Core {
         // Should only be called on load time (consumers expect buffers to be valid while Core is active)
         void allocateBufferPool( retro_system_av_info *avInfo );
 
+        // Audio
+
+        qreal audioSampleRate{ 44100 };
+
         // Consumer data (from input producers)
 
         ProducerFormat consumerFmt;
-
-        // 16 bits/buttons for 16 controllers
-        int16_t inputStates[ 16 ]{ 0 };
 
         QHash<int, Gamepad> gamepads;
 

@@ -248,6 +248,11 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
                 return;
             }
 
+            // If we're vsynced, drop any updates that came too quickly
+            //if( vsync ) {
+
+            //}
+
             emit commandOut( command, data, timeStamp );
 
             if( state == State::Playing ) {
@@ -285,7 +290,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
         }
 
         default: {
-        emit commandOut( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
             break;
         }
     }
@@ -337,7 +342,6 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         QVariant variant;
         variant.setValue( producerFmt );
         emit commandOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-        emit commandOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
     }
 
     emit dataOut( DataType::Video, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
@@ -396,18 +400,8 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     // Audio
 
     // The Libretro API only support 16-bit stereo PCM
-    // Not sure, but I think that Libretro uses the host's native byte order for audio,
-    // which for x86_64 is little endian
-    producerFmt.audioFormat.setSampleSize( 16 );
-    producerFmt.audioFormat.setSampleRate( avInfo->timing.sample_rate );
-    producerFmt.audioFormat.setChannelCount( 2 );
-    producerFmt.audioFormat.setSampleType( QAudioFormat::SignedInt );
-    producerFmt.audioFormat.setByteOrder( QAudioFormat::LittleEndian );
-    producerFmt.audioFormat.setCodec( "audio/pcm" );
-
-    // inputFormat may or may not be set at this point, either way is fine
-    // By default retro_run() is expected to be called at 60Hz
-    producerFmt.audioRatio = consumerFmt.videoFramerate / avInfo->timing.fps;
+    audioSampleRate = avInfo->timing.sample_rate;
+    emit commandOut( Command::SampleRate, audioSampleRate, QDateTime::currentMSecsSinceEpoch() );
 
     // Video
 
@@ -429,7 +423,6 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     QVariant variant;
     variant.setValue( producerFmt );
     emit commandOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-    emit commandOut( Command::AudioFormat, variant, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::allocateBufferPool( retro_system_av_info *avInfo ) {
@@ -446,7 +439,7 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     LibretroCore *core = LibretroCore::core;
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->audioSampleRate * 5,
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
@@ -459,7 +452,7 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
     core->audioBufferCurrentByte += 4;
 
     // Flush if we have more than 1/2 of a frame's worth of data
-    if( core->audioBufferCurrentByte > core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+    if( core->audioBufferCurrentByte > core->audioSampleRate * 4 / core->producerFmt.videoFramerate / 2 ) {
         core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
         core->audioBufferCurrentByte = 0;
         core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
@@ -470,7 +463,7 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     LibretroCore *core = LibretroCore::core;
 
     // Sanity check
-    Q_ASSERT_X( core->audioBufferCurrentByte < core->producerFmt.audioFormat.sampleRate() * 5,
+    Q_ASSERT_X( core->audioBufferCurrentByte < core->audioSampleRate * 5,
                 "audio batch callback",
                 QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
@@ -487,7 +480,7 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     core->audioBufferCurrentByte += frames * 4;
 
     // Flush if we have 1/2 of a frame's worth of data or more
-    if( core->audioBufferCurrentByte >= core->producerFmt.audioFormat.sampleRate() * 4 / core->producerFmt.videoFramerate / 2 ) {
+    if( core->audioBufferCurrentByte >= core->audioSampleRate * 4 / core->producerFmt.videoFramerate / 2 ) {
         core->emitAudioData( core->audioBufferPool[ core->audioPoolCurrentBuffer ], core->audioBufferCurrentByte );
         core->audioBufferCurrentByte = 0;
         core->audioPoolCurrentBuffer = ( core->audioPoolCurrentBuffer + 1 ) % POOL_SIZE;

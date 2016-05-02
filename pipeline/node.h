@@ -34,16 +34,18 @@ class Node : public QObject {
             // Inform consumers about heartbeat rate
             HeartbeatRate,
 
+            // Change consumer format
+            AudioFormat,
+            VideoFormat,
+            InputFormat,
+
+            // Core
+
             // Set FPS of the monitor. Used for when vsync is on (track with SetVsync)
             HostFPS,
 
             // Set FPS of the core in this pipeline. May not exist!
             CoreFPS,
-
-            // Change consumer format
-            AudioFormat,
-            VideoFormat,
-            InputFormat,
 
             // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
             // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
@@ -74,6 +76,13 @@ class Node : public QObject {
 
             // Set vsync mode
             SetVsync,
+
+            // Audio
+
+            // Sample rate in Hz
+            SampleRate,
+
+            // Input
 
             // Handle a new controller being added/removed (instanceID provided)
             // Usually you'll only want to bother hooking the removal so you can remove your copy of the controller data
@@ -111,6 +120,7 @@ class Node : public QObject {
 
         // FIXME: Use these or make an explicit "repeat command" function for classes that override these?
         virtual void commandIn( Command command, QVariant data, qint64 timeStamp );
+
         virtual void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 };
 

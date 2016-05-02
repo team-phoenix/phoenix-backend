@@ -86,53 +86,6 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
             break;
         }
 
-        case Command::AudioFormat: {
-            // Currently, we assume that the audio format will only be set once per session, during loading
-            if( state == State::Loading ) {
-                this->format = qvariant_cast<ProducerFormat>( data );
-
-                this->sampleRate = format.audioFormat.sampleRate();
-                this->coreFPS = format.videoFramerate;
-                this->hostFPS = coreFPS;
-
-                qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
-
-                inputAudioFormat.setSampleSize( 16 );
-                inputAudioFormat.setSampleRate( sampleRate );
-                inputAudioFormat.setChannelCount( 2 );
-                inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
-                inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
-                inputAudioFormat.setCodec( "audio/pcm" );
-
-                // Try using the nearest supported format
-                QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
-                outputAudioFormat = info.nearestFormat( inputAudioFormat );
-
-                // If that got us a format with a worse sample rate, use preferred format
-                if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
-                    outputAudioFormat = info.preferredFormat();
-                }
-
-                // Force 16-bit audio (for now)
-                outputAudioFormat.setSampleSize( 16 );
-
-                sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
-
-                qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
-                qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
-                qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
-                qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
-                         outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
-
-                resetAudio( );
-                allocateMemory();
-
-                outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
-            }
-
-            break;
-        }
-
         case Command::SetVolume: {
             if( outputAudioInterface ) {
                 outputAudioInterface->setVolume( data.toReal() );
@@ -144,6 +97,48 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
         case Command::SetVsync: {
             vsync = data.toBool();
             qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync;
+            break;
+        }
+
+        // Attempt to find suitable output format for given input sample rate, reload audio output and reset buffers
+        case Command::SampleRate: {
+            sampleRate = data.toReal();
+
+            // qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
+            qCDebug( phxAudioOutput ) << "sampleRate" << sampleRate;
+
+            inputAudioFormat.setSampleSize( 16 );
+            inputAudioFormat.setSampleRate( sampleRate );
+            inputAudioFormat.setChannelCount( 2 );
+            inputAudioFormat.setSampleType( QAudioFormat::SignedInt );
+            inputAudioFormat.setByteOrder( QAudioFormat::LittleEndian );
+            inputAudioFormat.setCodec( "audio/pcm" );
+
+            // Try using the nearest supported format
+            QAudioDeviceInfo info( QAudioDeviceInfo::defaultOutputDevice() );
+            outputAudioFormat = info.nearestFormat( inputAudioFormat );
+
+            // If that got us a format with a worse sample rate, use preferred format
+            if( outputAudioFormat.sampleRate() <= inputAudioFormat.sampleRate() ) {
+                outputAudioFormat = info.preferredFormat();
+            }
+
+            // Force 16-bit audio (for now)
+            outputAudioFormat.setSampleSize( 16 );
+
+            sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
+
+            qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
+            qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
+            qCDebug( phxAudioOutput ) << "sampleRateRatio" << sampleRateRatio;
+            qCDebug( phxAudioOutput, "Using nearest format supported by sound card: %iHz %ibits",
+                     outputAudioFormat.sampleRate(), outputAudioFormat.sampleSize() );
+
+            resetAudio();
+            allocateMemory();
+
+            outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
+            break;
         }
 
         default:
@@ -236,9 +231,8 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             // Send the converted data out
             int outputBytesWritten = outputBuffer.write( ( char * ) outputDataShort, outputBytesConverted );
             outputCurrentByte += outputBytesWritten;
-
+//#define DRC_LOGGING
 #if defined( DRC_LOGGING )
-            qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
             static qint64 lastMessage = 0;
 
             qint64 inputBytesPerMSec = inputAudioFormat.bytesForDuration( 1000 );
@@ -247,6 +241,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             if( currentTime - lastMessage > 1000 ) {
                 lastMessage = currentTime;
                 qCDebug( phxAudioOutput ) << "Input:" << inputBytes / inputBytesPerMSec << "ms";
+                qCDebug( phxAudioOutput ) << "hostFps:" << hostFPS << "coreFPS:" << coreFPS;
                 qCDebug( phxAudioOutput ) << "Output is" << ( ( ( double )( ( outputTotalBytes - outputFreeBytes ) ) /
                                           outputTotalBytes ) * 100 )
                                           << "% full," << ( outputTotalBytes - outputFreeBytes ) / outputBytesPerMSec << "ms (target:" << outputTargetMs << "ms /"

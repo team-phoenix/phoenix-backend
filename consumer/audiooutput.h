@@ -2,8 +2,6 @@
 
 #include "backendcommon.h"
 
-#include "consumer.h"
-#include "controllable.h"
 #include "node.h"
 
 #include "audiobuffer.h"
@@ -38,7 +36,6 @@ class AudioOutput : public Node {
     private:
         bool vsync{ true };
         State state{ State::Stopped };
-        ProducerFormat format;
 
         // Respond to the core running or not by keeping audio output active or not
         // AKA we'll pause if core is paused
