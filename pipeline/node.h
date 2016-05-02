@@ -75,6 +75,13 @@ class Node : public QObject {
             SetVolume,
 
             // Set vsync mode
+            // For PhoenixWindow this determines if it should draw the QML scene using vsync or not
+            // For MicroTimer this determines if its timer signals (false) or PhoenixWindow's timer signals (true)
+            //     should go down the pipeline
+            // Note that MicroTimer will inform all nodes that vsync is off if there is a large difference between
+            //     coreFPS and hostFPS. This does not affect PhoenixWindow.
+            // For all other nodes this should tell you whether the incoming heartbeats are at coreFPS's rate (false)
+            //     or hostFPS's rate (true)
             SetVsync,
 
             // Audio

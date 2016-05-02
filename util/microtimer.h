@@ -81,6 +81,8 @@ class MicroTimer : public Node {
         // In other words, !vsync
         bool emitHeartbeats{ false };
 
+        qreal hostFPS{ 60.0 };
+
         // Property setters/getters
         bool isSingleShot();
         void setSingleShot( bool );
@@ -98,7 +100,7 @@ class MicroTimer : public Node {
 
         bool maxAccuracy{ false };
         QElapsedTimer timer;
-        qreal frequency{ 0.0 };
+        qreal frequency{ 60.0 };
         qreal targetTime{ 0 };
         QList<int> registeredTimers;
 };
