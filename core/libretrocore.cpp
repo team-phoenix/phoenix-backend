@@ -248,11 +248,6 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
                 return;
             }
 
-            // If we're vsynced, drop any updates that came too quickly
-            //if( vsync ) {
-
-            //}
-
             emit commandOut( command, data, timeStamp );
 
             if( state == State::Playing ) {
@@ -324,7 +319,7 @@ void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t byte
 LibretroCore *LibretroCore::core = nullptr;
 
 void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emit dataOut( DataType::Audio, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emit dataOut( DataType::Audio, &mutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
@@ -344,7 +339,7 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
         emit commandOut( Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
     }
 
-    emit dataOut( DataType::Video, &producerMutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
+    emit dataOut( DataType::Video, &mutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
 // Private
@@ -443,10 +438,10 @@ void LibretroCore::audioSampleCallback( int16_t left, int16_t right ) {
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core->audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
-    core->producerMutex.lock();
+    core->mutex.lock();
     core->audioBufferPool[ core->audioPoolCurrentBuffer ][ core->audioBufferCurrentByte / 2 ] = left;
     core->audioBufferPool[ core->audioPoolCurrentBuffer ][ core->audioBufferCurrentByte / 2 + 1 ] = right;
-    core->producerMutex.unlock();
+    core->mutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += 4;
@@ -472,9 +467,9 @@ size_t LibretroCore::audioSampleBatchCallback( const int16_t *data, size_t frame
     int16_t *dst = dst_init + ( core->audioBufferCurrentByte / 2 );
 
     // Copy the incoming data
-    core->producerMutex.lock();
+    core->mutex.lock();
     memcpy( dst, data, frames * 4 );
-    core->producerMutex.unlock();
+    core->mutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core->audioBufferCurrentByte += frames * 4;
@@ -994,9 +989,9 @@ void LibretroCore::videoRefreshCallback( const void *data, unsigned width, unsig
     // Current frame exists, send it on its way
     if( data ) {
 
-        core->producerMutex.lock();
+        core->mutex.lock();
         memcpy( core->videoBufferPool[ core->videoPoolCurrentBuffer ], data, height * pitch );
-        core->producerMutex.unlock();
+        core->mutex.unlock();
 
         core->emitVideoData( core->videoBufferPool[ core->videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
         core->videoPoolCurrentBuffer = ( core->videoPoolCurrentBuffer + 1 ) % POOL_SIZE;

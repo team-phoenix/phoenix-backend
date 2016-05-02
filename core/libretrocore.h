@@ -127,7 +127,7 @@ class LibretroCore : public Core {
         ProducerFormat producerFmt;
 
         // Mutex for consumers (ensures reads/writes to/from the buffer pool are atomic)
-        QMutex producerMutex;
+        QMutex mutex;
 
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
         int16_t *audioBufferPool[ POOL_SIZE ]{ nullptr };
