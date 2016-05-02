@@ -96,7 +96,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
 
         case Command::SetVsync: {
             vsync = data.toBool();
-            qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync;
+            //qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync;
             break;
         }
 

@@ -69,7 +69,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         deleteMembers();
 
         qDebug() << "";
-        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded, quitting!";
+        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
         qDebug() << "";
     } );
 }
