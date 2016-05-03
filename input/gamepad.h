@@ -16,6 +16,7 @@
  */
 
 struct Gamepad {
+    Gamepad();
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 
@@ -24,6 +25,7 @@ struct Gamepad {
     int instanceID{ 0 };
 
     bool isKeyboard{ false };
-    Sint16 axis[ SDL_CONTROLLER_AXIS_MAX ]{ 0 };
-    Uint8 button[ SDL_CONTROLLER_BUTTON_MAX ]{ 0 };
+    Sint16 axis[ SDL_CONTROLLER_AXIS_MAX ] { 0 };
+    Uint8 button[ SDL_CONTROLLER_BUTTON_MAX ] { 0 };
 };
+Q_DECLARE_METATYPE( Gamepad )

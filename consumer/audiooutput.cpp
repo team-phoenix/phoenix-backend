@@ -102,7 +102,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
 
         // Attempt to find suitable output format for given input sample rate, reload audio output and reset buffers
         case Command::SampleRate: {
-            sampleRate = data.toReal();
+            sampleRate = data.toInt();
 
             // qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );
             qCDebug( phxAudioOutput ) << "sampleRate" << sampleRate;

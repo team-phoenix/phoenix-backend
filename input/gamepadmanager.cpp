@@ -51,10 +51,9 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
                         qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"
-                                            << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
-                                            << "total instanceIDs:" << gamepads.size();
-                        emit commandOut( Command::ControllerAdded, instanceID, QDateTime::currentMSecsSinceEpoch() );
-
+                                            << instanceID << "Number of gamepads (SDL):" << SDL_NumJoysticks()
+                                            << "Number of gamepads (Phoenix):" << gamepads.size();
+                        emit commandOut( Command::ControllerAdded, QVariant::fromValue( gamepads[ instanceID ] ), QDateTime::currentMSecsSinceEpoch() );
                         break;
                     }
 
@@ -65,16 +64,15 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
 
                         SDL_GameControllerClose( gamecontrollerHandle );
-                        gamepads.remove( instanceID );
-
-                        qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
-                                            << instanceID << "total joystickIDs:" << SDL_NumJoysticks()
-                                            << "total instanceIDs:" << gamepads.size();
 
                         // All children of this node that use input (consumers of this class's input data) will
                         // mirror this change to the hash table
-                        emit commandOut( Command::ControllerRemoved, instanceID, QDateTime::currentMSecsSinceEpoch() );
+                        emit commandOut( Command::ControllerRemoved, QVariant::fromValue( gamepads[ instanceID ] ), QDateTime::currentMSecsSinceEpoch() );
+                        gamepads.remove( instanceID );
 
+                        qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
+                                            << instanceID << "Number of gamepads (SDL):" << SDL_NumJoysticks()
+                                            << "Number of gamepads (Phoenix):" << gamepads.size();
                         break;
                     }
 

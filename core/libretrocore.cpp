@@ -279,7 +279,8 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
         }
 
         case Command::ControllerRemoved: {
-            int instanceID = data.toInt();
+            Gamepad gamepad = data.value<Gamepad>();
+            int instanceID = gamepad.instanceID;
             gamepads.remove( instanceID );
             emit commandOut( command, data, timeStamp );
         }

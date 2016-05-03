@@ -80,7 +80,8 @@
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
     input/gamepad.h \
-    backendplugin.h
+    backendplugin.h \
+    input/remappermodel.h
 
     SOURCES += \
     consumer/audiobuffer.cpp \
@@ -112,7 +113,9 @@
     util/controloutput.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
-    backendplugin.cpp
+    backendplugin.cpp \
+    input/remappermodel.cpp \
+    input/gamepad.cpp
 
     RESOURCES += input/controllerdb.qrc
 
