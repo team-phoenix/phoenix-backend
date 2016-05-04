@@ -1,12 +1,16 @@
 #include "libretrocore.h"
+#include "SDL.h"
+#include "SDL_gamecontroller.h"
+
 
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // Private
-    systemInfo( new retro_system_info() ) {
-    core = this;
+    systemInfo( new retro_system_info ) {
 
+    core = this;
     // All Libretro cores are pausable, just stop calling retro_run()
     pausable = true;
+
 }
 
 LibretroCore::~LibretroCore() {

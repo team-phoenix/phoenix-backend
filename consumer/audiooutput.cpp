@@ -1,4 +1,8 @@
 #include "audiooutput.h"
+#include "logging.h"
+
+#include <QAudioOutput>
+#include <QTimer>
 
 // FIXME: Stop assuming stereo?
 const auto samplesPerFrame = 2;

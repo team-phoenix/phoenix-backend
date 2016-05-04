@@ -1,11 +1,7 @@
 #include "audiobuffer.h"
 
 AudioBuffer::AudioBuffer( QObject *parent )
-    : QIODevice( parent ),
-      bufferPosition( 0 ) {
-}
-
-AudioBuffer::~AudioBuffer() {
+    : QIODevice( parent ) {
 }
 
 void AudioBuffer::start() {

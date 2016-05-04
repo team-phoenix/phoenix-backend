@@ -13,7 +13,7 @@ class VideoOutputNode : public Node {
         Q_PROPERTY( VideoOutput *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
     public:
-        explicit VideoOutputNode( Node *parent = 0 );
+        explicit VideoOutputNode( Node *parent = nullptr );
 
     signals:
         void videoOutputChanged();

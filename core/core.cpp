@@ -3,9 +3,6 @@
 Core::Core( Node *parent ) : Node( parent ) {
 }
 
-Core::~Core() {
-}
-
 // Slots
 
 void Core::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {

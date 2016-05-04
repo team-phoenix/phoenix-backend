@@ -3,12 +3,13 @@
 #include "logging.h"
 
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
-    gameThread( new QThread() ),
-    audioOutput( new AudioOutput() ),
-    gamepadManager( new GamepadManager() ),
-    libretroCore( new LibretroCore() ),
-    microTimer( new MicroTimer() ),
-    remapper( new Remapper() ) {
+    gameThread( new QThread ),
+    audioOutput( new AudioOutput ),
+    gamepadManager( new GamepadManager ),
+    libretroCore( new LibretroCore ),
+    microTimer( new MicroTimer ),
+    remapper( new Remapper ) {
+
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
     gamepadManager->moveToThread( gameThread );
@@ -72,9 +73,6 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
         qDebug() << "";
     } );
-}
-
-GameConsole::~GameConsole() {
 }
 
 // Public slots

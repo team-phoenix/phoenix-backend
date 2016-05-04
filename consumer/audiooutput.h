@@ -1,12 +1,11 @@
 #pragma once
 
-#include "backendcommon.h"
-
 #include "node.h"
-
 #include "audiobuffer.h"
+#include "samplerate.h"
 
-#include "logging.h"
+#include <QAudio>
+#include <QAudioFormat>
 
 /*
  * The AudioOutput class writes data to the default output device. Its internal buffers must be set by invoking
@@ -18,11 +17,13 @@
  * 1 sample = 2 bytes (L, L) or (R, R)
  */
 
+class QAudioOutput;
+
 class AudioOutput : public Node {
         Q_OBJECT
 
     public:
-        explicit AudioOutput( Node *parent = 0 );
+        explicit AudioOutput( Node *parent = nullptr );
         ~AudioOutput();
 
     public slots:

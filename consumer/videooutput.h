@@ -1,16 +1,17 @@
 #pragma once
 
-#include "backendcommon.h"
-
-#include "logging.h"
 #include "node.h"
 
 // FIXME: Remove once switched over to pipelinecommon.h
 #include "producer.h"
 
+#include <QQuickItem>
+
 /*
  * VideoOutput is a QQuickItem that consumes video data. It is meant to be instantiated from QML.
  */
+
+class QSGTexture;
 
 class VideoOutput : public QQuickItem {
         Q_OBJECT
@@ -22,7 +23,7 @@ class VideoOutput : public QQuickItem {
         Q_PROPERTY( bool widescreen MEMBER widescreen WRITE setWidescreen NOTIFY widescreenChanged )
 
     public:
-        explicit VideoOutput( QQuickItem *parent = 0 );
+        explicit VideoOutput( QQuickItem *parent = nullptr );
         ~VideoOutput();
 
         void setState( Node::State state );

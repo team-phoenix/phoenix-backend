@@ -24,7 +24,7 @@ class RemapperModel : public QAbstractListModel {
         Q_PROPERTY( Remapper *remapper READ getRemapper WRITE setRemapper NOTIFY remapperChanged )
 
     public:
-        explicit RemapperModel( QAbstractListModel *parent = 0 );
+        explicit RemapperModel( QAbstractListModel *parent = nullptr );
 
         enum RemapperRoles {
             NameRole = Qt::UserRole + 1,

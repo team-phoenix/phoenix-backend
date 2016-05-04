@@ -40,14 +40,14 @@
 
 #pragma once
 
-#include "backendcommon.h"
+#include <QIODevice>
 
 class AudioBuffer : public QIODevice {
         Q_OBJECT
 
     public:
-        AudioBuffer( QObject *parent = 0 );
-        ~AudioBuffer();
+        AudioBuffer( QObject *parent = nullptr );
+        ~AudioBuffer() = default;
 
         void start();
         void stop();
@@ -58,7 +58,7 @@ class AudioBuffer : public QIODevice {
         qint64 bytesAvailable() const;
 
     private:
-        qint64 bufferPosition;
+        qint64 bufferPosition{ 0 };
         QByteArray buffer;
 
 };

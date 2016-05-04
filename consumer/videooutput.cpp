@@ -1,4 +1,9 @@
 #include "videooutput.h"
+#include "logging.h"
+
+#include <QSGSimpleTextureNode>
+#include <QQuickWindow>
+#include <QOpenGLContext>
 
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     // Mandatory for our own drawing code to do anything

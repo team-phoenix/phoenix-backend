@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QDebug>
 #include <QMutex>
 #include <QObject>
 #include <QHash>
@@ -34,7 +33,7 @@ class Remapper : public Node {
         Q_OBJECT
 
     public:
-        explicit Remapper( Node *parent = 0 );
+        explicit Remapper( Node *parent = nullptr );
 
     signals:
         // Signals for RemapperModel

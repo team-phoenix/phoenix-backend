@@ -1,7 +1,10 @@
 #pragma once
 
-#include "backendcommon.h"
+#include <QMutex>
+#include <QObject>
 
+#include <QAudioFormat>
+#include <QImage>
 /*
  * Functionality and structures common to all producers.
  *
@@ -58,8 +61,8 @@ enum VideoRendererType {
 // Information for the consumer from the producer
 struct ProducerFormat {
 
-    ProducerFormat();
-    ~ProducerFormat();
+    ProducerFormat() = default;
+    ~ProducerFormat() = default;
 
     // Control
 
@@ -75,17 +78,26 @@ struct ProducerFormat {
     // In Libretro cores, this factor compensates for the emulation rate differing from the console's native framerate
     // if using VSync, for example
     // The ratio is hostFPS / coreFPS
-    qreal audioRatio;
+    qreal audioRatio{ 1.0 };
 
     // Video
 
-    qreal videoAspectRatio;
-    size_t videoBytesPerLine;
-    size_t videoBytesPerPixel;
-    qreal videoFramerate;
-    VideoRendererType videoMode;
-    QImage::Format videoPixelFormat;
-    QSize videoSize;
+    qreal videoAspectRatio{ 1.0 };
+    size_t videoBytesPerLine{ 0 };
+    size_t videoBytesPerPixel{ 0 };
+    qreal videoFramerate{ 60.0 };
+    VideoRendererType videoMode{ SOFTWARERENDER };
+    QImage::Format videoPixelFormat{ QImage::Format_RGB16 };
+    QSize videoSize{ 720, 480 };
+
+//    audioRatio( 1.0 ),
+//    videoAspectRatio( 1.0 ),
+//    videoBytesPerLine( 0 ),
+//    videoBytesPerPixel( 0 ),
+//    videoFramerate( 60.0 ),
+//    videoMode( SOFTWARERENDER ),
+//    videoPixelFormat( QImage::Format_RGB16 ),
+//    videoSize( 720, 480 )
 
 };
 Q_DECLARE_METATYPE( ProducerFormat )
@@ -94,8 +106,8 @@ Q_DECLARE_METATYPE( size_t )
 class Producer {
 
     public:
-        Producer();
-        ~Producer();
+        Producer() = default;
+        ~Producer() = default;
 
         // These signals have been commented out because the linker will complain no implementation of them
         // exists for Producer. Remember, this does NOT have the Q_OBJECT macro and is NOT a QObject!

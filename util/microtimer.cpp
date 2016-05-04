@@ -20,7 +20,6 @@
 #include "microtimer.h"
 
 #include <QDateTime>
-#include <QDebug>
 #include <QEvent>
 
 #include "logging.h"

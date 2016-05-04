@@ -1,7 +1,5 @@
 #pragma once
 
-#include "backendcommon.h"
-
 #include "logging.h"
 
 #include "controllable.h"
@@ -9,6 +7,8 @@
 #include "consumer.h"
 
 #include "node.h"
+
+using QStringMap = QMap<QString, QString>;
 
 /*
  * Superclass for all core plugins used by Phoenix. A very basic commandIn() override is provided. You'll probably want
@@ -27,8 +27,8 @@ class Core : public Node {
         Q_OBJECT
 
     public:
-        explicit Core( Node *parent = 0 );
-        virtual ~Core();
+        explicit Core( Node *parent = nullptr );
+        virtual ~Core() = default;
 
     public slots:
         virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;

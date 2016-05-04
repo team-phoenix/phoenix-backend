@@ -1,4 +1,7 @@
 #include "libretrovariable.h"
+#include "libretro.h"
+
+#include <QDebug>
 
 QDebug operator<<( QDebug debug, const LibretroVariable &var ) {
 
@@ -22,9 +25,6 @@ QDebug operator<<( QDebug debug, const LibretroVariable &var ) {
     return debug;
 
 }
-
-
-LibretroVariable::LibretroVariable() {}
 
 LibretroVariable::LibretroVariable( const retro_variable *var ) {
     m_key = var->key;
@@ -52,8 +52,6 @@ LibretroVariable::LibretroVariable( const std::string key ) {
     m_description = "";
     m_choices.append( "" );
 }
-
-LibretroVariable::~LibretroVariable() {}
 
 const std::string &LibretroVariable::key() const {
     return m_key;

@@ -13,7 +13,7 @@ class GlobalGamepad : public Node {
         Q_OBJECT
 
     public:
-        explicit GlobalGamepad( Node *parent = 0 );
+        explicit GlobalGamepad( Node *parent = nullptr );
 
     signals:
 

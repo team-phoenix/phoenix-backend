@@ -1,7 +1,4 @@
 #include "controloutput.h"
-
-#include <QDebug>
-
 #include "logging.h"
 
 ControlOutput::ControlOutput( Node *parent ) : Node( parent ) {

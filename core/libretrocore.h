@@ -1,7 +1,5 @@
 #pragma once
 
-#include "backendcommon.h"
-
 #include <QHash>
 
 #include "core.h"
@@ -11,9 +9,6 @@
 #include "libretrovariable.h"
 #include "logging.h"
 #include "node.h"
-
-#include "SDL.h"
-#include "SDL_gamecontroller.h"
 
 // Since each buffer holds one frame, depending on core, 30 frames = ~500ms
 #define POOL_SIZE 30
@@ -41,7 +36,7 @@ class LibretroCore : public Core {
         Q_OBJECT
 
     public:
-        explicit LibretroCore( Core *parent = 0 );
+        explicit LibretroCore( Core *parent = nullptr );
         ~LibretroCore();
 
     signals:

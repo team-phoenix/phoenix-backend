@@ -19,7 +19,7 @@ class GamepadManager : public Node {
         Q_OBJECT
 
     public:
-        explicit GamepadManager( Node *parent = 0 );
+        explicit GamepadManager( Node *parent = nullptr );
 
     signals:
 

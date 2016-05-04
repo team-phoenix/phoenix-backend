@@ -36,8 +36,8 @@ class GameConsole : public Node {
         Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
 
     public:
-        explicit GameConsole( Node *parent = 0 );
-        ~GameConsole();
+        explicit GameConsole( Node *parent = nullptr );
+        ~GameConsole() = default;
 
     public slots:
         void load();

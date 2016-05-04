@@ -1,7 +1,5 @@
 #pragma once
 
-#include "backendcommon.h"
-
 #include "libretro.h"
 
 // Helper for resolving libretro methods

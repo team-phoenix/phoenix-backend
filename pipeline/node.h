@@ -16,7 +16,7 @@ class Node : public QObject {
         Q_OBJECT
 
     public:
-        explicit Node( QObject *parent = 0 );
+        explicit Node( QObject *parent = nullptr );
 
         enum class Command {
             // State setters

@@ -1,19 +1,20 @@
 #pragma once
 
-#include "backendcommon.h"
+#include <QVector>
+#include <string>
 
-#include "libretro.h"
+struct retro_variable;
 
 // Container class for a libretro core variable
 class LibretroVariable {
     public:
-        LibretroVariable(); // default constructor
+        LibretroVariable() = default;
 
         LibretroVariable( const retro_variable *var );
 
         LibretroVariable( const std::string key );
 
-        virtual ~LibretroVariable();
+        virtual ~LibretroVariable() = default;
 
         const std::string &key() const;
 

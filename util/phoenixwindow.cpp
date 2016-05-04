@@ -18,8 +18,8 @@
  */
 
 #include "phoenixwindow.h"
+#include "logging.h"
 
-#include <QDebug>
 #include <QOpenGLContext>
 #include <QQuickWindow>
 #include <QSurfaceFormat>

@@ -14,7 +14,7 @@ class ControlOutput : public Node {
         Q_PROPERTY( State state MEMBER state NOTIFY stateChanged )
 
     public:
-        explicit ControlOutput( Node *parent = 0 );
+        explicit ControlOutput( Node *parent = nullptr );
 
     signals:
         void paused();

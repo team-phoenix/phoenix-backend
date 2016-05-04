@@ -33,7 +33,6 @@
 
 #pragma once
 
-#include <QDebug>
 #include <QElapsedTimer>
 #include <QList>
 #include <QObject>
@@ -56,7 +55,7 @@ class MicroTimer : public Node {
         Q_PROPERTY( qreal frequency READ getFrequency WRITE setFrequency )
 
     public:
-        explicit MicroTimer( Node *parent = 0 );
+        explicit MicroTimer( Node *parent = nullptr );
         virtual ~MicroTimer();
         bool event( QEvent *e ) override;
 

@@ -1,7 +1,5 @@
 #include "backendplugin.h"
 
-#include <QDebug>
-
 // Nodes
 #include "controloutput.h"
 #include "gameconsole.h"

@@ -16,7 +16,7 @@
  */
 
 struct Gamepad {
-    Gamepad();
+    Gamepad() = default;
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 
