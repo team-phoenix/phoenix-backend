@@ -12,9 +12,6 @@
 #include "remappermodel.h"
 #include "videooutput.h"
 
-// FIXME: Remove once we get rid of Producer
-#include "producer.h"
-
 // Misc
 #include "logging.h"
 

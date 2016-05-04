@@ -2,9 +2,6 @@
 
 #include "node.h"
 
-// FIXME: Remove once switched over to pipelinecommon.h
-#include "producer.h"
-
 #include <QQuickItem>
 
 /*

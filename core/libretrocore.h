@@ -1,6 +1,10 @@
 #pragma once
 
+#include <QDir>
+#include <QFile>
 #include <QHash>
+#include <QLibrary>
+#include <QObject>
 
 #include "core.h"
 #include "gamepad.h"

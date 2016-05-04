@@ -43,7 +43,7 @@
     INCLUDEPATH += ../externals/quazip/quazip
 
     # Include our stuff
-    INCLUDEPATH += consumer control core input pipeline role util
+    INCLUDEPATH += consumer control core input pipeline util
 
     HEADERS += \
     backendcommon.h \
@@ -56,18 +56,7 @@
     core/libretrocore.h \
     core/libretrosymbols.h \
     core/libretrovariable.h \
-    input/inputdevice.h \
-    input/inputdeviceevent.h \
-    input/inputmanager.h \
-    input/joystick.h \
-    input/keyboard.h \
-    input/qmlinputdevice.h \
-    input/sdleventloop.h \
     pipeline/node.h \
-    role/consumer.h \
-    role/control.h \
-    role/controllable.h \
-    role/producer.h \
     util/controlhelper.h \
     util/logging.h \
     pipeline/pipelinecommon.h \
@@ -92,18 +81,7 @@
     core/libretrocore.cpp \
     core/libretrosymbols.cpp \
     core/libretrovariable.cpp \
-    input/inputdevice.cpp \
-    input/inputdeviceevent.cpp \
-    input/inputmanager.cpp \
-    input/joystick.cpp \
-    input/keyboard.cpp \
-    input/qmlinputdevice.cpp \
-    input/sdleventloop.cpp \
     pipeline/node.cpp \
-    role/consumer.cpp \
-    role/control.cpp \
-    role/controllable.cpp \
-    role/producer.cpp \
     util/logging.cpp \
     util/microtimer.cpp \
     control/gameconsole.cpp \

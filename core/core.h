@@ -2,10 +2,6 @@
 
 #include "logging.h"
 
-#include "controllable.h"
-#include "producer.h"
-#include "consumer.h"
-
 #include "node.h"
 
 using QStringMap = QMap<QString, QString>;

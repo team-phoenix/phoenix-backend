@@ -31,7 +31,7 @@ class RemapperModel : public QAbstractListModel {
         };
 
         // FIXME: Move to cpp before committing
-        QHash<int, QByteArray> roleNames() {
+        QHash<int, QByteArray> roleNames() const override {
             QHash<int, QByteArray> roles;
             roles[ NameRole ] = "name";
             return roles;

@@ -2,6 +2,8 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+#include <QString>
+#include <QStringBuilder>
 
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // Private
