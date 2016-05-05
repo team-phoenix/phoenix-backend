@@ -24,6 +24,12 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connectNodes( microTimer, gamepadManager );
     connectNodes( gamepadManager, remapper );
 
+    connect( this, &GameConsole::remapperModelChanged, this, [this] {
+        if ( remapperModel ) {
+            remapperModel->setRemapper( remapper );
+        }
+    });
+
     // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
     connect( this, &GameConsole::globalGamepadChanged, this, [ = ]() {
         if( globalGamepad ) {

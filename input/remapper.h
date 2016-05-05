@@ -29,6 +29,8 @@ typedef QMap<QString, QString> QStringMap;
  * Note that L2 and R2 are not directly remappable, they're analog on the Xbox 360 controller (TODO?)
  */
 
+class RemapperModel;
+
 class Remapper : public Node {
         Q_OBJECT
 

@@ -1,4 +1,5 @@
 #include "remapper.h"
+#include "remappermodel.h"
 
 Remapper::Remapper( Node *parent ) : Node( parent ) {
 
@@ -272,3 +273,4 @@ int Remapper::stringToButton( QString button ) {
         return SDL_CONTROLLER_BUTTON_INVALID;
     }
 }
+

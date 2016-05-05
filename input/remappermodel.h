@@ -6,7 +6,6 @@
 #include <QModelIndex>
 #include <QObject>
 
-#include "remapper.h"
 
 /*
  * RemapperModel is a QML model whose job is to relay information between the QML world and Remapper, which is part
@@ -18,6 +17,8 @@
  *                 of the same model apart.
  * remapData (map): Map of string:string, key is the button name and the value is the remapped name
  */
+
+class Remapper;
 
 class RemapperModel : public QAbstractListModel {
         Q_OBJECT
@@ -32,9 +33,9 @@ class RemapperModel : public QAbstractListModel {
 
         // FIXME: Move to cpp before committing
         QHash<int, QByteArray> roleNames() {
-            QHash<int, QByteArray> roles;
-            roles[ NameRole ] = "name";
-            return roles;
+            return {
+                { NameRole, QByteArrayLiteral( "name" ) },
+            };
         }
 
         // FIXME: Move to cpp before committing
@@ -53,7 +54,7 @@ class RemapperModel : public QAbstractListModel {
 
     public slots:
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString /*GUID*/ ){}
+        void controllerAdded( QString GUID );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
         void controllerRemoved( QString /*GUID*/ ){}
@@ -64,10 +65,11 @@ class RemapperModel : public QAbstractListModel {
         // Remap mode completed, this GUID now gets this button assigned to it
         void remapModeEnd( QString /*GUID*/, QString /*originalButton*/, QString /*remappedButton*/ ){}
 
+        void setRemapper( Remapper *t_remapper );
+
     private:
         // FIXME: Move to cpp before committing
-        Remapper *getRemapper() { return nullptr; }
-        void setRemapper( Remapper */*remapper*/ ) {}
+        Remapper *getRemapper();
 
         // Copy of the remapping data
         // GUID : (button : remapped button)

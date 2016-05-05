@@ -17,6 +17,7 @@
 #include "phoenixwindow.h"
 #include "phoenixwindownode.h"
 #include "remapper.h"
+#include "remappermodel.h"
 #include "videooutput.h"
 #include "videooutputnode.h"
 
@@ -29,6 +30,7 @@ class GameConsole : public Node {
         Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
         Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
         Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
+        Q_PROPERTY( RemapperModel *remapperModel MEMBER remapperModel NOTIFY remapperModelChanged )
 
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
@@ -93,6 +95,7 @@ class GameConsole : public Node {
         GlobalGamepad *globalGamepad{ nullptr };
         PhoenixWindowNode *phoenixWindow{ nullptr };
         VideoOutputNode *videoOutput{ nullptr };
+        RemapperModel *remapperModel{ nullptr };
 
     private: // Property getters/setters
         qreal playbackSpeed{ 1.0 };
@@ -113,6 +116,7 @@ class GameConsole : public Node {
         void globalGamepadChanged();
         void phoenixWindowChanged();
         void videoOutputChanged();
+        void remapperModelChanged();
 
         void playbackSpeedChanged();
         void sourceChanged();
