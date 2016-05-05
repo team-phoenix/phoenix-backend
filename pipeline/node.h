@@ -5,8 +5,7 @@
 #include <QVariant>
 #include <QDateTime>
 
-// FIXME: start using once producer.h/control.h is no longer needed
-// #include "pipelinecommon.h"
+#include "pipelinecommon.h"
 
 /*
  * A node in the pipeline tree. This class defines a set of signals and slots common to each node.

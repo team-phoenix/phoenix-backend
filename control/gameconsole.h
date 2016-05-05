@@ -23,6 +23,20 @@
 
 #include "controlhelper.h"
 
+/*
+ * GameConsole's role is twofold:
+ * 1. Manage the lifecycle of the global pipeline and every dynamic pipeline (invoked by writing to the source property
+ *    and calling load())
+ * 2. Pass messages to the pipeline, but only once a dynamic pipeline is established. These messages include commands
+ *    like load() (which does some extra management stuff), play(), pause(), etc. along with setters like
+ *    playbackSpeed, source, etc.
+ *
+ * Other than to satisfy those two roles (and to cleanup on shutdown), GameConsole has no other logic nor should it.
+ * At its core, its primary role is to simply pass messages to the pipeline from QML.
+ *
+ * To hook the propogation of these commands down to the running Core, see ControlOutput. Usually this is directly
+ * connected to the Core of a particular dynamic pipeline.
+ */
 class GameConsole : public Node {
         Q_OBJECT
 

@@ -38,6 +38,7 @@ class RemapperModel : public QAbstractListModel {
             };
         }
 
+
         // FIXME: Move to cpp before committing
         // One row per GUID
         int rowCount( const QModelIndex &/*parent = QModelIndex()*/ ) const override {

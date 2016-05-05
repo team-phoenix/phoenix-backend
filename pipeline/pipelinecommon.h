@@ -20,8 +20,8 @@ enum VideoRendererType {
 };
 
 struct ProducerFormat {
-    ProducerFormat();
-    ~ProducerFormat();
+    ProducerFormat() = default;
+    ~ProducerFormat() = default;
 
     // Control
 
