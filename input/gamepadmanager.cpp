@@ -5,6 +5,7 @@
 #include <QFile>
 
 #include <memory>
+#include <cstring>
 
 #include "logging.h"
 
@@ -47,6 +48,17 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         gamepads[ instanceID ].joystickID = joystickID;
                         gamepads[ instanceID ].instanceID = instanceID;
                         gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
+
+                        const char *controllerName = SDL_GameControllerName( gamecontrollerHandle );
+
+                        if( controllerName ) {
+                            int len = strnlen( controllerName, 1024 );
+
+                            if( len ) {
+                                gamepads[ instanceID ].friendlyName = QString::fromUtf8( controllerName, len );
+                            }
+                        }
+
                         gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
                         qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"

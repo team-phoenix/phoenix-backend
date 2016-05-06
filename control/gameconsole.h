@@ -17,10 +17,9 @@
 #include "phoenixwindow.h"
 #include "phoenixwindownode.h"
 #include "remapper.h"
+#include "remappermodel.h"
 #include "videooutput.h"
 #include "videooutputnode.h"
-
-#include "controlhelper.h"
 
 /*
  * GameConsole's role is twofold:
@@ -42,6 +41,7 @@ class GameConsole : public Node {
         Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
         Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
         Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
+        Q_PROPERTY( RemapperModel *remapperModel MEMBER remapperModel NOTIFY remapperModelChanged )
         Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
@@ -108,6 +108,9 @@ class GameConsole : public Node {
         PhoenixWindowNode *phoenixWindow{ nullptr };
         VideoOutputNode *videoOutput{ nullptr };
 
+        // Misc
+        RemapperModel *remapperModel{ nullptr };
+
     private: // Property getters/setters
         qreal playbackSpeed{ 1.0 };
         qreal getPlaybackSpeed();
@@ -126,6 +129,7 @@ class GameConsole : public Node {
         void controlOutputChanged();
         void globalGamepadChanged();
         void phoenixWindowChanged();
+        void remapperModelChanged();
         void videoOutputChanged();
 
         void playbackSpeedChanged();

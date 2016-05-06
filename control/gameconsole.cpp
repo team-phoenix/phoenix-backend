@@ -1,5 +1,8 @@
 #include "gameconsole.h"
 
+#include <QMetaObject>
+#include <QScreen>
+
 #include "logging.h"
 
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
@@ -24,8 +27,14 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connectNodes( microTimer, gamepadManager );
     connectNodes( gamepadManager, remapper );
 
+    connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
+        if( remapperModel ) {
+            QMetaObject::invokeMethod( remapperModel, "setRemapper", Q_ARG( Remapper*, remapper ) );
+        }
+    } );
+
     // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
-    connect( this, &GameConsole::globalGamepadChanged, this, [ = ]() {
+    connect( this, &GameConsole::globalGamepadChanged, this, [ & ]() {
         if( globalGamepad ) {
             qCDebug( phxControl ) << "GlobalGamepad" << Q_FUNC_INFO << globalPipelineReady();
             connectNodes( remapper, globalGamepad );
@@ -33,7 +42,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     } );
 
     // Connect PhoenixWindow (which lives in QML) to the global pipeline as soon as it's set
-    connect( this, &GameConsole::phoenixWindowChanged, this, [ = ]() {
+    connect( this, &GameConsole::phoenixWindowChanged, this, [ & ]() {
         if( phoenixWindow ) {
             qCDebug( phxControl ) << "PhoenixWindow" << Q_FUNC_INFO << globalPipelineReady();
             connectNodes( this, phoenixWindow );
@@ -211,6 +220,7 @@ void GameConsole::applyPendingPropertyChanges() {
 
 void GameConsole::unloadLibretro() {
     qCDebug( phxControl ) << Q_FUNC_INFO;
+
     for( QMetaObject::Connection connection : sessionConnections ) {
         disconnect( connection );
     }

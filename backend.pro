@@ -46,7 +46,6 @@
     INCLUDEPATH += consumer control core input pipeline util
 
     HEADERS += \
-    backendcommon.h \
     consumer/audiobuffer.h \
     consumer/audiooutput.h \
     consumer/videooutput.h \
@@ -57,7 +56,6 @@
     core/libretrosymbols.h \
     core/libretrovariable.h \
     pipeline/node.h \
-    util/controlhelper.h \
     util/logging.h \
     pipeline/pipelinecommon.h \
     util/microtimer.h \

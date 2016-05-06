@@ -20,6 +20,9 @@ struct Gamepad {
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 
+    // Friendly name
+    QString friendlyName;
+
     // For internal use
     int joystickID{ 0 };
     int instanceID{ 0 };

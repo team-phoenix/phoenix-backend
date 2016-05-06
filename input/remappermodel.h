@@ -1,11 +1,16 @@
 #pragma once
 
+#include <QAbstractItemModel>
 #include <QAbstractListModel>
 #include <QByteArray>
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
+#include <QVariant>
 
+#include <iterator>
+
+#include "pipelinecommon.h"
 #include "remapper.h"
 
 /*
@@ -21,55 +26,91 @@
 
 class RemapperModel : public QAbstractListModel {
         Q_OBJECT
-        Q_PROPERTY( Remapper *remapper READ getRemapper WRITE setRemapper NOTIFY remapperChanged )
+        Q_PROPERTY( bool remapMode MEMBER remapMode NOTIFY remapModeChanged )
 
     public:
         explicit RemapperModel( QAbstractListModel *parent = nullptr );
 
         enum RemapperRoles {
-            NameRole = Qt::UserRole + 1,
+            // GUID: String
+            // GUID of the controller
+            GUIDRole = Qt::UserRole + 1,
+
+            // remapData: Object( String:String )
+            // Remap data for this GUID ( button:button )
+            RemapDataRole,
+
+            // available: Boolean
+            // True iff a controller is plugged in for this particular GUID
+            AvailableRole,
+
+            // pressed: Boolean
+            // True iff any controller with this GUID has any button pressed
+            PressedRole,
+
+            // friendlyName: String
+            // Friendly name of the controller as provided by SDL
+            FriendlyNameRole,
         };
 
-        // FIXME: Move to cpp before committing
-        QHash<int, QByteArray> roleNames() const override {
-            QHash<int, QByteArray> roles;
-            roles[ NameRole ] = "name";
-            return roles;
-        }
+        QHash<int, QByteArray> roleNames() const override;
 
-        // FIXME: Move to cpp before committing
+        QVariant data( const QModelIndex &index, int role = Qt::DisplayRole ) const override;
+
         // One row per GUID
-        int rowCount( const QModelIndex &/*parent = QModelIndex()*/ ) const override {
-            return 0;
-        }
-
-        // FIXME: Move to cpp before committing
-        QVariant data( const QModelIndex &/*index*/, int /*role = Qt::DisplayRole*/ ) const override {
-            return QVariant();
-        }
+        // Ignore parent, this isn't a table
+        int rowCount( const QModelIndex &/*parent = QModelIndex()*/ ) const override;
 
     signals:
-        void remapperChanged();
+        void remapModeChanged();
+        void remapModeBegin( QString GUID, QString button );
 
     public slots:
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString /*GUID*/ ){}
+        void controllerAdded( QString GUID , QString friendlyName );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
-        void controllerRemoved( QString /*GUID*/ ){}
+        void controllerRemoved( QString GUID );
 
         // Only fired while not in remap mode, true if any button on any controller with this GUID has been pressed
-        void buttonUpdate( QString /*GUID*/, bool /*pressed*/ ){}
+        void buttonUpdate( QString GUID, bool pressed );
 
-        // Remap mode completed, this GUID now gets this button assigned to it
-        void remapModeEnd( QString /*GUID*/, QString /*originalButton*/, QString /*remappedButton*/ ){}
+        // Remap mode completed, update UI
+        void remapModeEnd();
+
+        // Update remapData, reset model
+        void remapUpdate( QString GUID, QString originalButton, QString remappedButton );
+
+        // Connect to this Remapper
+        void setRemapper( Remapper *t_remapper );
+
+        // Call from QML
+        void beginRemap( QString GUID, QString button );
 
     private:
-        // FIXME: Move to cpp before committing
-        Remapper *getRemapper() { return nullptr; }
-        void setRemapper( Remapper */*remapper*/ ) {}
+        // Are we currently remapping?
+        bool remapMode{ false };
 
         // Copy of the remapping data
         // GUID : (button : remapped button)
-        QMap<QString, QMap<QString, QString>> remapData;
+        QMap<QString, QStringMap> remapData;
+
+        // True if any controller with a particular GUID has any button pressed
+        // GUID : button pressed
+        QMap<QString, bool> pressed;
+
+        // True if any controller is plugged in with this GUID
+        QMap<QString, bool> available;
+
+        // Friendly names for controllers as provided by SDL
+        QStringMap friendlyNames;
+
+        // Helpers
+
+        bool insertRowIfNotPresent( QString GUID );
+
+        // Returns the next highest GUID if the given one does not exist
+        int GUIDToRow( QString GUID ) const;
+
+        QString rowToGUID( int row ) const;
 };

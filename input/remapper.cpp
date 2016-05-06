@@ -10,6 +10,16 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
     emit commandOut( command, data, timeStamp );
 
     switch( command ) {
+        // Send out per-GUID OR'd states to RemapperModel then clear stored pressed states
+        case Command::Heartbeat: {
+            for( QString GUID : pressed.keys() ) {
+                emit buttonUpdate( GUID, pressed[ GUID ] );
+                pressed[ GUID ] = false;
+            }
+
+            break;
+        }
+
         case Command::ControllerAdded: {
             Gamepad gamepad = data.value<Gamepad>();
             QString GUID( QByteArray( ( const char * )gamepad.GUID.data, 16 ).toHex() );
@@ -18,7 +28,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             // Otherwise, just increment the count
             if( !GUIDCount.contains( GUID ) ) {
                 GUIDCount[ GUID ] = 1;
-                emit controllerAdded( GUID );
+                emit controllerAdded( GUID, gamepad.friendlyName );
             } else {
                 GUIDCount[ GUID ]++;
             }
@@ -27,6 +37,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             // For now, just init the remap with default mappings
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                 remapData[ GUID ][ i ] = i;
+                emit remapUpdate( GUID, buttonToString( i ), buttonToString( remapData[ GUID ][ i ] ) );
             }
 
             break;
@@ -47,17 +58,10 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             if( remapMode && !GUIDCount.contains( GUID ) ) {
                 qCWarning( phxInput ) << "No controllers with GUID" << GUID << "remaining, exiting remap mode!";
                 remapMode = false;
-                emit remapModeEnd( GUID, "ERROR", "ERROR" );
+                emit remapModeEnd();
             }
 
             break;
-        }
-
-        // FIXME: Remove
-        case Command::Play: {
-            // Enter remapping mode for testing
-            qDebug() << "Entering remap mode: enter a remapping for A";
-            remapModeBegin( "78696e70757401000000000000000000", "A" );
         }
 
         default: {
@@ -77,8 +81,15 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 mutex->unlock();
             }
 
-            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
             QString GUID( QByteArray( ( const char * )gamepad.GUID.data, 16 ).toHex() );
+
+            // OR all button states together by GUID
+            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                pressed[ GUID ] |= gamepad.button[ i ];
+            }
+
+            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
+            // Don't go past this block if in remap mode
             {
                 if( remapMode && GUID == remapModeGUID ) {
                     // Find a button press, the first one we encounter will be the new remapping
@@ -94,9 +105,11 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                             // Tell the model we're done
                             remapMode = false;
                             ignoreMode = true;
+                            ignoreModeGUID = GUID;
                             ignoreModeButton = i;
-                            qCDebug( phxInput ) << remapData[ GUID ];
-                            emit remapModeEnd( GUID, buttonToString( remapModeButton ), buttonToString( i ) );
+                            ignoreModeInstanceID = gamepad.instanceID;
+                            emit remapUpdate( GUID, buttonToString( remapModeButton ), buttonToString( i ) );
+                            emit remapModeEnd();
                             break;
                         }
                     }
@@ -111,7 +124,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
             // If ignoreButton is set, the user hasn't let go of the button they were remapping to
             // Do not let the button go through until they let go
-            if( ignoreMode ) {
+            if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
                 if( gamepad.button[ ignoreModeButton ] == SDL_PRESSED ) {
                     gamepad.button[ ignoreModeButton ] = SDL_RELEASED;
                 } else {

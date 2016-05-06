@@ -53,3 +53,6 @@ struct ProducerFormat {
 };
 Q_DECLARE_METATYPE( size_t )
 Q_DECLARE_METATYPE( ProducerFormat )
+
+typedef QMap<QString, QString> QStringMap;
+Q_DECLARE_METATYPE( QStringMap )

@@ -39,7 +39,7 @@ class Remapper : public Node {
         // Signals for RemapperModel
 
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString GUID );
+        void controllerAdded( QString GUID, QString friendlyName );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
         void controllerRemoved( QString GUID );
@@ -47,8 +47,11 @@ class Remapper : public Node {
         // Only fired while not in remap mode, true if any button on any controller with this GUID has been pressed
         void buttonUpdate( QString GUID, bool pressed );
 
-        // Remap mode completed, this GUID now gets this button assigned to it
-        void remapModeEnd( QString GUID, QString originalButton, QString remappedButton );
+        // Remap mode completed, update the UI
+        void remapModeEnd();
+
+        // Data for the model so it can update its internal copy of remapData
+        void remapUpdate( QString GUID, QString originalButton, QString remappedButton );
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
@@ -77,6 +80,12 @@ class Remapper : public Node {
         // The button pressed to set the remapping
         int ignoreModeButton{ SDL_CONTROLLER_BUTTON_INVALID };
 
+        // The GUID that was just remapped
+        QString ignoreModeGUID;
+
+        // The instanceID that was just remapped
+        int ignoreModeInstanceID{ -1 };
+
         // Ensure reads and writes to gamepadBuffer are atomic
         QMutex mutex;
 
@@ -94,6 +103,10 @@ class Remapper : public Node {
         // When 0, the entry may be removed
         // Used to know when it's time to emit controllerConnected()/controllerDisconnected()
         QMap<QString, int> GUIDCount;
+
+        // Used to track which GUIDs have a button pressed
+        // Cleared on each heartbeat
+        QMap<QString, bool> pressed;
 
         // Helpers
 
