@@ -10,9 +10,9 @@
 // Nodes
 #include "audiooutput.h"
 #include "gamepadmanager.h"
+#include "controloutput.h"
 #include "globalgamepad.h"
 #include "libretrocore.h"
-#include "controloutput.h"
 #include "microtimer.h"
 #include "phoenixwindow.h"
 #include "phoenixwindownode.h"
@@ -35,6 +35,7 @@
  * To hook the propogation of these commands down to the running Core, see ControlOutput. Usually this is directly
  * connected to the Core of a particular dynamic pipeline.
  */
+
 class GameConsole : public Node {
         Q_OBJECT
 
@@ -94,34 +95,36 @@ class GameConsole : public Node {
         QThread *gameThread;
 
         // Pipeline nodes owned by this class (game thread)
-        // Remember to add to deleteMembers() if adding a new one no matter what pipeline it belongs to
-        AudioOutput *audioOutput{ nullptr };
-        GamepadManager *gamepadManager{ nullptr };
-        LibretroCore *libretroCore{ nullptr };
-        MicroTimer *microTimer{ nullptr };
-        Remapper *remapper{ nullptr };
+        // When adding a new one, remember to:
+        //     - Add to deleteMembers() if adding a new one no matter what pipeline it belongs to
+        //     - Move to gameThread in the constructor
+        AudioOutput *audioOutput { nullptr };
+        GamepadManager *gamepadManager { nullptr };
+        LibretroCore *libretroCore { nullptr };
+        MicroTimer *microTimer { nullptr };
+        Remapper *remapper { nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties
-        ControlOutput *controlOutput{ nullptr };
-        GlobalGamepad *globalGamepad{ nullptr };
-        PhoenixWindowNode *phoenixWindow{ nullptr };
-        VideoOutputNode *videoOutput{ nullptr };
+        ControlOutput *controlOutput { nullptr };
+        GlobalGamepad *globalGamepad { nullptr };
+        PhoenixWindowNode *phoenixWindow { nullptr };
+        VideoOutputNode *videoOutput { nullptr };
 
-        // Misc
-        RemapperModel *remapperModel{ nullptr };
+        // Misc (not owned by us)
+        RemapperModel *remapperModel { nullptr };
 
     private: // Property getters/setters
-        qreal playbackSpeed{ 1.0 };
+        qreal playbackSpeed { 1.0 };
         qreal getPlaybackSpeed();
         void setPlaybackSpeed( qreal playbackSpeed );
         QVariantMap source;
         QVariantMap getSource();
         void setSource( QVariantMap source );
-        qreal volume{ 1.0 };
+        qreal volume { 1.0 };
         qreal getVolume();
         void setVolume( qreal volume );
-        bool vsync{ true };
+        bool vsync { true };
         bool getVsync();
         void setVsync( bool vsync );
 

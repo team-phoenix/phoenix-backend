@@ -29,7 +29,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
-            QMetaObject::invokeMethod( remapperModel, "setRemapper", Q_ARG( Remapper*, remapper ) );
+            QMetaObject::invokeMethod( remapperModel, "setRemapper", Q_ARG( Remapper *, remapper ) );
         }
     } );
 
@@ -97,7 +97,7 @@ void GameConsole::load() {
     Q_ASSERT( phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-    emit commandOut( Command::HostFPS, ( qreal )( phoenixWindow->phoenixWindow->screen()->refreshRate() ),
+    emit commandOut( Command::HostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(),
                      QDateTime::currentMSecsSinceEpoch() );
 
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
@@ -176,6 +176,7 @@ void GameConsole::loadLibretro() {
             // Incoming from LibretroCore! Send it back in to the pipeline, LibretroCore will ensure it won't loop
             case Command::CoreFPS: {
                 emit commandOut( command, data, QDateTime::currentMSecsSinceEpoch() );
+                break;
             }
 
             default: {
@@ -233,14 +234,15 @@ void GameConsole::unloadLibretro() {
 }
 
 void GameConsole::deleteLibretro() {
+    // Delete the dynamic pipeline created by the Libretro core
+    // Bottom to top
     audioOutput->deleteLater();
     libretroCore->deleteLater();
-    remapper->deleteLater();
-    gamepadManager->deleteLater();
-    microTimer->deleteLater();
 }
 
 void GameConsole::deleteMembers() {
+    // Delete everything owned by this class
+    // Alphabetical order because it doesn't matter
     audioOutput->deleteLater();
     gamepadManager->deleteLater();
     libretroCore->deleteLater();

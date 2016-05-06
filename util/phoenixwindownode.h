@@ -9,6 +9,7 @@
  * PhoenixWindowNode is a Node that wraps around an underlying PhoenixWindow. It fires heartbeat commands whenever the
  * window emits a QQuickWindow::frameSwapped() signal and will tell the underlying window whenever VSync mode changes.
  */
+
 class PhoenixWindowNode : public Node {
         Q_OBJECT
         Q_PROPERTY( PhoenixWindow *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )

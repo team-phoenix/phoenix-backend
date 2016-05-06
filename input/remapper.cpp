@@ -23,7 +23,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
 
         case Command::ControllerAdded: {
             Gamepad gamepad = data.value<Gamepad>();
-            QString GUID( QByteArray( ( const char * )gamepad.GUID.data, 16 ).toHex() );
+            QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
             // Add to map if it hasn't been encountered yet
             // Otherwise, just increment the count
@@ -46,7 +46,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
 
         case Command::ControllerRemoved: {
             Gamepad gamepad = data.value<Gamepad>();
-            QString GUID( QByteArray( ( const char * )gamepad.GUID.data, 16 ).toHex() );
+            QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
             GUIDCount[ GUID ]--;
 
             // Remove from map if no longer there
@@ -78,11 +78,11 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             Gamepad gamepad;
             {
                 mutex->lock();
-                gamepad = *( Gamepad * )data;
+                gamepad = *reinterpret_cast< Gamepad * >( data );
                 mutex->unlock();
             }
 
-            QString GUID( QByteArray( ( const char * )gamepad.GUID.data, 16 ).toHex() );
+            QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
             // OR all button states together by GUID
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
@@ -160,7 +160,9 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 this->mutex.unlock();
 
                 // Send buffer on its way
-                emit dataOut( DataType::Input, &( this->mutex ), ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
+                emit dataOut( DataType::Input, &( this->mutex ),
+                              reinterpret_cast< void * >( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
+                              QDateTime::currentMSecsSinceEpoch() );
 
                 // Increment the index
                 gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;

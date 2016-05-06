@@ -52,7 +52,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         const char *controllerName = SDL_GameControllerName( gamecontrollerHandle );
 
                         if( controllerName ) {
-                            int len = strnlen( controllerName, 1024 );
+                            int len = static_cast<int>( strnlen( controllerName, 1024 ) );
 
                             if( len ) {
                                 gamepads[ instanceID ].friendlyName = QString::fromUtf8( controllerName, len );
@@ -119,7 +119,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                 mutex.unlock();
 
                 // Send buffer on its way
-                emit dataOut( DataType::Input, &mutex, ( void * )( &gamepadBuffer[ gamepadBufferIndex ] ), 0, QDateTime::currentMSecsSinceEpoch() );
+                emit dataOut( DataType::Input, &mutex, &gamepadBuffer[ gamepadBufferIndex ], 0, QDateTime::currentMSecsSinceEpoch() );
 
                 // Increment the index
                 gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
