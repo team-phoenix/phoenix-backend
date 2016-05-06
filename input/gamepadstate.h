@@ -9,14 +9,15 @@
 #include "SDL_gamecontroller.h"
 
 /*
- * Gamepad is a small struct designed to hold the metadata and states of a single controller made available using
+ * GamepadState is a small struct designed to hold the metadata and states of a single controller made available using
  * SDL2's game controller API. An example of how to use this as a consumer to store input states for all controllers
  * can be found in LibretroCore. An example of how to use this as a consumer and producer to transform controller
  * states can be found in Remapper.
  */
 
-struct Gamepad {
-    Gamepad() = default;
+struct GamepadState {
+    GamepadState() = default;
+
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 
@@ -27,8 +28,8 @@ struct Gamepad {
     int joystickID{ 0 };
     int instanceID{ 0 };
 
-    bool isKeyboard{ false };
+    // Button and axis states
     Sint16 axis[ SDL_CONTROLLER_AXIS_MAX ] { 0 };
     Uint8 button[ SDL_CONTROLLER_BUTTON_MAX ] { 0 };
 };
-Q_DECLARE_METATYPE( Gamepad )
+Q_DECLARE_METATYPE( GamepadState )

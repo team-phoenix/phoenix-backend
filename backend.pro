@@ -46,52 +46,58 @@
     INCLUDEPATH += consumer control core input pipeline util
 
     HEADERS += \
+    backendplugin.h \
     consumer/audiobuffer.h \
     consumer/audiooutput.h \
     consumer/videooutput.h \
     consumer/videooutputnode.h \
+    control/gameconsole.h \
     core/core.h \
     core/libretro.h \
     core/libretrocore.h \
     core/libretrosymbols.h \
     core/libretrovariable.h \
-    pipeline/node.h \
-    util/logging.h \
-    pipeline/pipelinecommon.h \
-    util/microtimer.h \
-    control/gameconsole.h \
     input/gamepadmanager.h \
+    input/gamepadstate.h \
     input/globalgamepad.h \
+    input/keyboardlistener.h \
+    input/keyboardmanager.h \
+    input/keyboardstate.h \
     input/remapper.h \
+    input/remappermodel.h \
+    pipeline/node.h \
+    pipeline/pipelinecommon.h \
     util/controloutput.h \
+    util/logging.h \
+    util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
-    input/gamepad.h \
-    backendplugin.h \
-    input/remappermodel.h
 
     SOURCES += \
+    backendplugin.cpp \
     consumer/audiobuffer.cpp \
     consumer/audiooutput.cpp \
     consumer/videooutput.cpp \
     consumer/videooutputnode.cpp \
+    control/gameconsole.cpp \
     core/core.cpp \
     core/libretrocore.cpp \
     core/libretrosymbols.cpp \
     core/libretrovariable.cpp \
+    input/gamepadmanager.cpp \
+    input/gamepadstate.cpp \
+    input/globalgamepad.cpp \
+    input/keyboardlistener.cpp \
+    input/keyboardmanager.cpp \
+    input/keyboardstate.cpp \
+    input/remapper.cpp \
+    input/remappermodel.cpp \
     pipeline/node.cpp \
+    util/controloutput.cpp \
     util/logging.cpp \
     util/microtimer.cpp \
-    control/gameconsole.cpp \
-    input/gamepadmanager.cpp \
-    input/globalgamepad.cpp \
-    input/remapper.cpp \
-    util/controloutput.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
-    backendplugin.cpp \
-    input/remappermodel.cpp \
-    input/gamepad.cpp
 
     RESOURCES += input/controllerdb.qrc
 

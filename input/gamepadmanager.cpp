@@ -112,7 +112,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
             }
 
             // Emit an update for all connected controllers
-            for( Gamepad gamepad : gamepads ) {
+            for( GamepadState gamepad : gamepads ) {
                 // Copy current gamepad into buffer
                 mutex.lock();
                 gamepadBuffer[ gamepadBufferIndex ] = gamepad;

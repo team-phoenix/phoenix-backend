@@ -22,7 +22,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
         }
 
         case Command::ControllerAdded: {
-            Gamepad gamepad = data.value<Gamepad>();
+            GamepadState gamepad = data.value<GamepadState>();
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
             // Add to map if it hasn't been encountered yet
@@ -37,15 +37,15 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             // FIXME: Replace with something that reads all known mappings from disk, in the constructor
             // For now, just init the remap with default mappings
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                remapData[ GUID ][ i ] = i;
-                emit remapUpdate( GUID, buttonToString( i ), buttonToString( remapData[ GUID ][ i ] ) );
+                gamepadButtonToButton[ GUID ][ i ] = i;
+                emit remapUpdate( GUID, buttonToString( i ), buttonToString( gamepadButtonToButton[ GUID ][ i ] ) );
             }
 
             break;
         }
 
         case Command::ControllerRemoved: {
-            Gamepad gamepad = data.value<Gamepad>();
+            GamepadState gamepad = data.value<GamepadState>();
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
             GUIDCount[ GUID ]--;
 
@@ -75,10 +75,10 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
     switch( type ) {
         case DataType::Input: {
             // Copy incoming data to our own buffer
-            Gamepad gamepad;
+            GamepadState gamepad;
             {
                 mutex->lock();
-                gamepad = *reinterpret_cast< Gamepad * >( data );
+                gamepad = *reinterpret_cast< GamepadState * >( data );
                 mutex->unlock();
             }
 
@@ -101,7 +101,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                                                 << "remapped to" << buttonToString( i ) << "for GUID" << GUID;
 
                             // Store the new remapping internally
-                            remapData[ GUID ][ remapModeButton ] = i;
+                            gamepadButtonToButton[ GUID ][ remapModeButton ] = i;
 
                             // Tell the model we're done
                             remapMode = false;
@@ -134,14 +134,14 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             }
 
             // Remap button states according to stored data
-            Gamepad remappedGamepad = gamepad;
+            GamepadState remappedGamepad = gamepad;
             {
                 // Clear remappedGamepad's states
                 for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                     remappedGamepad.button[ i ] = SDL_RELEASED;
                 }
 
-                QMap<int, int> remap = remapData[ GUID ];
+                QMap<int, int> remap = gamepadButtonToButton[ GUID ];
 
                 for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                     // Read remapped button id from stored remap data
@@ -157,6 +157,42 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 // Copy current gamepad into buffer
                 this->mutex.lock();
                 gamepadBuffer[ gamepadBufferIndex ] = remappedGamepad;
+                this->mutex.unlock();
+
+                // Send buffer on its way
+                emit dataOut( DataType::Input, &( this->mutex ),
+                              reinterpret_cast< void * >( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
+                              QDateTime::currentMSecsSinceEpoch() );
+
+                // Increment the index
+                gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
+            }
+            break;
+        }
+
+        case DataType::KeyboardInput: {
+            // Unpack keyboard states and write to gamepad according to remap data
+            {
+                mutex->lock();
+                KeyboardState keyboard = *reinterpret_cast<KeyboardState *>( data );
+
+                for( int i = keyboard.head; i < keyboard.tail; i = ( i + 1 ) % 128 ) {
+                    int key = keyboard.key[ i ];
+                    bool pressed = keyboard.pressed[ i ];
+
+                    if( keyboardButtonToButton.contains( key ) ) {
+                        keyboardGamepad.button[ keyboardButtonToButton[ key ] ] = pressed ? SDL_PRESSED : SDL_RELEASED;
+                    }
+                }
+
+                mutex->unlock();
+            }
+
+            // Send gamepad on its way
+            {
+                // Copy current gamepad into buffer
+                this->mutex.lock();
+                gamepadBuffer[ gamepadBufferIndex ] = keyboardGamepad;
                 this->mutex.unlock();
 
                 // Send buffer on its way

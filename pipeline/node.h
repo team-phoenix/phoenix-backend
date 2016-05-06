@@ -104,6 +104,7 @@ class Node : public QObject {
             Audio,
             Input,
             TouchInput,
+            KeyboardInput,
         };
         Q_ENUM( DataType )
 

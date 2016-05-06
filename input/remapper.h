@@ -4,22 +4,24 @@
 #include <QObject>
 #include <QHash>
 #include <QMap>
+#include <Qt>
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
 #include "node.h"
-#include "gamepad.h"
+#include "gamepadstate.h"
+#include "keyboardstate.h"
 #include "logging.h"
 
 typedef QMap<QString, QString> QStringMap;
 
 /*
- * Remapper is a Node whose job is to filter and transform input data that passes through it based on stored remapping
- * data. It also provides signals and slots to communicate with a QML-based frontend that will present the user with a
+ * Remapper is a Node whose job is to transform input data that passes through it based on stored remapping data.
+ * It also provides signals and slots to communicate with a QML-based frontend that will present the user with a
  * graphical interface for setting remappings.
  *
- * The remapper currently supports the button layout of an Xbox 360 controller (these are the actual strings used):
+ * The remapper supports the button layout of an Xbox 360 controller (these are the actual strings used):
  *  Face buttons: A B X Y
  *  Center buttons: Back Guide Start
  *  DPAD: Up Down Left Right
@@ -27,6 +29,8 @@ typedef QMap<QString, QString> QStringMap;
  *  Stick buttons: L3 R3
  *
  * Note that L2 and R2 are not directly remappable, they're analog on the Xbox 360 controller (TODO?)
+ *
+ * The remapper also lets the user remap the keyboard. (TODO)
  */
 
 class RemapperModel;
@@ -93,13 +97,34 @@ class Remapper : public Node {
 
         // A circular buffer that holds gamepad state updates
         // A value of 100 should be sufficient for most purposes
-        Gamepad gamepadBuffer[ 100 ];
+        GamepadState gamepadBuffer[ 100 ];
         int gamepadBufferIndex{ 0 };
 
         // Remapping stuff
 
         // Remap data
-        QMap<QString, QMap<int, int>> remapData;
+        QMap<QString, QMap<int, int>> gamepadButtonToButton;
+
+        // Keyboard remapping data
+        // We keep the keyboard's state here as it comes to us "raw"
+        GamepadState keyboardGamepad;
+        QMap<int, int> keyboardButtonToButton {
+            { Qt::Key_W, SDL_CONTROLLER_BUTTON_DPAD_UP },
+            { Qt::Key_A, SDL_CONTROLLER_BUTTON_DPAD_LEFT },
+            { Qt::Key_S, SDL_CONTROLLER_BUTTON_DPAD_DOWN },
+            { Qt::Key_D, SDL_CONTROLLER_BUTTON_DPAD_RIGHT },
+            { Qt::Key_P, SDL_CONTROLLER_BUTTON_A },
+            { Qt::Key_L, SDL_CONTROLLER_BUTTON_B },
+            { Qt::Key_O, SDL_CONTROLLER_BUTTON_X },
+            { Qt::Key_K, SDL_CONTROLLER_BUTTON_Y },
+            { Qt::Key_Shift, SDL_CONTROLLER_BUTTON_LEFTSHOULDER },
+            { Qt::Key_Space, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
+            { Qt::Key_Backspace, SDL_CONTROLLER_BUTTON_BACK },
+            { Qt::Key_Escape, SDL_CONTROLLER_BUTTON_GUIDE },
+            { Qt::Key_Return, SDL_CONTROLLER_BUTTON_START },
+            { Qt::Key_1, SDL_CONTROLLER_BUTTON_LEFTSTICK },
+            { Qt::Key_3, SDL_CONTROLLER_BUTTON_RIGHTSTICK },
+        };
 
         // Count of how many controllers of a certain GUID are connected
         // When 0, the entry may be removed

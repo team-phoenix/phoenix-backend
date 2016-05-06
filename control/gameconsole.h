@@ -12,6 +12,8 @@
 #include "gamepadmanager.h"
 #include "controloutput.h"
 #include "globalgamepad.h"
+#include "keyboardlistener.h"
+#include "keyboardmanager.h"
 #include "libretrocore.h"
 #include "microtimer.h"
 #include "phoenixwindow.h"
@@ -100,6 +102,7 @@ class GameConsole : public Node {
         //     - Move to gameThread in the constructor
         AudioOutput *audioOutput { nullptr };
         GamepadManager *gamepadManager { nullptr };
+        KeyboardManager *keyboardInputNode { nullptr };
         LibretroCore *libretroCore { nullptr };
         MicroTimer *microTimer { nullptr };
         Remapper *remapper { nullptr };
@@ -110,6 +113,9 @@ class GameConsole : public Node {
         GlobalGamepad *globalGamepad { nullptr };
         PhoenixWindowNode *phoenixWindow { nullptr };
         VideoOutputNode *videoOutput { nullptr };
+
+        // Misc (owned by us)
+        KeyboardListener *keyboardInput { nullptr };
 
         // Misc (not owned by us)
         RemapperModel *remapperModel { nullptr };

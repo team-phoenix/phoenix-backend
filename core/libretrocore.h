@@ -7,7 +7,7 @@
 #include <QObject>
 
 #include "core.h"
-#include "gamepad.h"
+#include "gamepadstate.h"
 #include "libretro.h"
 #include "libretrosymbols.h"
 #include "libretrovariable.h"
@@ -155,7 +155,7 @@ class LibretroCore : public Core {
 
         ProducerFormat consumerFmt;
 
-        QHash<int, Gamepad> gamepads;
+        QHash<int, GamepadState> gamepads;
 
         QPointF touchCoords;
         bool touchState{ false };

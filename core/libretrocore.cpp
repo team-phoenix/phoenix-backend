@@ -285,7 +285,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
         }
 
         case Command::ControllerRemoved: {
-            Gamepad gamepad = data.value<Gamepad>();
+            GamepadState gamepad = data.value<GamepadState>();
             int instanceID = gamepad.instanceID;
             gamepads.remove( instanceID );
             emit commandOut( command, data, timeStamp );
@@ -305,7 +305,7 @@ void LibretroCore::dataIn( DataType type, QMutex *mutex, void *data, size_t byte
         // Make a copy of the data into our own gamepad list
         case DataType::Input: {
             mutex->lock();
-            Gamepad gamepad = *( Gamepad * )data;
+            GamepadState gamepad = *( GamepadState * )data;
             int instanceID = gamepad.instanceID;
             gamepads[ instanceID ] = gamepad;
             mutex->unlock();
@@ -927,7 +927,7 @@ int16_t LibretroCore::inputStateCallback( unsigned port, unsigned device, unsign
     int16_t value = 0;
 
     // TODO: Don't OR all controllers together!
-    for( Gamepad gamepad : core->gamepads ) {
+    for( GamepadState gamepad : core->gamepads ) {
         if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
             value |= 1;
         }

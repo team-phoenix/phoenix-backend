@@ -9,13 +9,16 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     gameThread( new QThread ),
     audioOutput( new AudioOutput ),
     gamepadManager( new GamepadManager ),
+    keyboardInputNode( new KeyboardManager ),
     libretroCore( new LibretroCore ),
     microTimer( new MicroTimer ),
-    remapper( new Remapper ) {
+    remapper( new Remapper ),
+    keyboardInput( new KeyboardListener ) {
 
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
     gamepadManager->moveToThread( gameThread );
+    keyboardInputNode->moveToThread( gameThread );
     libretroCore->moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
@@ -25,7 +28,12 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     // Connect global pipeline (at least the parts that can be connected at this point)
     connectNodes( microTimer, gamepadManager );
-    connectNodes( gamepadManager, remapper );
+    connectNodes( gamepadManager, keyboardInputNode );
+    connectNodes( keyboardInputNode, remapper );
+
+    // Handle the wrapper nodes/node frontends/node proxies
+
+    keyboardInputNode->connectKeyboardInput( keyboardInput );
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
@@ -245,6 +253,8 @@ void GameConsole::deleteMembers() {
     // Alphabetical order because it doesn't matter
     audioOutput->deleteLater();
     gamepadManager->deleteLater();
+    keyboardInput->deleteLater();
+    keyboardInputNode->deleteLater();
     libretroCore->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
