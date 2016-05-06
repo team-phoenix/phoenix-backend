@@ -11,7 +11,6 @@
 #include <iterator>
 
 #include "pipelinecommon.h"
-#include "remapper.h"
 
 /*
  * RemapperModel is a QML model whose job is to relay information between the QML world and Remapper, which is part
@@ -23,6 +22,8 @@
  *                 of the same model apart.
  * remapData (map): Map of string:string, key is the button name and the value is the remapped name
  */
+
+class Remapper;
 
 class RemapperModel : public QAbstractListModel {
         Q_OBJECT
