@@ -180,8 +180,8 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                     int key = keyboard.key[ i ];
                     bool pressed = keyboard.pressed[ i ];
 
-                    if( keyboardButtonToButton.contains( key ) ) {
-                        keyboardGamepad.button[ keyboardButtonToButton[ key ] ] = pressed ? SDL_PRESSED : SDL_RELEASED;
+                    if( keyboardKeyToSDLButton.contains( key ) ) {
+                        keyboardGamepad.button[ keyboardKeyToSDLButton[ key ] ] = pressed ? SDL_PRESSED : SDL_RELEASED;
                     }
                 }
 

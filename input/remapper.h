@@ -108,7 +108,7 @@ class Remapper : public Node {
         // Keyboard remapping data
         // We keep the keyboard's state here as it comes to us "raw"
         GamepadState keyboardGamepad;
-        QMap<int, int> keyboardButtonToButton {
+        QMap<int, int> keyboardKeyToSDLButton {
             { Qt::Key_W, SDL_CONTROLLER_BUTTON_DPAD_UP },
             { Qt::Key_A, SDL_CONTROLLER_BUTTON_DPAD_LEFT },
             { Qt::Key_S, SDL_CONTROLLER_BUTTON_DPAD_DOWN },
