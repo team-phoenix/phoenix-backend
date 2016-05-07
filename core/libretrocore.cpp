@@ -193,7 +193,7 @@ void LibretroCore::commandIn( Command command, QVariant data, qint64 timeStamp )
 
                 }
 
-                variablesHaveChanged = true;
+                variablesAreDirty = true;
             }
 
             pausable = true;
@@ -654,13 +654,13 @@ bool LibretroCore::environmentCallback( unsigned cmd, void *data ) {
             // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
             // Let the core know we have some variable changes if we set our internal flag (clear it so the change only happens once)
             // TODO: Protect all variable-touching code with mutexes?
-            if( core->variablesHaveChanged ) {
+            if( core->variablesAreDirty ) {
                 // Special case: Force DeSmuME's pointer type variable to "touch" in order to work with our touch code
                 if( core->variables.contains( "desmume_pointer_type" ) ) {
                     core->variables[ "desmume_pointer_type" ].setValue( "touch" );
                 }
 
-                core->variablesHaveChanged = false;
+                core->variablesAreDirty = false;
                 *( bool * )data = true;
                 return true;
             } else {

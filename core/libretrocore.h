@@ -118,6 +118,7 @@ class LibretroCore : public Core {
         QMap<QString, QString> inputDescriptors;
 
         // Node data
+
         State currentState;
 
         // Producer data (for consumers like AudioOutput, VideoOutput...)
@@ -151,7 +152,7 @@ class LibretroCore : public Core {
 
         qreal audioSampleRate{ 44100 };
 
-        // Consumer data (from input producers)
+        // Input
 
         ProducerFormat consumerFmt;
 
@@ -159,7 +160,6 @@ class LibretroCore : public Core {
 
         QPointF touchCoords;
         bool touchState{ false };
-        bool variablesHaveChanged{ false };
 
         // Callbacks
 
@@ -175,6 +175,9 @@ class LibretroCore : public Core {
 
         // Core-specific variables
         QMap<std::string, LibretroVariable> variables;
+
+        // True if variables are dirty and the core needs to know about them
+        bool variablesAreDirty{ false };
 
         // Helper that generates key for looking up the inputDescriptors
         QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
