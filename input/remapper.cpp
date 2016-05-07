@@ -2,7 +2,7 @@
 #include "remappermodel.h"
 
 Remapper::Remapper( Node *parent ) : Node( parent ) {
-
+    keyboardGamepad.instanceID = -1;
 }
 
 // Public slots
