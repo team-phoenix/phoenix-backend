@@ -27,6 +27,9 @@ class Node : public QObject {
             Unload,
             Reset,
 
+            // The global pipeline has been established
+            GlobalPipelineReady,
+
             // Run pipeline for a frame
             Heartbeat,
 

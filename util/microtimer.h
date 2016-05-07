@@ -75,12 +75,18 @@ class MicroTimer : public Node {
         void killTimers();
 
     private:
-        // If true, do not emit heartbeats
-        // If false, let heartbeats that come to this pass
+        // If true, emit our own heartbeats and eat the ones that come to us
+        // If false, let heartbeats that come to this pass through and do not emit our own
         // In other words, !vsync
-        bool emitHeartbeats{ false };
+        bool emitHeartbeats { false };
+        bool vsync { true };
 
         qreal hostFPS{ 60.0 };
+
+        // Helpers
+
+        // Checks if coreFPS and hostFPS differ by more than 2% and tells the rest of the pipeline vsync is off if it is
+        void checkFPS();
 
         // Property setters/getters
         bool isSingleShot();
@@ -97,9 +103,9 @@ class MicroTimer : public Node {
         qreal getFrequency();
         void setFrequency( qreal frequency );
 
-        bool maxAccuracy{ false };
+        bool maxAccuracy { false };
         QElapsedTimer timer;
-        qreal frequency{ 60.0 };
-        qreal targetTime{ 0 };
+        qreal frequency { 60.0 };
+        qreal targetTime { 0 };
         QList<int> registeredTimers;
 };

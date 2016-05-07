@@ -112,26 +112,34 @@ void MicroTimer::stop() {
 
 void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
+        // Always take over when the emulation has stopped or the global pipeline has been established as the window may
+        // not emit heartbeats all the time... or at all
+        case Command::Stop:
+        case Command::Load:
+        case Command::Pause:
+        case Command::Unload:
+        case Command::GlobalPipelineReady: {
+            qCDebug( phxTimer ) << "Ignoring vsync, running own timer";
+            startFreq( frequency != 0 ? frequency : 60 );
+            emitHeartbeats = true;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
+        // Restore vsync-derived setting for this timer, then do the 2% check again
+        case Command::Play: {
+            emitHeartbeats = !vsync;
+            checkFPS();
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
         // Eat this heartbeat if we're to emit heartbeats of our own (vsync off)
         case Command::Heartbeat: {
             if( emitHeartbeats ) {
                 break;
             } else {
-                // If we're vsync'd and the discrepency is too large between coreFPS and hostFPS, do not use vsync'd
-                // signals. 2% is a reasonable value for this.
-                // This could happen if the user's monitor (hostFPS) is 120Hz and our game (coreFPS) is 60Hz
-                // or the game is PAL (coreFPS = 50Hz) and the user's monitor (hostFPS) is 60Hz
-                // If vsync is off, we'll always heartbeat at the correct rate
-                qreal coreFPS = frequency;
-                qreal percentDifference = qAbs( hostFPS - coreFPS ) / coreFPS * 100;
-
-                // Force vsync off from this node down
-                // This will not affect PhoenixWindow
-                if( percentDifference > 2.0 ) {
-                    emitHeartbeats = true;
-                    emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
-                }
-
+                checkFPS();
                 emit commandOut( command, data, timeStamp );
             }
 
@@ -154,7 +162,14 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
         // Invert vsync value to get what we should do
         case Command::SetVsync: {
             emit commandOut( command, data, timeStamp );
+            vsync = data.toBool();
             emitHeartbeats = !( data.toBool() );
+
+            // Check this here too, heartbeats may not always be emitted
+            if( !emitHeartbeats ) {
+                checkFPS();
+            }
+
             break;
         }
 
@@ -162,7 +177,6 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
             emit commandOut( command, data, timeStamp );
             break;
     }
-
 }
 
 void MicroTimer::killTimers() {
@@ -173,6 +187,23 @@ void MicroTimer::killTimers() {
     }
 
     registeredTimers.clear();
+}
+
+void MicroTimer::checkFPS() {
+    // If we're vsync'd and the discrepency is too large between coreFPS and hostFPS, do not use vsync'd
+    // signals. 2% is a reasonable value for this.
+    // This could happen if the user's monitor (hostFPS) is 120Hz and our game (coreFPS) is 60Hz
+    // or the game is PAL (coreFPS = 50Hz) and the user's monitor (hostFPS) is 60Hz
+    // If vsync is off, we'll always heartbeat at the correct rate
+    qreal coreFPS = frequency;
+    qreal percentDifference = qAbs( hostFPS - coreFPS ) / coreFPS * 100;
+
+    // Force vsync off from this node down
+    // This will not affect PhoenixWindow
+    if( percentDifference > 2.0 ) {
+        emitHeartbeats = true;
+        emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
+    }
 }
 
 bool MicroTimer::isSingleShot() {

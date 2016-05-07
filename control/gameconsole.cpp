@@ -38,6 +38,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
             QMetaObject::invokeMethod( remapperModel, "setRemapper", Q_ARG( Remapper *, remapper ) );
+            checkIfGlobalPipelineReady();
         }
     } );
 
@@ -46,6 +47,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         if( globalGamepad ) {
             qCDebug( phxControl ) << "GlobalGamepad" << Q_FUNC_INFO << globalPipelineReady();
             connectNodes( remapper, globalGamepad );
+            checkIfGlobalPipelineReady();
         }
     } );
 
@@ -55,6 +57,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
             qCDebug( phxControl ) << "PhoenixWindow" << Q_FUNC_INFO << globalPipelineReady();
             connectNodes( this, phoenixWindow );
             connectNodes( phoenixWindow, microTimer );
+            checkIfGlobalPipelineReady();
         }
     } );
 
@@ -196,6 +199,13 @@ void GameConsole::loadLibretro() {
 
 bool GameConsole::globalPipelineReady() {
     return ( globalGamepad && phoenixWindow && phoenixWindow->phoenixWindow && phoenixWindow->phoenixWindow->screen() );
+}
+
+void GameConsole::checkIfGlobalPipelineReady() {
+    if( globalPipelineReady() ) {
+        qCDebug( phxControl ) << "Global pipeline ready";
+        emit commandOut( Command::GlobalPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    }
 }
 
 bool GameConsole::dynamicPipelineReady() {

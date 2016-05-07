@@ -71,6 +71,9 @@ class GameConsole : public Node {
         // Return true if all global pipeline members from QML are set
         bool globalPipelineReady();
 
+        // Emit Command::GlobalPipelineReady if it's ready to go
+        void checkIfGlobalPipelineReady();
+
         // Return true if a core is loaded and its dynamic pipeline is hooked to the global one
         bool dynamicPipelineReady();
 
