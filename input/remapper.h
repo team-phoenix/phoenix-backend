@@ -100,14 +100,23 @@ class Remapper : public Node {
         GamepadState gamepadBuffer[ 100 ];
         int gamepadBufferIndex{ 0 };
 
+        // Used to track which GUIDs have a button pressed
+        // Cleared on each heartbeat
+        QMap<QString, bool> pressed;
+
+        // True if a mapped keyboard key is pressed
+        bool keyboardKeyPressed { false };
+
         // Remapping stuff
 
         // Remap data
-        QMap<QString, QMap<int, int>> gamepadButtonToButton;
+        QMap<QString, QMap<int, int>> gamepadSDLButtonToSDLButton;
 
         // Keyboard remapping data
         // We keep the keyboard's state here as it comes to us "raw"
         GamepadState keyboardGamepad;
+
+        // Default keyboard mapping
         QMap<int, int> keyboardKeyToSDLButton {
             { Qt::Key_W, SDL_CONTROLLER_BUTTON_DPAD_UP },
             { Qt::Key_A, SDL_CONTROLLER_BUTTON_DPAD_LEFT },
@@ -126,14 +135,12 @@ class Remapper : public Node {
             { Qt::Key_3, SDL_CONTROLLER_BUTTON_RIGHTSTICK },
         };
 
+        // Internal bookkeeping
+
         // Count of how many controllers of a certain GUID are connected
         // When 0, the entry may be removed
         // Used to know when it's time to emit controllerConnected()/controllerDisconnected()
         QMap<QString, int> GUIDCount;
-
-        // Used to track which GUIDs have a button pressed
-        // Cleared on each heartbeat
-        QMap<QString, bool> pressed;
 
         // Helpers
 

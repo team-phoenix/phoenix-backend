@@ -27,6 +27,7 @@
 MicroTimer::MicroTimer( Node *parent ) : Node( parent ) {
     timer.invalidate();
     startFreq( 60.0 );
+    qCDebug( phxTimer ) << "Beginning timer at a default frequency of 60Hz";
 }
 
 MicroTimer::~MicroTimer() {
@@ -67,6 +68,7 @@ bool MicroTimer::event( QEvent *e ) {
             // the dynamic pipeline's established
             if( vsync && !fpsDiffOkay() && dynamicPipelineReady ) {
                 vsync = false;
+                qCDebug( phxTimer ) << "VSync enabled but coreFPS and hostFPS differ by at least 2%. Telling remainder of pipeline to assume VSync is off...";
                 emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
             }
         }
