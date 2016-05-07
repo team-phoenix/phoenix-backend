@@ -104,13 +104,13 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 if( remapMode && GUID == remapModeGUID ) {
                     // Find a button press, the first one we encounter will be the new remapping
                     for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                        if( gamepad.button[ i ] ) {
+                        if( gamepad.button[ i ] == SDL_PRESSED ) {
                             // TODO: Store this mapping to disk
-                            qCDebug( phxInput ) << "Button" << buttonToString( remapModeButton )
-                                                << "remapped to" << buttonToString( i ) << "for GUID" << GUID;
+                            qCDebug( phxInput ) << "Button" << buttonToString( i )
+                                                << "remapped to" << buttonToString( remapModeButton ) << "for GUID" << GUID;
 
                             // Store the new remapping internally
-                            gamepadSDLButtonToSDLButton[ GUID ][ remapModeButton ] = i;
+                            gamepadSDLButtonToSDLButton[ GUID ][ i ] = remapModeButton;
 
                             // Tell the model we're done
                             remapMode = false;
