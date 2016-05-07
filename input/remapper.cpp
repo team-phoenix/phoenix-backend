@@ -18,6 +18,13 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
                 pressed[ GUID ] = false;
             }
 
+            // If in remap mode, make sure the GUID in question still exists, exit remap mode if not
+            if( remapMode && !GUIDCount.contains( remapModeGUID ) ) {
+                qCWarning( phxInput ) << "No controllers with GUID" << remapModeGUID << "remaining, exiting remap mode!";
+                remapMode = false;
+                emit remapModeEnd();
+            }
+
             break;
         }
 
@@ -53,13 +60,6 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             if( GUIDCount[ GUID ] == 0 ) {
                 GUIDCount.remove( GUID );
                 emit controllerRemoved( GUID );
-            }
-
-            // If in remap mode, make sure the GUID in question still exists, exit remap mode if not
-            if( remapMode && !GUIDCount.contains( GUID ) ) {
-                qCWarning( phxInput ) << "No controllers with GUID" << GUID << "remaining, exiting remap mode!";
-                remapMode = false;
-                emit remapModeEnd();
             }
 
             break;
