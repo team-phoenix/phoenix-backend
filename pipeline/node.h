@@ -30,6 +30,9 @@ class Node : public QObject {
             // The global pipeline has been established
             GlobalPipelineReady,
 
+            // The dynamic pipeline has been established
+            DynamicPipelineReady,
+
             // Run pipeline for a frame
             Heartbeat,
 

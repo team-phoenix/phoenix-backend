@@ -46,13 +46,6 @@ class QEvent;
 
 class MicroTimer : public Node {
         Q_OBJECT
-        Q_PROPERTY( bool singleShot READ isSingleShot WRITE setSingleShot )
-        Q_PROPERTY( qreal interval READ interval WRITE setInterval )
-        Q_PROPERTY( qreal remainingTime READ remainingTime )
-        Q_PROPERTY( Qt::TimerType timerType READ timerType WRITE setTimerType )
-        Q_PROPERTY( bool active READ isActive )
-        Q_PROPERTY( bool maxAccuracy READ getMaxAccuracy WRITE setMaxAccuracy )
-        Q_PROPERTY( qreal frequency READ getFrequency WRITE setFrequency )
 
     public:
         explicit MicroTimer( Node *parent = nullptr );
@@ -64,9 +57,7 @@ class MicroTimer : public Node {
         void missedTimeouts( int numMissed );
 
     public slots:
-        void start();
-        void start( qreal msec );
-        void startFreq( qreal frequency );
+        void startFreq( qreal coreFPS );
         void stop();
 
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
@@ -75,37 +66,29 @@ class MicroTimer : public Node {
         void killTimers();
 
     private:
-        // If true, emit our own heartbeats and eat the ones that come to us
-        // If false, let heartbeats that come to this pass through and do not emit our own
-        // In other words, !vsync
-        bool emitHeartbeats { false };
+        // If true, let heartbeats that come to this pass through and do not emit our own (we can veto that however)
+        // If false, emit our own heartbeats and eat the ones that come to us
         bool vsync { true };
 
-        qreal hostFPS{ 60.0 };
+        bool globalPipelineReady { false };
+        bool dynamicPipelineReady { false };
+
+        State state { State::Stopped };
+
+        qreal hostFPS { 60.0 };
+        qreal coreFPS { 60.0 };
 
         // Helpers
 
         // Checks if coreFPS and hostFPS differ by more than 2% and tells the rest of the pipeline vsync is off if it is
-        void checkFPS();
+        bool fpsDiffOkay();
 
         // Property setters/getters
-        bool isSingleShot();
-        void setSingleShot( bool );
-        qreal interval();
-        void setInterval( qreal interval );
-        qreal remainingTime();
-        Qt::TimerType timerType();
-        void setTimerType( Qt::TimerType );
-        bool isActive();
 
-        bool getMaxAccuracy();
         void setMaxAccuracy( bool maxAccuracy );
-        qreal getFrequency();
-        void setFrequency( qreal frequency );
 
         bool maxAccuracy { false };
         QElapsedTimer timer;
-        qreal frequency { 60.0 };
         qreal targetTime { 0 };
         QList<int> registeredTimers;
 };

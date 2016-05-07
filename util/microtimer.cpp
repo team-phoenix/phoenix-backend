@@ -26,6 +26,7 @@
 
 MicroTimer::MicroTimer( Node *parent ) : Node( parent ) {
     timer.invalidate();
+    startFreq( 60.0 );
 }
 
 MicroTimer::~MicroTimer() {
@@ -34,9 +35,11 @@ MicroTimer::~MicroTimer() {
     }
 }
 
+// Public
+
 bool MicroTimer::event( QEvent *e ) {
     // Abort if frequency hasn't been set yet, is negative or the timer is shut off
-    if( frequency > 0 && timer.isValid() ) {
+    if( coreFPS > 0 && timer.isValid() ) {
         // We use ms internally
         qreal currentTime = timer.nsecsElapsed() / 1000000.0;
 
@@ -47,7 +50,7 @@ bool MicroTimer::event( QEvent *e ) {
             int counter = 0;
 
             while( currentTime >= targetTime ) {
-                targetTime += 1000.0 / frequency;
+                targetTime += 1000.0 / coreFPS;
                 counter++;
             }
 
@@ -56,9 +59,15 @@ bool MicroTimer::event( QEvent *e ) {
                 emit missedTimeouts( counter - 1 );
             }
 
-            if( emitHeartbeats ) {
+            if( ( !vsync || state != State::Playing || !fpsDiffOkay() ) && globalPipelineReady ) {
                 commandOut( Command::Heartbeat, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-                emit timeout();
+            }
+
+            // This situation should be dealt with as soon as possible... but can only be reliably dealt with once
+            // the dynamic pipeline's established
+            if( vsync && !fpsDiffOkay() && dynamicPipelineReady ) {
+                vsync = false;
+                emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
             }
         }
     }
@@ -66,13 +75,7 @@ bool MicroTimer::event( QEvent *e ) {
     return QObject::event( e );
 }
 
-void MicroTimer::start() {
-    startFreq( 0 );
-}
-
-void MicroTimer::start( qreal msec ) {
-    startFreq( 1000.0 / msec );
-}
+// Public slots
 
 void MicroTimer::startFreq( qreal frequency ) {
     if( frequency <= 0 ) {
@@ -80,7 +83,7 @@ void MicroTimer::startFreq( qreal frequency ) {
         return;
     }
 
-    this->frequency = frequency;
+    this->coreFPS = frequency;
 
     // Set inital target to the next interval
     targetTime = 1000.0 / frequency;
@@ -114,32 +117,55 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
     switch( command ) {
         // Always take over when the emulation has stopped or the global pipeline has been established as the window may
         // not emit heartbeats all the time... or at all
-        case Command::Stop:
-        case Command::Load:
-        case Command::Pause:
-        case Command::Unload:
+        case Command::Stop: {
+            state = State::Stopped;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
+        case Command::Load: {
+            state = State::Loading;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
+        case Command::Pause: {
+            state = State::Paused;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
+        case Command::Unload: {
+            state = State::Unloading;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
         case Command::GlobalPipelineReady: {
-            qCDebug( phxTimer ) << "Ignoring vsync, running own timer";
-            startFreq( frequency != 0 ? frequency : 60 );
-            emitHeartbeats = true;
+            globalPipelineReady = true;
             emit commandOut( command, data, timeStamp );
             break;
         }
 
-        // Restore vsync-derived setting for this timer, then do the 2% check again
+        case Command::DynamicPipelineReady: {
+            dynamicPipelineReady = true;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
         case Command::Play: {
-            emitHeartbeats = !vsync;
-            checkFPS();
+            state = State::Playing;
             emit commandOut( command, data, timeStamp );
             break;
         }
 
-        // Eat this heartbeat if we're to emit heartbeats of our own (vsync off)
+        // Only let VSync through if:
+        // - VSync on
+        // - Playing
+        // - coreFPS and hostFPS differ by less than 2%
+        // - global pipeline is fully connected
         case Command::Heartbeat: {
-            if( emitHeartbeats ) {
-                break;
-            } else {
-                checkFPS();
+            if( vsync && state == State::Playing && fpsDiffOkay() && globalPipelineReady ) {
                 emit commandOut( command, data, timeStamp );
             }
 
@@ -154,7 +180,7 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
 
         case Command::CoreFPS: {
             emit commandOut( command, data, timeStamp );
-            qCDebug( phxTimer ).nospace() << "Began timer at " << data.toReal() << "Hz (vsync: " << !emitHeartbeats << ")";
+            qCDebug( phxTimer ).nospace() << "Began timer at " << data.toReal() << "Hz (vsync: " << vsync << ")";
             startFreq( data.toReal() );
             break;
         }
@@ -163,13 +189,6 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
         case Command::SetVsync: {
             emit commandOut( command, data, timeStamp );
             vsync = data.toBool();
-            emitHeartbeats = !( data.toBool() );
-
-            // Check this here too, heartbeats may not always be emitted
-            if( !emitHeartbeats ) {
-                checkFPS();
-            }
-
             break;
         }
 
@@ -189,59 +208,23 @@ void MicroTimer::killTimers() {
     registeredTimers.clear();
 }
 
-void MicroTimer::checkFPS() {
+// Private
+
+bool MicroTimer::fpsDiffOkay() {
     // If we're vsync'd and the discrepency is too large between coreFPS and hostFPS, do not use vsync'd
     // signals. 2% is a reasonable value for this.
     // This could happen if the user's monitor (hostFPS) is 120Hz and our game (coreFPS) is 60Hz
     // or the game is PAL (coreFPS = 50Hz) and the user's monitor (hostFPS) is 60Hz
     // If vsync is off, we'll always heartbeat at the correct rate
-    qreal coreFPS = frequency;
     qreal percentDifference = qAbs( hostFPS - coreFPS ) / coreFPS * 100;
 
     // Force vsync off from this node down
     // This will not affect PhoenixWindow
     if( percentDifference > 2.0 ) {
-        emitHeartbeats = true;
-        emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
+        return false;
     }
-}
 
-bool MicroTimer::isSingleShot() {
-    return false;
-}
-
-void MicroTimer::setSingleShot( bool ) {
-    qInfo() << "MicroTimer: Single shot timers not supported";
-}
-
-qreal MicroTimer::interval() {
-    return frequency > 0 ? 1000.0 / frequency : 0;
-}
-
-void MicroTimer::setInterval( qreal interval ) {
-    if( interval > 0 ) {
-        frequency = interval / 1000.0;
-    }
-}
-
-qreal MicroTimer::remainingTime() {
-    return targetTime - timer.elapsed();
-}
-
-Qt::TimerType MicroTimer::timerType() {
-    return Qt::PreciseTimer;
-}
-
-void MicroTimer::setTimerType( Qt::TimerType ) {
-    qInfo() << "MicroTimer: Timer type not changeable";
-}
-
-bool MicroTimer::isActive() {
-    return timer.isValid();
-}
-
-bool MicroTimer::getMaxAccuracy() {
-    return maxAccuracy;
+    return true;
 }
 
 void MicroTimer::setMaxAccuracy( bool maxAccuracy ) {
@@ -249,21 +232,9 @@ void MicroTimer::setMaxAccuracy( bool maxAccuracy ) {
 
     // Reset to apply the change unless frequency is <= 0, in which case the thing's not running and we should just
     // kill the timers if they're running
-    if( frequency > 0 ) {
-        startFreq( frequency );
+    if( coreFPS > 0 ) {
+        startFreq( coreFPS );
     } else {
-        killTimers();
-    }
-}
-
-qreal MicroTimer::getFrequency() {
-    return frequency;
-}
-
-void MicroTimer::setFrequency( qreal frequency ) {
-    this->frequency = frequency;
-
-    if( frequency <= 0 ) {
         killTimers();
     }
 }

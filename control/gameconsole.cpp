@@ -115,6 +115,7 @@ void GameConsole::load() {
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
         qCDebug( phxControl ) << "Dynamic pipeline ready";
+        emit commandOut( Command::DynamicPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
         applyPendingPropertyChanges();
         emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
     } else if( source[ "type" ].toString().isEmpty() ||
