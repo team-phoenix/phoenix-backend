@@ -59,6 +59,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
             state = State::Unloading;
             pipelineStateChanged();
             shutdown();
+            break;
         }
 
         // For debugging. Prints number of heartbeats it gets each second (it can only check how much time has passed
@@ -100,7 +101,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
 
         case Command::SetVsync: {
             vsync = data.toBool();
-            //qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync;
+            qCDebug( phxAudioOutput ).nospace() << "vsync: " << vsync << ", coreFPS: " << coreFPS << "Hz, hostFPS: " << hostFPS << "Hz";
             break;
         }
 
@@ -130,7 +131,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
             // Force 16-bit audio (for now)
             outputAudioFormat.setSampleSize( 16 );
 
-            sampleRateRatio = ( qreal )outputAudioFormat.sampleRate()  / inputAudioFormat.sampleRate();
+            sampleRateRatio = static_cast<qreal>( outputAudioFormat.sampleRate() ) / inputAudioFormat.sampleRate();
 
             qCDebug( phxAudioOutput ) << "audioFormatIn" << inputAudioFormat;
             qCDebug( phxAudioOutput ) << "audioFormatOut" << outputAudioFormat;
@@ -141,7 +142,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
             resetAudio();
             allocateMemory();
 
-            outputLengthMs = outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) / 1000;
+            outputLengthMs = static_cast<int>( outputAudioFormat.durationForBytes( outputAudioInterface->bufferSize() ) ) / 1000;
             break;
         }
 
@@ -179,13 +180,13 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
                 resetAudio();
             }
 
-            int inputBytes = bytes;
+            int inputBytes = static_cast<int>( bytes );
             int inputFrames = inputAudioFormat.framesForBytes( inputBytes );
             int inputSamples = inputFrames * samplesPerFrame;
 
             // What do we have to work with?
             int outputTotalBytes = outputAudioFormat.bytesForDuration( outputLengthMs * 1000 );
-            outputCurrentByte = outputBuffer.bytesAvailable();
+            outputCurrentByte = static_cast<int>( outputBuffer.bytesAvailable() );
             int outputFreeBytes = outputTotalBytes - outputCurrentByte;
             int outputFreeFrames = outputAudioFormat.framesForBytes( outputFreeBytes );
             int outputFreeSamples = outputFreeFrames * samplesPerFrame;
@@ -198,7 +199,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             int outputEstimatedBytes = outputAudioFormat.bytesForDuration( inputAudioFormat.durationForBytes( inputBytes ) );
             int outputVectorTargetToCurrent = outputTargetByte - outputCurrentByte + outputEstimatedBytes;
             // double unclampedDRCScale = ( double )outputVectorTargetToCurrent / outputTargetByte;
-            double unclampedDRCScale = ( double )outputVectorTargetToCurrent + outputEstimatedBytes / outputEstimatedBytes;
+            double unclampedDRCScale = static_cast<double>( outputVectorTargetToCurrent ) + outputEstimatedBytes / outputEstimatedBytes;
 
             // Calculate the final DRC ratio
             double DRCScale = qMax( -maxDeviation, qMin( unclampedDRCScale, maxDeviation ) );
@@ -206,7 +207,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             double adjustedSampleRateRatio = sampleRateRatio * ( 1.0 + DRCScale ) * hostRatio;
 
             // libsamplerate works in floats, must convert to floats for processing
-            src_short_to_float_array( ( short * )inputDataShort, inputDataFloat, inputSamples );
+            src_short_to_float_array( inputDataShort, inputDataFloat, inputSamples );
 
             // Set up a struct containing parameters for the resampler
             SRC_DATA srcData;
@@ -219,21 +220,21 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
 
             // Perform resample
             src_set_ratio( resamplerState, adjustedSampleRateRatio );
-            auto errorCode = src_process( resamplerState, &srcData );
+            int errorCode = src_process( resamplerState, &srcData );
 
             if( errorCode ) {
                 qCWarning( phxAudioOutput ) << "libresample error: " << src_strerror( errorCode ) ;
             }
 
-            auto outputFramesConverted = srcData.output_frames_gen;
-            auto outputBytesConverted = outputAudioFormat.bytesForFrames( outputFramesConverted );
-            auto outputSamplesConverted = outputFramesConverted * samplesPerFrame;
+            int outputFramesConverted = static_cast<int>( srcData.output_frames_gen );
+            int outputBytesConverted = outputAudioFormat.bytesForFrames( outputFramesConverted );
+            int outputSamplesConverted = outputFramesConverted * samplesPerFrame;
 
             // Convert float data back to shorts
             src_float_to_short_array( outputDataFloat, outputDataShort, outputSamplesConverted );
 
             // Send the converted data out
-            int outputBytesWritten = outputBuffer.write( ( char * ) outputDataShort, outputBytesConverted );
+            int outputBytesWritten = static_cast<int>( outputBuffer.write( reinterpret_cast<char *>( outputDataShort ), outputBytesConverted ) );
             outputCurrentByte += outputBytesWritten;
 //#define DRC_LOGGING
 #if defined( DRC_LOGGING )
@@ -404,13 +405,13 @@ void AudioOutput::resetAudio() {
 void AudioOutput::allocateMemory() {
     // Some cores may give as much as 4 video frames' worth of audio data in a single video frame period, so we need to one-up them
     const static int bufferSizeInVideoFrames = 30;
-    size_t inputBufferSamples = samplesPerFrame * inputAudioFormat.framesForDuration( ( 1000 / coreFPS ) * bufferSizeInVideoFrames * 1000 );
-    size_t outputBufferSamples = samplesPerFrame * outputAudioFormat.framesForDuration( outputLengthMs * 1000 );
+    int inputBufferSamples = samplesPerFrame * inputAudioFormat.framesForDuration( static_cast<qint64>( ( 1000.0 / coreFPS ) * bufferSizeInVideoFrames * 1000.0 ) );
+    int outputBufferSamples = samplesPerFrame * outputAudioFormat.framesForDuration( outputLengthMs * 1000 );
 
     qCDebug( phxAudioOutput ) << "Allocating" <<
-                              ( double )(
-                                  sizeof( float ) * ( inputBufferSamples + outputBufferSamples ) +
-                                  sizeof( short ) * ( inputBufferSamples + outputBufferSamples )
+                              static_cast<double>(
+                                  static_cast<int>( sizeof( float ) ) * ( inputBufferSamples + outputBufferSamples ) +
+                                  static_cast<int>( sizeof( short ) ) * ( inputBufferSamples + outputBufferSamples )
                               )
                               / 1024.0 << "KB for resampling";
     qCDebug( phxAudioOutput ).nospace() << "Input buffer samples: " << inputBufferSamples <<
