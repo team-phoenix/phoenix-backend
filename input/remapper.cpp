@@ -206,7 +206,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                         gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] = true;
                     }
 
-                    if( angle > 270.0 - halfRange && angle < 270.0 - halfRange ) {
+                    if( angle > 270.0 - halfRange && angle < 270.0 + halfRange ) {
                         gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] = true;
                     }
 
