@@ -129,8 +129,9 @@ class Remapper : public Node {
         // We keep the keyboard's state here as it comes to us "raw"
         GamepadState keyboardGamepad;
 
-        // Default keyboard mapping
         QMap<int, int> keyboardKeyToSDLButton {
+            // Default keyboard mapping
+            // US Keyboard
             { Qt::Key_W, SDL_CONTROLLER_BUTTON_DPAD_UP },
             { Qt::Key_A, SDL_CONTROLLER_BUTTON_DPAD_LEFT },
             { Qt::Key_S, SDL_CONTROLLER_BUTTON_DPAD_DOWN },
@@ -139,6 +140,11 @@ class Remapper : public Node {
             { Qt::Key_L, SDL_CONTROLLER_BUTTON_B },
             { Qt::Key_O, SDL_CONTROLLER_BUTTON_X },
             { Qt::Key_K, SDL_CONTROLLER_BUTTON_Y },
+            // Alternate layout
+            //{ Qt::Key_L, SDL_CONTROLLER_BUTTON_A },
+            //{ Qt::Key_K, SDL_CONTROLLER_BUTTON_B },
+            //{ Qt::Key_I, SDL_CONTROLLER_BUTTON_X },
+            //{ Qt::Key_J, SDL_CONTROLLER_BUTTON_Y },
             { Qt::Key_Shift, SDL_CONTROLLER_BUTTON_LEFTSHOULDER },
             { Qt::Key_Space, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
             { Qt::Key_Backspace, SDL_CONTROLLER_BUTTON_BACK },
@@ -146,6 +152,20 @@ class Remapper : public Node {
             { Qt::Key_Return, SDL_CONTROLLER_BUTTON_START },
             { Qt::Key_1, SDL_CONTROLLER_BUTTON_LEFTSTICK },
             { Qt::Key_3, SDL_CONTROLLER_BUTTON_RIGHTSTICK },
+            // Home row
+            { Qt::Key_Home, SDL_CONTROLLER_BUTTON_GUIDE },
+            // Arrow keys
+            { Qt::Key_Up, SDL_CONTROLLER_BUTTON_DPAD_UP },
+            { Qt::Key_Down, SDL_CONTROLLER_BUTTON_DPAD_DOWN },
+            { Qt::Key_Left, SDL_CONTROLLER_BUTTON_DPAD_LEFT },
+            { Qt::Key_Right, SDL_CONTROLLER_BUTTON_DPAD_RIGHT },
+            // Number pad
+            { Qt::Key_5, SDL_CONTROLLER_BUTTON_A },
+            { Qt::Key_4, SDL_CONTROLLER_BUTTON_B },
+            { Qt::Key_8, SDL_CONTROLLER_BUTTON_X },
+            { Qt::Key_7, SDL_CONTROLLER_BUTTON_Y },
+            { Qt::Key_6, SDL_CONTROLLER_BUTTON_BACK },
+            { Qt::Key_Enter, SDL_CONTROLLER_BUTTON_START },
         };
 
         // Internal bookkeeping
