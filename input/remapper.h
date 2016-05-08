@@ -57,7 +57,7 @@ class Remapper : public Node {
         void remappingEnded();
 
         // Data for the model so it can update its internal copy of remapData
-        void setMapping( QString GUID, QString virtualButton, QString physicalButton );
+        void setMapping( QString GUID, QString physicalButton, QString virtualButton );
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
@@ -181,8 +181,8 @@ class Remapper : public Node {
 
         // If clear is set, analog state is cleared if no d-pad buttons pressed
         GamepadState mapDpadToAnalog( GamepadState gamepad, bool clear = false );
-
-        QString buttonToString( int button );
-
-        int stringToButton( QString button );
 };
+
+QString buttonToString( int button );
+
+int stringToButton( QString button );

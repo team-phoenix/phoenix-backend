@@ -64,7 +64,7 @@ class RemapperModel : public QAbstractListModel {
 
     signals:
         void remapModeChanged();
-        void beginRemapping( QString GUID, QString button );
+        void beginRemappingProxy( QString GUID, QString button );
 
     public slots:
         // A new controller GUID was seen, add to the model's list
@@ -80,7 +80,7 @@ class RemapperModel : public QAbstractListModel {
         void remappingEnded();
 
         // Update remapData, reset model
-        void setMapping( QString GUID, QString virtualButton, QString physicalButton );
+        void setMapping( QString GUID, QString physicalButton , QString virtualButton );
 
         // Connect to this Remapper
         void setRemapper( Remapper *t_remapper );
@@ -93,7 +93,7 @@ class RemapperModel : public QAbstractListModel {
         bool remapMode{ false };
 
         // Copy of the remapping data
-        // GUID : (button : remapped button)
+        // GUID : ( physicalButton:virtualButton )
         QMap<QString, QStringMap> remapData;
 
         // True if any controller with a particular GUID has any button pressed

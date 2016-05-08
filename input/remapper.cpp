@@ -79,7 +79,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             // For now, just init the remap with default mappings
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                 gamepadSDLButtonToSDLButton[ GUID ][ i ] = i;
-                emit setMapping( GUID, buttonToString( i ), buttonToString( gamepadSDLButtonToSDLButton[ GUID ][ i ] ) );
+                emit setMapping( GUID, buttonToString( i ), buttonToString( i ) );
             }
 
             break;
@@ -202,7 +202,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                             ignoreModeGUID = GUID;
                             ignoreModeButton = physicalButton;
                             ignoreModeInstanceID = gamepad.instanceID;
-                            emit setMapping( GUID, buttonToString( virtualButton ), buttonToString( physicalButton ) );
+                            emit setMapping( GUID, buttonToString( physicalButton ), buttonToString( virtualButton ) );
                             emit remappingEnded();
                             break;
                         }
@@ -325,6 +325,8 @@ void Remapper::beginRemapping( QString GUID, QString button ) {
     remapModeButton = stringToButton( button );
 }
 
+// Private
+
 GamepadState Remapper::mapDpadToAnalog( GamepadState gamepad, bool clear ) {
     // TODO: Support other axes?
     // TODO: Support multiple axes?
@@ -404,9 +406,7 @@ GamepadState Remapper::mapDpadToAnalog( GamepadState gamepad, bool clear ) {
     return gamepad;
 }
 
-// Private
-
-QString Remapper::buttonToString( int button ) {
+QString buttonToString( int button ) {
     switch( button ) {
         case SDL_CONTROLLER_BUTTON_A: {
             return QStringLiteral( "A" );
@@ -469,12 +469,12 @@ QString Remapper::buttonToString( int button ) {
         }
 
         default: {
-            return QStringLiteral( "ERROR" );
+            return QStringLiteral( "INVALID" );
         }
     }
 }
 
-int Remapper::stringToButton( QString button ) {
+int stringToButton( QString button ) {
     if( button == QStringLiteral( "A" ) ) {
         return SDL_CONTROLLER_BUTTON_A;
     } else if( button == QStringLiteral( "B" ) ) {

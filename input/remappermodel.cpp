@@ -39,12 +39,25 @@ QVariant RemapperModel::data( const QModelIndex &index, int role ) const {
             // Get the GUID
             QString GUID = rowToGUID( index.row() );
 
+            qDebug() << "Get GUID" << GUID << "row" << index.row();
+
             // Get the remap data
             QVariantMap remapData;
 
-            for( QString key : this->remapData[ GUID ].keys() ) {
-                remapData[ key ] = this->remapData[ GUID ][ key ];
+            // Generate virtualButton -> physicalButtons
+            for( int virtualButton = 0; virtualButton < SDL_CONTROLLER_BUTTON_MAX; virtualButton++ ) {
+                remapData[ buttonToString( virtualButton ) ] = QStringList();
+                QStringList list;
+                for( QString physicalButton : this->remapData[ GUID ].keys() ) {
+                    if( this->remapData[ GUID ][ physicalButton ] == buttonToString( virtualButton ) ) {
+                        list.append( physicalButton );
+                        qDebug() << list << physicalButton;
+                    }
+                }
+                remapData[ buttonToString( virtualButton ) ].setValue( list );
             }
+
+            qDebug() << remapData << this->remapData;
 
             return remapData;
         }
@@ -97,13 +110,12 @@ void RemapperModel::remappingEnded() {
     emit remapModeChanged();
 }
 
-void RemapperModel::setMapping( QString GUID, QString virtualButton, QString physicalButton ) {
+void RemapperModel::setMapping( QString GUID, QString physicalButton, QString virtualButton ) {
     // Update the model if this GUID is not in the list yet
     insertRowIfNotPresent( GUID );
 
     // Add to/update the map
-    // FIXME: This is backwards compared to how it's stored in Remapper
-    remapData[ GUID ][ virtualButton ] = physicalButton;
+    remapData[ GUID ][ physicalButton ] = virtualButton;
     int row = GUIDToRow( GUID );
     emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { RemapDataRole } );
 }
@@ -114,14 +126,15 @@ void RemapperModel::setRemapper( Remapper *t_remapper ) {
     connect( t_remapper, &Remapper::buttonUpdate, this, &RemapperModel::buttonUpdate );
     connect( t_remapper, &Remapper::remappingEnded, this, &RemapperModel::remappingEnded );
     connect( t_remapper, &Remapper::setMapping, this, &RemapperModel::setMapping );
-    connect( this, &RemapperModel::beginRemapping, t_remapper, &Remapper::beginRemapping );
+
+    connect( this, &RemapperModel::beginRemappingProxy, t_remapper, &Remapper::beginRemapping );
 }
 
 void RemapperModel::beginRemapping( QString GUID, QString button ) {
     if( !remapMode ) {
         remapMode = true;
         emit remapModeChanged();
-        emit beginRemapping( GUID, button );
+        emit beginRemappingProxy( GUID, button );
     } else {
         qCWarning( phxInput ) << "Remap mode already active!";
     }
