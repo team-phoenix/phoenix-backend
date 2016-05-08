@@ -39,8 +39,6 @@ QVariant RemapperModel::data( const QModelIndex &index, int role ) const {
             // Get the GUID
             QString GUID = rowToGUID( index.row() );
 
-            qDebug() << "Get GUID" << GUID << "row" << index.row();
-
             // Get the remap data
             QVariantMap remapData;
 
@@ -51,13 +49,10 @@ QVariant RemapperModel::data( const QModelIndex &index, int role ) const {
                 for( QString physicalButton : this->remapData[ GUID ].keys() ) {
                     if( this->remapData[ GUID ][ physicalButton ] == buttonToString( virtualButton ) ) {
                         list.append( physicalButton );
-                        qDebug() << list << physicalButton;
                     }
                 }
                 remapData[ buttonToString( virtualButton ) ].setValue( list );
             }
-
-            qDebug() << remapData << this->remapData;
 
             return remapData;
         }
