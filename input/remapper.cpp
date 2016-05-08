@@ -118,55 +118,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
-            // OR all button states together by GUID
-            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                pressed[ GUID ] |= gamepad.button[ i ];
-            }
-
-            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
-            // Don't go past this block if in remap mode
-            {
-                if( remapMode && GUID == remapModeGUID ) {
-                    // Find a button press, the first one we encounter will be the new remapping
-                    for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                        if( gamepad.button[ i ] == SDL_PRESSED ) {
-                            // TODO: Store this mapping to disk
-                            qCDebug( phxInput ) << "Button" << buttonToString( i )
-                                                << "remapped to" << buttonToString( remapModeButton ) << "for GUID" << GUID;
-
-                            // Store the new remapping internally
-                            gamepadSDLButtonToSDLButton[ GUID ][ i ] = remapModeButton;
-
-                            // Tell the model we're done
-                            remapMode = false;
-                            ignoreMode = true;
-                            ignoreModeGUID = GUID;
-                            ignoreModeButton = i;
-                            ignoreModeInstanceID = gamepad.instanceID;
-                            emit remapUpdate( GUID, buttonToString( remapModeButton ), buttonToString( i ) );
-                            emit remapModeEnd();
-                            break;
-                        }
-                    }
-
-                    // Do not go any further in this data handler
-                    return;
-                } else if( remapMode ) {
-                    // Do not go any further in this data handler
-                    return;
-                }
-            }
-
-            // If ignoreButton is set, the user hasn't let go of the button they were remapping to
-            // Do not let the button go through until they let go
-            if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
-                if( gamepad.button[ ignoreModeButton ] == SDL_PRESSED ) {
-                    gamepad.button[ ignoreModeButton ] = SDL_RELEASED;
-                } else {
-                    ignoreMode = false;
-                }
-            }
-
             // Apply axis to d-pad, if enabled
             // This will always be enabled if we're not currently playing so GlobalGamepad can use the analog stick
             if( analogToDpad[ GUID ] || !playing ) {
@@ -223,6 +174,55 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             // Apply d-pad to axis, if enabled
             if( dpadToAnalog[ GUID ] ) {
                 gamepad = mapDpadToAnalog( gamepad );
+            }
+
+            // OR all button states together by GUID
+            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                pressed[ GUID ] |= gamepad.button[ i ];
+            }
+
+            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
+            // Don't go past this block if in remap mode
+            {
+                if( remapMode && GUID == remapModeGUID ) {
+                    // Find a button press, the first one we encounter will be the new remapping
+                    for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                        if( gamepad.button[ i ] == SDL_PRESSED ) {
+                            // TODO: Store this mapping to disk
+                            qCDebug( phxInput ) << "Button" << buttonToString( i )
+                                                << "remapped to" << buttonToString( remapModeButton ) << "for GUID" << GUID;
+
+                            // Store the new remapping internally
+                            gamepadSDLButtonToSDLButton[ GUID ][ i ] = remapModeButton;
+
+                            // Tell the model we're done
+                            remapMode = false;
+                            ignoreMode = true;
+                            ignoreModeGUID = GUID;
+                            ignoreModeButton = i;
+                            ignoreModeInstanceID = gamepad.instanceID;
+                            emit remapUpdate( GUID, buttonToString( remapModeButton ), buttonToString( i ) );
+                            emit remapModeEnd();
+                            break;
+                        }
+                    }
+
+                    // Do not go any further in this data handler
+                    return;
+                } else if( remapMode ) {
+                    // Do not go any further in this data handler
+                    return;
+                }
+            }
+
+            // If ignoreButton is set, the user hasn't let go of the button they were remapping to
+            // Do not let the button go through until they let go
+            if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
+                if( gamepad.button[ ignoreModeButton ] == SDL_PRESSED ) {
+                    gamepad.button[ ignoreModeButton ] = SDL_RELEASED;
+                } else {
+                    ignoreMode = false;
+                }
             }
 
             // Remap button states according to stored data
