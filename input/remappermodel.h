@@ -64,7 +64,7 @@ class RemapperModel : public QAbstractListModel {
 
     signals:
         void remapModeChanged();
-        void remapModeBegin( QString GUID, QString button );
+        void beginRemapping( QString GUID, QString button );
 
     public slots:
         // A new controller GUID was seen, add to the model's list
@@ -77,16 +77,16 @@ class RemapperModel : public QAbstractListModel {
         void buttonUpdate( QString GUID, bool pressed );
 
         // Remap mode completed, update UI
-        void remapModeEnd();
+        void remappingEnded();
 
         // Update remapData, reset model
-        void remapUpdate( QString GUID, QString originalButton, QString remappedButton );
+        void setMapping( QString GUID, QString virtualButton, QString physicalButton );
 
         // Connect to this Remapper
         void setRemapper( Remapper *t_remapper );
 
         // Call from QML
-        void beginRemap( QString GUID, QString button );
+        void beginRemapping( QString GUID, QString button );
 
     private:
         // Are we currently remapping?

@@ -52,7 +52,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             if( remapMode && !GUIDCount.contains( remapModeGUID ) ) {
                 qCWarning( phxInput ) << "No controllers with GUID" << remapModeGUID << "remaining, exiting remap mode!";
                 remapMode = false;
-                emit remapModeEnd();
+                emit remappingEnded();
             }
 
             break;
@@ -79,7 +79,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             // For now, just init the remap with default mappings
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                 gamepadSDLButtonToSDLButton[ GUID ][ i ] = i;
-                emit remapUpdate( GUID, buttonToString( i ), buttonToString( gamepadSDLButtonToSDLButton[ GUID ][ i ] ) );
+                emit setMapping( GUID, buttonToString( i ), buttonToString( gamepadSDLButtonToSDLButton[ GUID ][ i ] ) );
             }
 
             break;
@@ -186,23 +186,24 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             {
                 if( remapMode && GUID == remapModeGUID ) {
                     // Find a button press, the first one we encounter will be the new remapping
-                    for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                        if( gamepad.button[ i ] == SDL_PRESSED ) {
+                    for( int physicalButton = 0; physicalButton < SDL_CONTROLLER_BUTTON_MAX; physicalButton++ ) {
+                        if( gamepad.button[ physicalButton ] == SDL_PRESSED ) {
+                            int virtualButton = remapModeButton;
                             // TODO: Store this mapping to disk
-                            qCDebug( phxInput ) << "Button" << buttonToString( i )
-                                                << "remapped to" << buttonToString( remapModeButton ) << "for GUID" << GUID;
+                            qCDebug( phxInput ) << "Button" << buttonToString( physicalButton )
+                                                << "from GUID" << GUID << "now activates" << buttonToString( virtualButton );
 
                             // Store the new remapping internally
-                            gamepadSDLButtonToSDLButton[ GUID ][ i ] = remapModeButton;
+                            gamepadSDLButtonToSDLButton[ GUID ][ physicalButton ] = virtualButton;
 
                             // Tell the model we're done
                             remapMode = false;
                             ignoreMode = true;
                             ignoreModeGUID = GUID;
-                            ignoreModeButton = i;
+                            ignoreModeButton = physicalButton;
                             ignoreModeInstanceID = gamepad.instanceID;
-                            emit remapUpdate( GUID, buttonToString( remapModeButton ), buttonToString( i ) );
-                            emit remapModeEnd();
+                            emit setMapping( GUID, buttonToString( virtualButton ), buttonToString( physicalButton ) );
+                            emit remappingEnded();
                             break;
                         }
                     }
@@ -226,29 +227,32 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             }
 
             // Remap button states according to stored data
-            GamepadState remappedGamepad = gamepad;
             {
+                GamepadState virtualGamepad = gamepad;
+
                 // Clear remappedGamepad's states
                 for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                    remappedGamepad.button[ i ] = SDL_RELEASED;
+                    virtualGamepad.button[ i ] = SDL_RELEASED;
                 }
 
-                QMap<int, int> remap = gamepadSDLButtonToSDLButton[ GUID ];
+                QMap<int, int> physicalToVirtual = gamepadSDLButtonToSDLButton[ GUID ];
 
-                for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                    // Read remapped button id from stored remap data
-                    int remappedButtonID = remap[ i ];
+                for( int physicalButton = 0; physicalButton < SDL_CONTROLLER_BUTTON_MAX; physicalButton++ ) {
+                    // Read virtual (remapped) button id from stored remap data
+                    int virtualButton = physicalToVirtual[ physicalButton ];
 
-                    // Write this button's state to the remapped button ID
-                    remappedGamepad.button[ remappedButtonID ] |= gamepad.button[ i ];
+                    // Write the physical button's state to its corresponding virtual button (set by user)
+                    virtualGamepad.button[ virtualButton ] |= gamepad.button[ physicalButton ];
                 }
+
+                gamepad = virtualGamepad;
             }
 
             // Send updated data out
             {
                 // Copy current gamepad into buffer
                 this->mutex.lock();
-                gamepadBuffer[ gamepadBufferIndex ] = remappedGamepad;
+                gamepadBuffer[ gamepadBufferIndex ] = gamepad;
                 this->mutex.unlock();
 
                 // Send buffer on its way
@@ -315,7 +319,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
     }
 }
 
-void Remapper::remapModeBegin( QString GUID, QString button ) {
+void Remapper::beginRemapping( QString GUID, QString button ) {
     remapMode = true;
     remapModeGUID = GUID;
     remapModeButton = stringToButton( button );

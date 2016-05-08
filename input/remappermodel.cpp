@@ -92,17 +92,18 @@ void RemapperModel::buttonUpdate( QString GUID, bool pressed ) {
     emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { PressedRole } );
 }
 
-void RemapperModel::remapModeEnd() {
+void RemapperModel::remappingEnded() {
     remapMode = false;
     emit remapModeChanged();
 }
 
-void RemapperModel::remapUpdate( QString GUID, QString originalButton, QString remappedButton ) {
+void RemapperModel::setMapping( QString GUID, QString virtualButton, QString physicalButton ) {
     // Update the model if this GUID is not in the list yet
     insertRowIfNotPresent( GUID );
 
     // Add to/update the map
-    remapData[ GUID ][ originalButton ] = remappedButton;
+    // FIXME: This is backwards compared to how it's stored in Remapper
+    remapData[ GUID ][ virtualButton ] = physicalButton;
     int row = GUIDToRow( GUID );
     emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { RemapDataRole } );
 }
@@ -111,16 +112,16 @@ void RemapperModel::setRemapper( Remapper *t_remapper ) {
     connect( t_remapper, &Remapper::controllerAdded, this, &RemapperModel::controllerAdded );
     connect( t_remapper, &Remapper::controllerRemoved, this, &RemapperModel::controllerRemoved );
     connect( t_remapper, &Remapper::buttonUpdate, this, &RemapperModel::buttonUpdate );
-    connect( t_remapper, &Remapper::remapModeEnd, this, &RemapperModel::remapModeEnd );
-    connect( t_remapper, &Remapper::remapUpdate, this, &RemapperModel::remapUpdate );
-    connect( this, &RemapperModel::remapModeBegin, t_remapper, &Remapper::remapModeBegin );
+    connect( t_remapper, &Remapper::remappingEnded, this, &RemapperModel::remappingEnded );
+    connect( t_remapper, &Remapper::setMapping, this, &RemapperModel::setMapping );
+    connect( this, &RemapperModel::beginRemapping, t_remapper, &Remapper::beginRemapping );
 }
 
-void RemapperModel::beginRemap( QString GUID, QString button ) {
+void RemapperModel::beginRemapping( QString GUID, QString button ) {
     if( !remapMode ) {
         remapMode = true;
         emit remapModeChanged();
-        emit remapModeBegin( GUID, button );
+        emit beginRemapping( GUID, button );
     } else {
         qCWarning( phxInput ) << "Remap mode already active!";
     }

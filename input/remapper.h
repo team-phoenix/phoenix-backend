@@ -54,19 +54,21 @@ class Remapper : public Node {
         void buttonUpdate( QString GUID, bool pressed );
 
         // Remap mode completed, update the UI
-        void remapModeEnd();
+        void remappingEnded();
 
         // Data for the model so it can update its internal copy of remapData
-        void remapUpdate( QString GUID, QString originalButton, QString remappedButton );
+        void setMapping( QString GUID, QString virtualButton, QString physicalButton );
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
         void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
 
+        // Slots from RemapperModel
+
         // Do not send input updates to this node's children, listen for a button press on this GUID and reply back
         // with a button once pressed
-        void remapModeBegin( QString GUID, QString button );
+        void beginRemapping( QString GUID, QString button );
 
     private:
         // Node stuff
