@@ -199,8 +199,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                     angle += 360.0;
                 }
 
-                //qDebug() << angle << radius << xCoord << yCoord;
-
                 if( radius > threshold ) {
                     qreal halfRange = rangeDegrees / 2.0;
 
@@ -290,7 +288,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             // Apply d-pad to axis, if enabled
             if( dpadToAnalogKeyboard ) {
                 keyboardGamepad = mapDpadToAnalog( keyboardGamepad, true );
-                qDebug() << keyboardGamepad.axis[ SDL_CONTROLLER_AXIS_LEFTX ] << keyboardGamepad.axis[ SDL_CONTROLLER_AXIS_LEFTY ];
             }
 
             // Send gamepad on its way
@@ -393,7 +390,6 @@ GamepadState Remapper::mapDpadToAnalog( GamepadState gamepad, bool clear ) {
         }
 
         // Finally, set the value and return
-        qDebug() << xValue << yValue;
         gamepad.axis[ xAxis ] = xValue;
         gamepad.axis[ yAxis ] = yValue;
     } else if( clear ) {
