@@ -1,6 +1,7 @@
 #include "remapper.h"
 #include "remappermodel.h"
 
+#include <QKeySequence>
 #include <QVector2D>
 #include <QtMath>
 
@@ -33,6 +34,43 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
 
             // TODO: Read keyboard setting from disk too
             dpadToAnalogKeyboard = true;
+
+            // Give the model friendly names for all the keys set
+            for( int physicalKey : keyboardKeyToSDLButton.keys() ) {
+                int virtualButton = keyboardKeyToSDLButton[ physicalKey ];
+
+                // This prints garbage as-is, so change it to something that doesn't
+                // Confirmed on Windows but looks okay in OS X?
+                // https://bugreports.qt.io/browse/QTBUG-40030
+                if( physicalKey == Qt::Key_Shift ) {
+                    physicalKey = Qt::ShiftModifier;
+                }
+
+                if( physicalKey == Qt::Key_Control ) {
+                    physicalKey = Qt::ControlModifier;
+                }
+
+                if( physicalKey == Qt::Key_Meta ) {
+                    physicalKey = Qt::MetaModifier;
+                }
+
+                if( physicalKey == Qt::Key_Alt ) {
+                    physicalKey = Qt::AltModifier;
+                }
+
+                if( physicalKey == Qt::Key_AltGr ) {
+                    physicalKey = Qt::AltModifier;
+                }
+
+                QString keyString = QKeySequence( physicalKey ).toString( QKeySequence::NativeText );
+
+                // Strip out trailing + in the corrected keys
+                if( keyString.length() > 1 ) {
+                    keyString = keyString.section( '+', 0, 0 );
+                }
+
+                emit setMapping( "",  keyString, buttonToString( virtualButton ) );
+            }
 
             break;
         }
