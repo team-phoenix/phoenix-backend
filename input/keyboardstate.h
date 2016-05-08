@@ -6,7 +6,8 @@
  */
 
 struct KeyboardState {
-    KeyboardState();
+    KeyboardState() = default;
+
     // Because key values run the entire possible range of ints, it's inefficient to store a 32-bit array. Storing
     // the values as a hash map is also no good; you'll end up doing expensive heap allocations copying data to this
     // node's child as a signal and it's not thread-safe to simply send the hash map as a pointer.
@@ -21,9 +22,9 @@ struct KeyboardState {
     // One beyond final entry in the buffer
     int tail { 0 };
 
-    // Key code
+    // Key code circular buffer
     int key[ 128 ] { 0 };
 
-    // Key state
+    // Key state circular buffer
     bool pressed[ 128 ] { false };
 };

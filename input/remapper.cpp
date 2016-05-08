@@ -1,6 +1,9 @@
 #include "remapper.h"
 #include "remappermodel.h"
 
+#include <QVector2D>
+#include <QtMath>
+
 Remapper::Remapper( Node *parent ) : Node( parent ) {
     keyboardGamepad.instanceID = -1;
 }
@@ -11,8 +14,26 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
     emit commandOut( command, data, timeStamp );
 
     switch( command ) {
+        case Command::Stop:
+        case Command::Load:
+        case Command::Pause:
+        case Command::Unload:
+        case Command::Reset: {
+            playing = false;
+            break;
+        }
+
+        case Command::Play: {
+            playing = true;
+            break;
+        }
+
         case Command::GlobalPipelineReady: {
             emit controllerAdded( "", "Keyboard" );
+
+            // TODO: Read keyboard setting from disk too
+            dpadToAnalogKeyboard = true;
+
             break;
         }
 
@@ -50,7 +71,11 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
                 GUIDCount[ GUID ]++;
             }
 
-            // FIXME: Replace with something that reads all known mappings from disk, in the constructor
+            // TODO: Read value from disk
+            analogToDpad[ GUID ] = true;
+            dpadToAnalog[ GUID ] = true;
+
+            // TODO: Read mappings from disk
             // For now, just init the remap with default mappings
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                 gamepadSDLButtonToSDLButton[ GUID ][ i ] = i;
@@ -142,6 +167,66 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 }
             }
 
+            // Apply axis to d-pad, if enabled
+            // This will always be enabled if we're not currently playing so GlobalGamepad can use the analog stick
+            if( analogToDpad[ GUID ] || !playing ) {
+                // TODO: Support other axes?
+                int xAxis = SDL_CONTROLLER_AXIS_LEFTX;
+                int yAxis = SDL_CONTROLLER_AXIS_LEFTY;
+
+                // TODO: Let user configure these
+
+                qreal threshold = 16384.0;
+
+                // Size in degrees of the arc covering and centered around each cardinal direction
+                // If <90, there will be gaps in the diagonals
+                // If >180, this code will always produce diagonal inputs
+                qreal rangeDegrees = 180.0 - 45.0;
+
+                // Get axis coords in cartesian coords
+                // Bottom right is positive -> top right is positive
+                float xCoord = gamepad.axis[ xAxis ];
+                float yCoord = -gamepad.axis[ yAxis ];
+
+                // Get radius from center
+                QVector2D position( xCoord, yCoord );
+                qreal radius = position.length();
+
+                // Get angle in degrees
+                qreal angle = qRadiansToDegrees( qAtan2( yCoord, xCoord ) );
+
+                if( angle < 0.0 ) {
+                    angle += 360.0;
+                }
+
+                //qDebug() << angle << radius << xCoord << yCoord;
+
+                if( radius > threshold ) {
+                    qreal halfRange = rangeDegrees / 2.0;
+
+                    if( angle > 90.0 - halfRange && angle < 90.0 + halfRange ) {
+                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] = true;
+                    }
+
+                    if( angle > 270.0 - halfRange && angle < 270.0 - halfRange ) {
+                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] = true;
+                    }
+
+                    if( angle > 180.0 - halfRange && angle < 180.0 + halfRange ) {
+                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] = true;
+                    }
+
+                    if( angle > 360.0 - halfRange || angle < 0.0 + halfRange ) {
+                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] = true;
+                    }
+                }
+            }
+
+            // Apply d-pad to axis, if enabled
+            if( dpadToAnalog[ GUID ] ) {
+                gamepad = mapDpadToAnalog( gamepad );
+            }
+
             // Remap button states according to stored data
             GamepadState remappedGamepad = gamepad;
             {
@@ -197,9 +282,15 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 mutex->unlock();
             }
 
-            // OR all key states together
+            // OR all key states together and store that value
             for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
                 keyboardKeyPressed |= keyboardGamepad.button[ i ];
+            }
+
+            // Apply d-pad to axis, if enabled
+            if( dpadToAnalogKeyboard ) {
+                keyboardGamepad = mapDpadToAnalog( keyboardGamepad, true );
+                qDebug() << keyboardGamepad.axis[ SDL_CONTROLLER_AXIS_LEFTX ] << keyboardGamepad.axis[ SDL_CONTROLLER_AXIS_LEFTY ];
             }
 
             // Send gamepad on its way
@@ -231,6 +322,86 @@ void Remapper::remapModeBegin( QString GUID, QString button ) {
     remapMode = true;
     remapModeGUID = GUID;
     remapModeButton = stringToButton( button );
+}
+
+GamepadState Remapper::mapDpadToAnalog( GamepadState gamepad, bool clear ) {
+    // TODO: Support other axes?
+    // TODO: Support multiple axes?
+    int xAxis = SDL_CONTROLLER_AXIS_LEFTX;
+    int yAxis = SDL_CONTROLLER_AXIS_LEFTY;
+
+    // The distance from center the analog stick will go if a d-pad button is pressed
+    // TODO: Let the user set this
+    // TODO: Recommend to the user to set this to a number comparable to the analog stick's actual range
+    qreal maxRange = 32768.0;
+
+    bool up = gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] == SDL_PRESSED;
+    bool down = gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] == SDL_PRESSED;
+    bool left = gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] == SDL_PRESSED;
+    bool right = gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] == SDL_PRESSED;
+
+    if( up || down || left || right ) {
+        qreal angle = 0.0;
+
+        // Check diagonals first
+        if( up && right ) {
+            angle = 45.0;
+        } else if( up && left ) {
+            angle = 135.0;
+        } else if( down && left ) {
+            angle = 225.0;
+        } else if( down && right ) {
+            angle = 315.0;
+        } else if( right ) {
+            angle = 0.0;
+        } else if( up ) {
+            angle = 90.0;
+        } else if( left ) {
+            angle = 180.0;
+        } else { /*if( down )*/
+            angle = 270.0;
+        }
+
+        // Get coords on a unit circle
+        qreal xScale = qCos( qDegreesToRadians( angle ) );
+        qreal yScale = qSin( qDegreesToRadians( angle ) );
+
+        // Convert from positive top right coord system to positive bottom right coord system
+        yScale = -yScale;
+
+        // Map unit circle range to full range of Sint16 without over/underflowing
+        Sint16 xValue = 0;
+        Sint16 yValue = 0;
+        {
+            // Map scales from [-1.0, 1.0] to [0.0, 1.0]
+            xScale += 1.0;
+            xScale /= 2.0;
+            yScale += 1.0;
+            yScale /= 2.0;
+
+            // Map scales from [0.0, 1.0] to [0, maxRange + maxRange - 1]
+            xScale *= maxRange + maxRange - 1;
+            yScale *= maxRange + maxRange - 1;
+
+            // Map scales from [0, maxRange + maxRange - 1] to [-maxRange, maxRange - 1]
+            xScale -= maxRange;
+            yScale -= maxRange;
+
+            // Convert to int (drops fractional value, not the same as a floor operation!)
+            xValue = static_cast<Sint16>( xScale );
+            yValue = static_cast<Sint16>( yScale );
+        }
+
+        // Finally, set the value and return
+        qDebug() << xValue << yValue;
+        gamepad.axis[ xAxis ] = xValue;
+        gamepad.axis[ yAxis ] = yValue;
+    } else if( clear ) {
+        gamepad.axis[ xAxis ] = 0;
+        gamepad.axis[ yAxis ] = 0;
+    }
+
+    return gamepad;
 }
 
 // Private

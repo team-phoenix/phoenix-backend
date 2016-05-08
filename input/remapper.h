@@ -69,6 +69,11 @@ class Remapper : public Node {
         void remapModeBegin( QString GUID, QString button );
 
     private:
+        // Node stuff
+
+        // True iff we're playing right now
+        bool playing{ false };
+
         // Producer stuff
 
         // If true, do not send any data to children
@@ -112,6 +117,14 @@ class Remapper : public Node {
         // Remap data
         QMap<QString, QMap<int, int>> gamepadSDLButtonToSDLButton;
 
+        // Convert analog stick values to d-pad presses and vice versa
+        // This is useful to both LibretroCore and the UI (GlobalGamepad)
+        // analogToDpad is always active when not playing
+        QMap<QString, bool> analogToDpad;
+        QMap<QString, bool> dpadToAnalog;
+
+        bool dpadToAnalogKeyboard { false };
+
         // Keyboard remapping data
         // We keep the keyboard's state here as it comes to us "raw"
         GamepadState keyboardGamepad;
@@ -143,6 +156,9 @@ class Remapper : public Node {
         QMap<QString, int> GUIDCount;
 
         // Helpers
+
+        // If clear is set, analog state is cleared if no d-pad buttons pressed
+        GamepadState mapDpadToAnalog( GamepadState gamepad, bool clear = false );
 
         QString buttonToString( int button );
 
