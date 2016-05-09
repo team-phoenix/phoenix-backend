@@ -54,6 +54,7 @@
     consumer/audiooutput.h \
     consumer/videooutput.h \
     consumer/videooutputnode.h \
+    control/controloutput.h \
     control/gameconsole.h \
     core/core.h \
     core/libretro.h \
@@ -70,7 +71,6 @@
     input/remappermodel.h \
     pipeline/node.h \
     pipeline/pipelinecommon.h \
-    util/controloutput.h \
     util/logging.h \
     util/microtimer.h \
     util/phoenixwindow.h \
@@ -82,6 +82,7 @@
     consumer/audiooutput.cpp \
     consumer/videooutput.cpp \
     consumer/videooutputnode.cpp \
+    control/controloutput.cpp \
     control/gameconsole.cpp \
     core/core.cpp \
     core/libretrocore.cpp \
@@ -96,7 +97,6 @@
     input/remapper.cpp \
     input/remappermodel.cpp \
     pipeline/node.cpp \
-    util/controloutput.cpp \
     util/logging.cpp \
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
