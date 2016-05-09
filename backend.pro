@@ -45,6 +45,9 @@
     # Include our stuff
     INCLUDEPATH += consumer control core input pipeline util
 
+    # Build with debugging info
+    DEFINES += QT_MESSAGELOGCONTEXT
+
     HEADERS += \
     backendplugin.h \
     consumer/audiobuffer.h \
