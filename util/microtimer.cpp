@@ -40,7 +40,7 @@ MicroTimer::~MicroTimer() {
 
 bool MicroTimer::event( QEvent *e ) {
     // Abort if frequency hasn't been set yet, is negative or the timer is shut off
-    if( coreFPS > 0 && timer.isValid() ) {
+    if( coreFPS > 0 && timer.isValid() && e->type() == QEvent::Timer ) {
         // We use ms internally
         qreal currentTime = timer.nsecsElapsed() / 1000000.0;
 
@@ -72,6 +72,7 @@ bool MicroTimer::event( QEvent *e ) {
                 emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
             }
         }
+        return true;
     }
 
     return QObject::event( e );
