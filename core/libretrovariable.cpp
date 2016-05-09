@@ -78,11 +78,19 @@ const QVector<std::string> &LibretroVariable::choices() const {
     return m_choices;
 }
 
-bool LibretroVariable::setValue( std::string value ) {
-    m_value = std::move( value );
+bool LibretroVariable::setValue( const std::string &value ) {
+    m_value = value;
     return true;
+}
+
+bool LibretroVariable::setValue( std::string &&t_value ) {
+    return setValue( t_value );
 }
 
 bool LibretroVariable::isValid() const {
     return !m_key.empty();
+}
+
+bool LibretroVariable::operator ==(const LibretroVariable &t_var1 ) {
+    return ( m_key == t_var1.m_key );
 }

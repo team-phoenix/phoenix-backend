@@ -9,9 +9,7 @@ struct retro_variable;
 class LibretroVariable {
     public:
         LibretroVariable() = default;
-
         LibretroVariable( const retro_variable *var );
-
         LibretroVariable( const std::string key );
 
         virtual ~LibretroVariable() = default;
@@ -19,16 +17,18 @@ class LibretroVariable {
         const std::string &key() const;
 
         const std::string &value( const std::string &default_ ) const;
-
         const std::string &value() const;
 
         const std::string &description() const;
 
         const QVector<std::string> &choices() const;
 
-        bool setValue( std::string value );
+        bool setValue( const std::string &value );
+        bool setValue( std::string &&t_value );
 
         bool isValid() const;
+
+        bool operator ==( const LibretroVariable &t_var1 );
 
     private:
         // use std::strings instead of QStrings, since the later store data as 16bit chars

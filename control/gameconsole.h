@@ -23,6 +23,8 @@
 #include "videooutput.h"
 #include "videooutputnode.h"
 
+#include "libretrovariablemodel.h"
+
 /*
  * GameConsole's role is twofold:
  * 1. Manage the lifecycle of the global pipeline and every dynamic pipeline (invoked by writing to the source property
@@ -41,6 +43,7 @@
 class GameConsole : public Node {
         Q_OBJECT
 
+        Q_PROPERTY( LibretroVariableModel* variableModel MEMBER variableModel NOTIFY variableModelChanged )
         Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
         Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
         Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
@@ -109,6 +112,7 @@ class GameConsole : public Node {
         LibretroCore *libretroCore { nullptr };
         MicroTimer *microTimer { nullptr };
         Remapper *remapper { nullptr };
+        LibretroVariableModel* variableModel{ nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties
@@ -143,6 +147,7 @@ class GameConsole : public Node {
         void phoenixWindowChanged();
         void remapperModelChanged();
         void videoOutputChanged();
+        void variableModelChanged();
 
         void playbackSpeedChanged();
         void sourceChanged();

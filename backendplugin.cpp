@@ -11,6 +11,7 @@
 #include "phoenixwindow.h"
 #include "remappermodel.h"
 #include "videooutput.h"
+#include "libretrovariablemodel.h"
 
 // Misc
 #include "logging.h"
@@ -22,6 +23,7 @@ void BackendPlugin::registerTypes( const char *uri ) {
     qmlRegisterType<GlobalGamepad>( uri, 1, 0, "GlobalGamepad" );
     qmlRegisterType<PhoenixWindowNode>( uri, 1, 0, "PhoenixWindowNode" );
     qmlRegisterType<VideoOutputNode>( uri, 1, 0, "VideoOutputNode" );
+    qmlRegisterType<LibretroVariableModel>( uri, 1, 0, "LibretroVariableModel" );
 
     // Other QML-owned classes
     qmlRegisterType<PhoenixWindow>( uri, 1, 0, "PhoenixWindow" );
