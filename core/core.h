@@ -7,8 +7,7 @@
 using QStringMap = QMap<QString, QString>;
 
 /*
- * Superclass for all core plugins used by Phoenix. A very basic commandIn() override is provided. You'll probably want
- * to override that in your subclass and not use this one at all. Core subclasses are not expected to have extensive
+ * Superclass for all core plugins used by Phoenix. Core subclasses are not expected to have extensive
  * error checking or validation of the commands given to them. For example, they should not have to expect Command::Pause
  * when pausable is false.
  *
@@ -19,17 +18,14 @@ using QStringMap = QMap<QString, QString>;
  * Core is also a consumer of input data.
  */
 
-class Core : public Node {
+class Core : public QObject {
         Q_OBJECT
 
     public:
-        explicit Core( Node *parent = nullptr );
+        explicit Core( QObject *parent = nullptr );
         virtual ~Core() = default;
 
-    public slots:
-        virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
-
-    protected:
+    public:
         // Properties
 
         // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
@@ -57,7 +53,7 @@ class Core : public Node {
 
         // Current state
         // Read-write
-        State state{ State::Stopped };
+        Node::State state{ Node::State::Stopped };
 
         // Range: [0.0, 1.0]
         // Read-write

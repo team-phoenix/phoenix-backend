@@ -19,7 +19,6 @@ class Node : public QObject {
 
         enum class Command {
             // State setters
-            // FIXME: Redundant?
             Stop,
             Load,
             Play,
@@ -114,7 +113,6 @@ class Node : public QObject {
         };
         Q_ENUM( DataType )
 
-        // FIXME: Redundant?
         enum class State {
             Stopped,
             Loading,

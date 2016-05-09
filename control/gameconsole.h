@@ -14,7 +14,8 @@
 #include "globalgamepad.h"
 #include "keyboardlistener.h"
 #include "keyboardmanager.h"
-#include "libretrocore.h"
+#include "libretroloader.h"
+#include "libretrorunner.h"
 #include "microtimer.h"
 #include "phoenixwindow.h"
 #include "phoenixwindownode.h"
@@ -109,7 +110,8 @@ class GameConsole : public Node {
         AudioOutput *audioOutput { nullptr };
         GamepadManager *gamepadManager { nullptr };
         KeyboardManager *keyboardInputNode { nullptr };
-        LibretroCore *libretroCore { nullptr };
+        LibretroLoader *libretroLoader { nullptr };
+        LibretroRunner *libretroRunner { nullptr };
         MicroTimer *microTimer { nullptr };
         Remapper *remapper { nullptr };
         LibretroVariableModel* variableModel{ nullptr };

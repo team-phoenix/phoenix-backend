@@ -59,8 +59,11 @@
     core/core.h \
     core/libretro.h \
     core/libretrocore.h \
+    core/libretroloader.h \
+    core/libretrorunner.h \
     core/libretrosymbols.h \
     core/libretrovariable.h \
+    core/libretrovariablemodel.h \
     input/gamepadmanager.h \
     input/gamepadstate.h \
     input/globalgamepad.h \
@@ -75,7 +78,6 @@
     util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
-    core/libretrovariablemodel.h
 
     SOURCES += \
     backendplugin.cpp \
@@ -87,8 +89,11 @@
     control/gameconsole.cpp \
     core/core.cpp \
     core/libretrocore.cpp \
+    core/libretroloader.cpp \
+    core/libretrorunner.cpp \
     core/libretrosymbols.cpp \
     core/libretrovariable.cpp \
+    core/libretrovariablemodel.cpp \
     input/gamepadmanager.cpp \
     input/gamepadstate.cpp \
     input/globalgamepad.cpp \
@@ -102,7 +107,6 @@
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
-    core/libretrovariablemodel.cpp
 
     RESOURCES += input/controllerdb.qrc
 

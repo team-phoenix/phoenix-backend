@@ -44,19 +44,10 @@ class LibretroCore : public Core {
         ~LibretroCore();
 
     signals:
-        void libretroCoreNTSC( bool NTSC );
+        void commandOut( Node::Command command, QVariant data, qint64 timeStamp );
+        void dataOut( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 
-    public slots:
-        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
-        void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
-
-    protected:
-        // Only staticly-linked callbacks (and their static helpers) may access this data/call these methods
-
-        // A hack that gives us the implicit C++ 'this' pointer while maintaining a C-style function signature
-        // for the callbacks as required by libretro.h. We can only have a single instance of Core running at any time.
-        static LibretroCore *core;
-
+    public:
         // Struct containing libretro methods
         LibretroSymbols symbols;
 
@@ -64,13 +55,6 @@ class LibretroCore : public Core {
         // the core's internal use
         retro_hw_render_callback openGLContext;
 
-        // Used by audio callback
-        void emitAudioData( void *data, size_t bytes );
-
-        // Used by video callback
-        void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
-
-    private:
         // Files and paths
 
         QLibrary coreFile;
@@ -102,8 +86,6 @@ class LibretroCore : public Core {
         // SRAM
 
         void *saveDataBuf{ nullptr };
-        void loadSaveData();
-        void storeSaveData();
 
         // Core-specific constants
 
@@ -119,9 +101,12 @@ class LibretroCore : public Core {
 
         // Node data
 
-        State currentState;
+        Node::State currentState;
 
         // Producer data (for consumers like AudioOutput, VideoOutput...)
+
+        // Get AV info from the core and pass along to consumers
+        void getAVInfo( retro_system_av_info *avInfo );
 
         // Format going out to the consumers
         ProducerFormat producerFmt;
@@ -130,7 +115,7 @@ class LibretroCore : public Core {
         QMutex mutex;
 
         // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
-        int16_t *audioBufferPool[ POOL_SIZE ]{ nullptr };
+        int16_t *audioBufferPool[ POOL_SIZE ] { nullptr };
         int audioPoolCurrentBuffer{ 0 };
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
@@ -139,14 +124,8 @@ class LibretroCore : public Core {
         // FIXME: In practice, that's not always the case? Some cores only hit that *on average*
         int audioBufferCurrentByte{ 0 };
 
-        uint8_t *videoBufferPool[ POOL_SIZE ]{ nullptr };
+        uint8_t *videoBufferPool[ POOL_SIZE ] { nullptr };
         int videoPoolCurrentBuffer{ 0 };
-
-        // Get AV info from the core and pass along to consumers
-        void getAVInfo( retro_system_av_info *avInfo );
-
-        // Should only be called on load time (consumers expect buffers to be valid while Core is active)
-        void allocateBufferPool( retro_system_av_info *avInfo );
 
         // Audio
 
@@ -163,13 +142,11 @@ class LibretroCore : public Core {
 
         // Callbacks
 
-        static void audioSampleCallback( int16_t left, int16_t right );
-        static size_t audioSampleBatchCallback( const int16_t *data, size_t frames );
-        static bool environmentCallback( unsigned cmd, void *data );
-        static void inputPollCallback( void );
-        static void logCallback( enum retro_log_level level, const char *fmt, ... );
-        static int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
-        static void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
+        // Used by audio callback
+        void emitAudioData( void *data, size_t bytes );
+
+        // Used by video callback
+        void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
 
         // Misc
 
@@ -179,7 +156,26 @@ class LibretroCore : public Core {
         // True if variables are dirty and the core needs to know about them
         bool variablesAreDirty{ false };
 
-        // Helper that generates key for looking up the inputDescriptors
-        QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
-
 };
+
+// Libretro is a C API. This limits us to one LibretroCore per process.
+extern LibretroCore core;
+
+// SRAM
+void loadSaveData();
+void storeSaveData();
+
+// Should only be called on load time (consumers expect buffers to be valid while Core is active)
+void allocateBufferPool( retro_system_av_info *avInfo );
+
+// Callbacks
+void audioSampleCallback( int16_t left, int16_t right );
+size_t audioSampleBatchCallback( const int16_t *data, size_t frames );
+bool environmentCallback( unsigned cmd, void *data );
+void inputPollCallback( void );
+void logCallback( enum retro_log_level level, const char *fmt, ... );
+int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
+void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
+
+// Helper that generates key for looking up the inputDescriptors
+QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );

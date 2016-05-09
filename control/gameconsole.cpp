@@ -10,16 +10,18 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     audioOutput( new AudioOutput ),
     gamepadManager( new GamepadManager ),
     keyboardInputNode( new KeyboardManager ),
-    libretroCore( new LibretroCore ),
+    libretroLoader( new LibretroLoader ),
+    libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
     remapper( new Remapper ),
     keyboardInput( new KeyboardListener ) {
 
     // Move all our stuff to the game thread
+    libretroLoader->moveToThread( gameThread );
     audioOutput->moveToThread( gameThread );
     gamepadManager->moveToThread( gameThread );
     keyboardInputNode->moveToThread( gameThread );
-    libretroCore->moveToThread( gameThread );
+    libretroRunner->moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
 
@@ -166,28 +168,27 @@ void GameConsole::loadLibretro() {
     Q_ASSERT_X( controlOutput, "libretro load", "controlOutput was not set!" );
     Q_ASSERT_X( videoOutput, "libretro load", "videoOutput was not set!" );
 
-    // Connect LibretroCore to the global pipeline
-    sessionConnections << connectNodes( remapper, libretroCore );
+    // Disconnect PhoenixWindow from MicroTimer, insert libretroLoader in between
+    disconnectNodes( phoenixWindow, microTimer );
+    sessionConnections << connectNodes( phoenixWindow, libretroLoader );
+    sessionConnections << connectNodes( libretroLoader, microTimer );
 
-    // Connect LibretroCore to its children
-    sessionConnections << connectNodes( libretroCore, audioOutput );
-    sessionConnections << connectNodes( libretroCore, videoOutput );
-    sessionConnections << connectNodes( libretroCore, controlOutput );
+    // Connect LibretroRunner to the global pipeline
+    sessionConnections << connectNodes( remapper, libretroRunner );
+
+    // Connect LibretroRunner to its children
+    sessionConnections << connectNodes( libretroRunner, audioOutput );
+    sessionConnections << connectNodes( libretroRunner, videoOutput );
+    sessionConnections << connectNodes( libretroRunner, controlOutput );
 
     // Hook LibretroCore so we know when commands have reached it
     // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
     // We care about this happening as LibretroCore needs to save its running game before quitting
     // We also need CoreFPS from LibretroCore so MicroTimer knows how quickly it should emit heartbeats
-    sessionConnections << connect( libretroCore, &Node::commandOut, libretroCore, [ & ]( Command command, QVariant data, qint64 ) {
+    sessionConnections << connect( libretroRunner, &Node::commandOut, libretroRunner, [ & ]( Command command, QVariant, qint64 ) {
         switch( command ) {
             case Command::Stop: {
                 unloadLibretro();
-                break;
-            }
-
-            // Incoming from LibretroCore! Send it back in to the pipeline, LibretroCore will ensure it won't loop
-            case Command::CoreFPS: {
-                emit commandOut( command, data, QDateTime::currentMSecsSinceEpoch() );
                 break;
             }
 
@@ -245,6 +246,9 @@ void GameConsole::unloadLibretro() {
         disconnect( connection );
     }
 
+    // Restore connection between PhoenixWindow and MicroTimer
+    connectNodes( phoenixWindow, microTimer );
+
     sessionConnections.clear();
 
     if( quitFlag ) {
@@ -256,7 +260,8 @@ void GameConsole::deleteLibretro() {
     // Delete the dynamic pipeline created by the Libretro core
     // Bottom to top
     audioOutput->deleteLater();
-    libretroCore->deleteLater();
+    libretroLoader->deleteLater();
+    libretroRunner->deleteLater();
 }
 
 void GameConsole::deleteMembers() {
@@ -266,7 +271,8 @@ void GameConsole::deleteMembers() {
     gamepadManager->deleteLater();
     keyboardInput->deleteLater();
     keyboardInputNode->deleteLater();
-    libretroCore->deleteLater();
+    libretroLoader->deleteLater();
+    libretroRunner->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
 }
