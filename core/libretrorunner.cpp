@@ -1,7 +1,9 @@
 #include "libretrorunner.h"
+#include "touchstate.h"
 
 #include <QString>
 #include <QStringBuilder>
+#include <QMutexLocker>
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
@@ -137,7 +139,7 @@ void LibretroRunner::dataIn( DataType type, QMutex *mutex, void *data, size_t by
             }
 
             mutex->lock();
-            GamepadState gamepad = *( GamepadState * )data;
+            GamepadState gamepad = *static_cast<GamepadState *>( data );
             int instanceID = gamepad.instanceID;
             core.gamepads[ instanceID ] = gamepad;
             mutex->unlock();
@@ -145,6 +147,9 @@ void LibretroRunner::dataIn( DataType type, QMutex *mutex, void *data, size_t by
         }
 
         case DataType::TouchInput: {
+            QMutexLocker locker( mutex );
+            Q_UNUSED( locker );
+            core.m_touchState = *static_cast<TouchState *>( data );
             break;
         }
 

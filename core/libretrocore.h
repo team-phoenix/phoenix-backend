@@ -13,6 +13,7 @@
 #include "libretrovariable.h"
 #include "logging.h"
 #include "node.h"
+#include "touchstate.h"
 
 // Since each buffer holds one frame, depending on core, 30 frames = ~500ms
 #define POOL_SIZE 30
@@ -137,8 +138,8 @@ class LibretroCore : public Core {
 
         QHash<int, GamepadState> gamepads;
 
-        QPointF touchCoords;
-        bool touchState{ false };
+        TouchState m_touchState;
+
 
         // Callbacks
 

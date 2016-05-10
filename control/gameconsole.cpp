@@ -1,9 +1,10 @@
 #include "gameconsole.h"
+#include "touchmanager.h"
+#include "logging.h"
 
 #include <QMetaObject>
 #include <QScreen>
 
-#include "logging.h"
 
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
     gameThread( new QThread ),
@@ -14,13 +15,15 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
     remapper( new Remapper ),
-    keyboardInput( new KeyboardListener ) {
+    keyboardInput( new KeyboardListener ),
+    m_touchManager( new TouchManager ) {
 
     // Move all our stuff to the game thread
     libretroLoader->moveToThread( gameThread );
     audioOutput->moveToThread( gameThread );
     gamepadManager->moveToThread( gameThread );
     keyboardInputNode->moveToThread( gameThread );
+    m_touchManager->moveToThread( gameThread );
     libretroRunner->moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
@@ -31,10 +34,11 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     // Connect global pipeline (at least the parts that can be connected at this point)
     connectNodes( microTimer, gamepadManager );
     connectNodes( gamepadManager, keyboardInputNode );
-    connectNodes( keyboardInputNode, remapper );
+    connectNodes( keyboardInputNode, m_touchManager );
+    connectNodes( m_touchManager, remapper );
 
     // Handle the wrapper nodes/node frontends/node proxies
-
+    m_touchManager->setListener( keyboardInput );
     keyboardInputNode->connectKeyboardInput( keyboardInput );
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
@@ -282,6 +286,7 @@ void GameConsole::deleteMembers() {
     gamepadManager->deleteLater();
     keyboardInput->deleteLater();
     keyboardInputNode->deleteLater();
+    m_touchManager->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
     microTimer->deleteLater();

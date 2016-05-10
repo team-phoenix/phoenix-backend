@@ -78,7 +78,9 @@
     util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
-    core/libretrovariableforwarder.h
+    core/libretrovariableforwarder.h \
+    input/touchmanager.h \
+    input/touchstate.h
 
     SOURCES += \
     backendplugin.cpp \
@@ -108,7 +110,9 @@
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
-    core/libretrovariableforwarder.cpp
+    core/libretrovariableforwarder.cpp \
+    input/touchmanager.cpp \
+    input/touchstate.cpp
 
     RESOURCES += input/controllerdb.qrc
 

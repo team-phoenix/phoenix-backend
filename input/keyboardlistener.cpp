@@ -17,16 +17,32 @@ KeyboardListener::KeyboardListener() {
     window->installEventFilter( this );
 }
 
-bool KeyboardListener::eventFilter( QObject */*watched*/, QEvent *event ) {
-    if( event->type() == QEvent::KeyPress ) {
-        int key = dynamic_cast<QKeyEvent *>( event )->key();
-        emit keyPressed( key );
+bool KeyboardListener::eventFilter( QObject *watched, QEvent *event ) {
+
+    switch( event->type() ) {
+        case QEvent::KeyPress: {
+            emit keyPressed( static_cast<QKeyEvent *>( event )->key() );
+            event->accept();
+            break;
+        }
+        case QEvent::KeyRelease: {
+            emit keyReleased( static_cast<QKeyEvent *>( event )->key() );
+            event->accept();
+            break;
+        }
+        case QEvent::MouseButtonPress: {
+            emit mousePressed( static_cast<QMouseEvent *>( event )->localPos() );
+            event->accept();
+            break;
+        }
+        case QEvent::MouseButtonRelease: {
+            emit mouseReleased( static_cast<QMouseEvent *>( event )->localPos() );
+            event->accept();
+            break;
+        }
+        default:
+            break;
     }
 
-    if( event->type() == QEvent::KeyRelease ) {
-        int key = dynamic_cast<QKeyEvent *>( event )->key();
-        emit keyReleased( key );
-    }
-
-    return false;
+    return QObject::eventFilter( watched, event );
 }

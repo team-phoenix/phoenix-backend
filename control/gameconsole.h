@@ -40,7 +40,9 @@
  *
  * To hook the propogation of these commands down to the running Core, see ControlOutput. Usually this is directly
  * connected to the Core of a particular dynamic pipeline.
- */
+ */        
+
+class TouchManager;
 
 class GameConsole : public Node {
         Q_OBJECT
@@ -117,6 +119,7 @@ class GameConsole : public Node {
         Remapper *remapper { nullptr };
         LibretroVariableModel* variableModel{ nullptr };
         LibretroVariableForwarder m_variableForwarder;
+        TouchManager *m_touchManager{ nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties

@@ -564,22 +564,23 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         switch( id ) {
             // 0 or 1
             case RETRO_DEVICE_ID_POINTER_PRESSED: {
-                return core.touchState ? 1 : 0;
+                return core.m_touchState.pressed;
             }
             break;
 
             // -0x7FFF to 0x7FFF, clamp incoming values to [0.0, 1.0]
             // -32767 to 32767... odd range to use IMO (literally)
             case RETRO_DEVICE_ID_POINTER_X: {
-                qreal x = 1.0 + -core.touchCoords.x();
+
+                qreal x = 1.0 + -core.m_touchState.point.x();
 
                 if( x > 1.0 ) {
                     x = 1.0;
-                }
-
-                if( x < 0.0 ) {
+                } else if( x < 0.0 ) {
                     x = 0.0;
                 }
+
+                qDebug() << "InputStateCB: TOuch" << x << ":" << core.m_touchState.point.x();
 
                 int ret = 0xFFFE;
                 ret *= x;
@@ -590,7 +591,7 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             break;
 
             case RETRO_DEVICE_ID_POINTER_Y: {
-                qreal y = 1.0 + -core.touchCoords.y();
+                qreal y = 1.0 + -core.m_touchState.point.y();
 
                 if( y > 1.0 ) {
                     y = 1.0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPointF>
 
 class QEvent;
 
@@ -19,9 +20,11 @@ class KeyboardListener : public QObject {
     public:
         KeyboardListener();
 
-        bool eventFilter( QObject */*watched*/, QEvent *event ) override;
+        bool eventFilter( QObject *watched, QEvent *event ) override;
 
     signals:
         void keyPressed( int key );
         void keyReleased( int key );
+        void mousePressed( QPointF );
+        void mouseReleased( QPointF );
 };
