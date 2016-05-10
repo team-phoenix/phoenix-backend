@@ -1,6 +1,6 @@
 #include "libretrovariablemodel.h"
 #include "libretrovariableforwarder.h"
-#include "node.h";
+#include "node.h"
 
 #include <QDebug>
 
@@ -55,6 +55,8 @@ QVariant LibretroVariableModel::data(const QModelIndex &index, int role) const
 void LibretroVariableModel::setForwarder( LibretroVariableForwarder *t_forwarder ) {
     m_forwarder = t_forwarder;
     connect( m_forwarder, &LibretroVariableForwarder::variableFound, this, &LibretroVariableModel::appendVariable );
+    connect( m_forwarder, &LibretroVariableForwarder::clearVariables, this, &LibretroVariableModel::clear );
+
 }
 
 void LibretroVariableModel::appendVariable( LibretroVariable t_var ) {
@@ -63,14 +65,10 @@ void LibretroVariableModel::appendVariable( LibretroVariable t_var ) {
     endInsertRows();
 }
 
-void LibretroVariableModel::removeVariable( LibretroVariable &t_var) {
-    for ( int i=0; i < m_varList.size(); ++i ) {
-        if ( t_var == m_varList[ i ] ) {
-            beginRemoveRows( QModelIndex(), i, i );
-            endRemoveRows();
-            break;
-        }
-    }
+void LibretroVariableModel::clear() {
+    beginRemoveRows( QModelIndex(), 0, m_varList.size() );
+    m_varList.clear();
+    endRemoveRows();
 }
 
 void LibretroVariableModel::updateVariable( QString t_key, QString t_value ) {

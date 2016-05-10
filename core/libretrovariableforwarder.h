@@ -13,6 +13,7 @@ public:
 
 signals:
     void variableFound( LibretroVariable var );
+    void clearVariables();
 
 
 public slots:

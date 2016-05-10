@@ -29,8 +29,10 @@ public:
 
 public slots:
     void appendVariable( LibretroVariable t_var );
-    void removeVariable( LibretroVariable &t_var );
     void updateVariable( QString t_key, QString t_value );
+
+private slots:
+    void clear();
 
 private:
     QList<LibretroVariable> m_varList;

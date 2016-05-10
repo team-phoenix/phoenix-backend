@@ -9,10 +9,17 @@ LibretroVariableForwarder::LibretroVariableForwarder(QObject *parent) : Node(par
 
 void LibretroVariableForwarder::commandIn(Node::Command command, QVariant data, qint64 timeStamp) {
 
-    if ( Command::LibretroVariablesEmitted == command ) {
-        emit variableFound( data.value<LibretroVariable>() );
-    } else if ( Command::SetLibretroVariable == command ) {
-        Node::commandIn( command, data, timeStamp );
+    switch( command ) {
+        case Command::LibretroVariablesEmitted:
+            emit variableFound( data.value<LibretroVariable>() );
+            break;
+        case Command::SetLibretroVariable:
+            return Node::commandIn( command, data, timeStamp );
+        case Command::Stop:
+            emit clearVariables();
+            break;
+        default:
+            break;
     }
 
     // Do not emit commands unspecific to the LibretroVariableModel, or else the
