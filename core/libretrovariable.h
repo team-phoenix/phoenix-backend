@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QVector>
+#include <QMetaType>
 #include <string>
 
 struct retro_variable;
@@ -10,21 +11,22 @@ class LibretroVariable {
     public:
         LibretroVariable() = default;
         LibretroVariable( const retro_variable *var );
-        LibretroVariable( const std::string key );
+        LibretroVariable( const QByteArray& key );
+        LibretroVariable( const QByteArray&& key );
 
         virtual ~LibretroVariable() = default;
 
-        const std::string &key() const;
+        const QByteArray &key() const;
 
-        const std::string &value( const std::string &default_ ) const;
-        const std::string &value() const;
+        const QByteArray &value( const QByteArray &default_ ) const;
+        const QByteArray &value() const;
 
-        const std::string &description() const;
+        const QByteArray &description() const;
 
-        const QVector<std::string> &choices() const;
+        const QVector<QByteArray> &choices() const;
 
-        bool setValue( const std::string &value );
-        bool setValue( std::string &&t_value );
+        bool setValue( const QByteArray &value );
+        bool setValue( QByteArray &&t_value );
 
         bool isValid() const;
 
@@ -33,11 +35,13 @@ class LibretroVariable {
     private:
         // use std::strings instead of QStrings, since the later store data as 16bit chars
         // while cores probably use ASCII/utf-8 internally..
-        std::string m_key;
-        std::string m_value; // XXX: value should not be modified from the UI while a retro_run() call happens
-        std::string m_description;
-        QVector<std::string> m_choices;
+        QByteArray m_key;
+        QByteArray m_value; // XXX: value should not be modified from the UI while a retro_run() call happens
+        QByteArray m_description;
+        QVector<QByteArray> m_choices;
 
 };
 
 QDebug operator<<( QDebug debug, const LibretroVariable &var );
+
+Q_DECLARE_METATYPE( LibretroVariable )

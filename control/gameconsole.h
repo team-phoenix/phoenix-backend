@@ -25,6 +25,7 @@
 #include "videooutputnode.h"
 
 #include "libretrovariablemodel.h"
+#include "libretrovariableforwarder.h"
 
 /*
  * GameConsole's role is twofold:
@@ -115,6 +116,7 @@ class GameConsole : public Node {
         MicroTimer *microTimer { nullptr };
         Remapper *remapper { nullptr };
         LibretroVariableModel* variableModel{ nullptr };
+        LibretroVariableForwarder m_variableForwarder;
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties

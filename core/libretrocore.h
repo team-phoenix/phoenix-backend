@@ -151,10 +151,12 @@ class LibretroCore : public Core {
         // Misc
 
         // Core-specific variables
-        QMap<std::string, LibretroVariable> variables;
+        QMap<QByteArray, LibretroVariable> variables;
 
         // True if variables are dirty and the core needs to know about them
         bool variablesAreDirty{ false };
+
+        void updateVariables();
 
 };
 

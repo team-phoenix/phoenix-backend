@@ -37,3 +37,11 @@ bool disconnectNodes( Node *t_parent, Node *t_child ) {
 bool disconnectNodes( Node &t_parent, Node &t_child ) {
     return disconnectNodes( &t_parent, &t_child );
 }
+
+QList<QMetaObject::Connection> connectNodes(Node &t_parent, Node *t_child) {
+    return connectNodes( &t_parent, t_child );
+}
+
+QList<QMetaObject::Connection> connectNodes(Node *t_parent, Node &t_child) {
+    return connectNodes( t_parent, &t_child );
+}

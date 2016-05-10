@@ -9,7 +9,7 @@ class LibretroLoader : public Node {
         Q_OBJECT
 
     public:
-        LibretroLoader();
+        LibretroLoader() = default;
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;

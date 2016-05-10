@@ -76,6 +76,10 @@ void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, s
     emit dataOut( Node::DataType::Video, &core.mutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
 }
 
+void LibretroCore::updateVariables() {
+    variablesAreDirty = true;
+}
+
 // Global
 LibretroCore core;
 
@@ -317,9 +321,9 @@ bool environmentCallback( unsigned cmd, void *data ) {
                 const auto &var = core.variables[ retroVariable->key ];
 
                 if( var.isValid() ) {
-                    retroVariable->value = var.value().c_str();
+                    retroVariable->value = var.value().data();
 
-                    if( strlen( var.value().c_str() ) ) {
+                    if( !var.value().isEmpty() ) {
                         //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
                         return true;
                     }
@@ -340,7 +344,6 @@ bool environmentCallback( unsigned cmd, void *data ) {
                     core.variables.insert( v.key(), v );
                 }
 
-                //qCDebug( phxCore ) << "        " << v;
             }
 
             return true;
@@ -354,18 +357,18 @@ bool environmentCallback( unsigned cmd, void *data ) {
             if( core.variablesAreDirty ) {
                 // Special case: Force DeSmuME's pointer type variable to "touch" in order to work with our touch code
                 if( core.variables.contains( "desmume_pointer_type" ) ) {
-                    core.variables[ "desmume_pointer_type" ].setValue( "touch" );
+                    core.variables[ "desmume_pointer_type" ].setValue( QByteArrayLiteral( "touch" ) );
                 }
 
                 core.variablesAreDirty = false;
-                *( bool * )data = true;
+                *static_cast<bool *>( data ) = true;
                 return true;
             } else {
-                *( bool * )data = false;
+                *static_cast<bool *>( data ) = false;
                 return false;
             }
 
-            break;
+
         }
 
         case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: // 18
@@ -408,7 +411,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
             break;
 
         case RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: // 26
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL)(26)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIROxNMENT_EXPERIMENTAL)(26)";
             break;
 
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27

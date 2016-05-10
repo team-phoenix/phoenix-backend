@@ -44,6 +44,12 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         }
     } );
 
+    connect( this, &GameConsole::variableModelChanged, this, [this] {
+        if ( variableModel ) {
+            variableModel->setForwarder( &m_variableForwarder );
+        }
+    });
+
     // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
     connect( this, &GameConsole::globalGamepadChanged, this, [ & ]() {
         if( globalGamepad ) {
@@ -167,14 +173,19 @@ void GameConsole::loadLibretro() {
     // Ensure that the properties were set in QML
     Q_ASSERT_X( controlOutput, "libretro load", "controlOutput was not set!" );
     Q_ASSERT_X( videoOutput, "libretro load", "videoOutput was not set!" );
+    Q_ASSERT_X( variableModel, "libretro load", "variableModel was not set!" );
+
 
     // Disconnect PhoenixWindow from MicroTimer, insert libretroLoader in between
     disconnectNodes( phoenixWindow, microTimer );
     sessionConnections << connectNodes( phoenixWindow, libretroLoader );
     sessionConnections << connectNodes( libretroLoader, microTimer );
+    sessionConnections << connectNodes( libretroLoader, m_variableForwarder );
+
 
     // Connect LibretroRunner to the global pipeline
     sessionConnections << connectNodes( remapper, libretroRunner );
+    sessionConnections << connectNodes( m_variableForwarder, libretroRunner );
 
     // Connect LibretroRunner to its children
     sessionConnections << connectNodes( libretroRunner, audioOutput );

@@ -45,6 +45,14 @@ class Node : public QObject {
 
             // Core
 
+            // Emitted from the core, tells the pipeline that a LibretroVariable has set by retro_init().
+            // Useful for initial aggregation of variables within LibretroVariableModel.
+            LibretroVariablesEmitted,
+
+            // Sent from the LibretroVariableForwarder to the core, telling the core that the
+            // user has changed a variable's value. The core's variables need to be updated on the next frame.
+            SetLibretroVariable,
+
             // Set FPS of the monitor. Used for when vsync is on (track with SetVsync)
             HostFPS,
 
@@ -138,8 +146,10 @@ class Node : public QObject {
 // Convenience functions for easily connecting and disconnecting nodes
 
 QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child );
-
 QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child );
+QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node *t_child );
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node &t_child );
+
 
 bool disconnectNodes( Node *t_parent, Node *t_child );
 

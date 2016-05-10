@@ -78,6 +78,7 @@
     util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
+    core/libretrovariableforwarder.h
 
     SOURCES += \
     backendplugin.cpp \
@@ -107,6 +108,7 @@
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
+    core/libretrovariableforwarder.cpp
 
     RESOURCES += input/controllerdb.qrc
 

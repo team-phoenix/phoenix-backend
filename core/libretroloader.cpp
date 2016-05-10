@@ -6,9 +6,6 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-LibretroLoader::LibretroLoader() {
-}
-
 void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
 
@@ -167,7 +164,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
             // Set all variables to their defaults, mark all variables as dirty
             {
-                for( auto key : core.variables.keys() ) {
+                for( const auto &key : core.variables.keys() ) {
                     LibretroVariable &variable = core.variables[ key ];
 
                     if( !variable.choices().size() ) {
@@ -175,18 +172,23 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     }
 
                     // Assume the defualt choice to be the first option offered
-                    std::string defaultChoice = variable.choices().at( 0 );
-
-                    if( !strlen( defaultChoice.c_str() ) ) {
+                    QByteArray defaultChoice = variable.choices()[ 0 ];
+                    if( defaultChoice.isEmpty() ) {
                         continue;
                     }
 
                     // Assign
                     variable.setValue( defaultChoice );
 
+                    qDebug() << variable;
+
+                    QVariant var;
+                    var.setValue( variable );
+                    emit commandOut( Command::LibretroVariablesEmitted, var, -1 );
+
                 }
 
-                core.variablesAreDirty = true;
+                core.updateVariables();
             }
 
             // Disconnect LibretroCore from the rest of the pipeline

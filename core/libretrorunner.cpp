@@ -6,9 +6,6 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-LibretroRunner::LibretroRunner() {
-}
-
 void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
 
@@ -99,6 +96,13 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             break;
         }
 
+        case Command::SetLibretroVariable: {
+            LibretroVariable var = data.value<LibretroVariable>();
+            core.variables.insert( var.key(), var );
+            core.updateVariables();
+            break;
+        }
+
         case Command::ControllerRemoved: {
             if( !connectedToCore ) {
                 connectedToCore = true;
@@ -110,6 +114,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             int instanceID = gamepad.instanceID;
             core.gamepads.remove( instanceID );
             emit commandOut( command, data, timeStamp );
+            break;
         }
 
         default: {

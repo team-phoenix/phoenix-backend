@@ -9,7 +9,7 @@ class LibretroRunner : public Node {
         Q_OBJECT
 
     public:
-        LibretroRunner();
+        LibretroRunner() = default;
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
