@@ -38,6 +38,11 @@ void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 ti
                 videoOutput->setFormat( qvariant_cast<ProducerFormat>( data ) );
                 break;
 
+            case Command::SetAspectRatioMode: {
+                videoOutput->setAspectMode( data.toInt() );
+                break;
+            }
+
             default:
                 break;
         }

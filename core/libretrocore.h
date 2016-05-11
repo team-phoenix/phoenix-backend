@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QLibrary>
 #include <QObject>
+#include <QRect>
 
 #include "core.h"
 #include "gamepadstate.h"
@@ -13,7 +14,7 @@
 #include "libretrovariable.h"
 #include "logging.h"
 #include "node.h"
-#include "touchstate.h"
+#include "mousestate.h"
 
 // Since each buffer holds one frame, depending on core, 30 frames = ~500ms
 #define POOL_SIZE 30
@@ -138,8 +139,9 @@ class LibretroCore : public Core {
 
         QHash<int, GamepadState> gamepads;
 
-        TouchState m_touchState;
-
+        MouseState mouse;
+        QRect geometry;
+        int aspectMode { 0 };
 
         // Callbacks
 

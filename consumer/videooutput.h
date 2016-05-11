@@ -13,6 +13,7 @@ class QSGTexture;
 class VideoOutput : public QQuickItem {
         Q_OBJECT
 
+        Q_PROPERTY( int aspectMode MEMBER aspectMode WRITE setAspectMode NOTIFY aspectModeChanged )
         Q_PROPERTY( qreal aspectRatio MEMBER aspectRatio NOTIFY aspectRatioChanged )
         Q_PROPERTY( bool linearFiltering MEMBER linearFiltering NOTIFY linearFilteringChanged )
         Q_PROPERTY( bool television MEMBER television WRITE setTelevision NOTIFY televisionChanged )
@@ -27,13 +28,20 @@ class VideoOutput : public QQuickItem {
         void setFormat( ProducerFormat consumerFmt );
         void data( void *data, size_t bytes, qint64 timestamp );
 
+        // Setters for the properties, will force a recheck of the aspect ratio if any are called
+        void setAspectMode( int aspectMode );
+        void setTelevision( bool television );
+        void setNtsc( bool ntsc );
+        void setWidescreen( bool widescreen );
+
     signals:
         // Properties
-        void aspectRatioChanged( qreal aspectRatio );
-        void linearFilteringChanged( bool linearFiltering );
-        void televisionChanged( bool television );
-        void ntscChanged( bool ntsc );
-        void widescreenChanged( bool widescreen );
+        void aspectModeChanged();
+        void aspectRatioChanged();
+        void linearFilteringChanged();
+        void televisionChanged();
+        void ntscChanged();
+        void widescreenChanged();
 
     private:
         // Current state. Used to ignore data that arrives after already being told we're no longer playing
@@ -54,6 +62,9 @@ class VideoOutput : public QQuickItem {
         // paintData is a pointer to a QSGTransformNode which contains the transformation matrix (unused)
         QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData * ) override;
 
+        // The mode to scale the picture in
+        int aspectMode { 0 };
+
         // The correct aspect ratio to display this picture in
         qreal aspectRatio{ 1.0 };
         qreal calculateAspectRatio( ProducerFormat format );
@@ -72,11 +83,6 @@ class VideoOutput : public QQuickItem {
         // Is this standard 4:3 (false) or is the image anamorphic widescreen (16:9 packed into a 4:3 frame, true)?
         // Ignored if television is false
         bool widescreen{ false };
-
-        // Setters for the above 3 properties, will force a recheck of the aspect ratio if any are called
-        void setTelevision( bool television );
-        void setNtsc( bool ntsc );
-        void setWidescreen( bool widescreen );
 
         // Helper for printing aspect ratios as fractions
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor

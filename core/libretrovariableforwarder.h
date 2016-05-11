@@ -3,20 +3,18 @@
 #include "node.h"
 #include "libretrovariable.h"
 
-class LibretroVariableForwarder : public Node
-{
-    Q_OBJECT
-public:
-    explicit LibretroVariableForwarder( QObject *parent = nullptr );
+class LibretroVariableForwarder : public Node {
+        Q_OBJECT
 
-    virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
+    public:
+        explicit LibretroVariableForwarder( QObject *parent = nullptr );
 
-signals:
-    void variableFound( LibretroVariable var );
-    void clearVariables();
+        virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
+    signals:
+        void variableFound( LibretroVariable var );
+        void clearVariables();
 
-public slots:
+    public slots:
 
 };
-

@@ -9,11 +9,12 @@ VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     // Mandatory for our own drawing code to do anything
     setFlag( QQuickItem::ItemHasContents, true );
 
-    emit aspectRatioChanged( aspectRatio );
-    emit linearFilteringChanged( linearFiltering );
-    emit televisionChanged( television );
-    emit ntscChanged( ntsc );
-    emit widescreenChanged( widescreen );
+    emit aspectModeChanged();
+    emit aspectRatioChanged();
+    emit linearFilteringChanged();
+    emit televisionChanged();
+    emit ntscChanged();
+    emit widescreenChanged();
 
     size_t newSize = this->format.videoSize.width() * this->format.videoSize.height() * this->format.videoBytesPerPixel;
     framebuffer = new uchar[ newSize ]();
@@ -50,7 +51,7 @@ void VideoOutput::setFormat( ProducerFormat format ) {
                                       << " (was " << oldAspectRatioXInt << ":" << oldAspectRatioYInt << ")" ;
 
         aspectRatio = newRatio;
-        emit aspectRatioChanged( aspectRatio );
+        emit aspectRatioChanged();
     }
 
     // Allocate a new framebuffer if the incoming format defines a larger one than we already have room for
@@ -158,6 +159,13 @@ qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
     }
 
     return newRatio;
+}
+
+void VideoOutput::setAspectMode( int aspectMode ) {
+    if( this->aspectMode != aspectMode ) {
+        this->aspectMode = aspectMode;
+        setFormat( this->format );
+    }
 }
 
 void VideoOutput::setTelevision( bool television ) {

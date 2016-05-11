@@ -12,7 +12,7 @@
 #include "gamepadmanager.h"
 #include "controloutput.h"
 #include "globalgamepad.h"
-#include "keyboardlistener.h"
+#include "keyboardmouselistener.h"
 #include "keyboardmanager.h"
 #include "libretroloader.h"
 #include "libretrorunner.h"
@@ -40,20 +40,21 @@
  *
  * To hook the propogation of these commands down to the running Core, see ControlOutput. Usually this is directly
  * connected to the Core of a particular dynamic pipeline.
- */        
+ */
 
-class TouchManager;
+class MouseManager;
 
 class GameConsole : public Node {
         Q_OBJECT
 
-        Q_PROPERTY( LibretroVariableModel* variableModel MEMBER variableModel NOTIFY variableModelChanged )
         Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
         Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
         Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
         Q_PROPERTY( RemapperModel *remapperModel MEMBER remapperModel NOTIFY remapperModelChanged )
+        Q_PROPERTY( LibretroVariableModel *variableModel MEMBER variableModel NOTIFY variableModelChanged )
         Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
 
+        Q_PROPERTY( int aspectRatioMode READ getAspectRatioMode WRITE setAspectRatioMode NOTIFY aspectRatioModeChanged )
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
@@ -112,29 +113,32 @@ class GameConsole : public Node {
         //     - Move to gameThread in the constructor
         AudioOutput *audioOutput { nullptr };
         GamepadManager *gamepadManager { nullptr };
-        KeyboardManager *keyboardInputNode { nullptr };
+        KeyboardManager *keyboardManager { nullptr };
         LibretroLoader *libretroLoader { nullptr };
         LibretroRunner *libretroRunner { nullptr };
         MicroTimer *microTimer { nullptr };
+        MouseManager *mouseManager{ nullptr };
         Remapper *remapper { nullptr };
-        LibretroVariableModel* variableModel{ nullptr };
-        LibretroVariableForwarder m_variableForwarder;
-        TouchManager *m_touchManager{ nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties
         ControlOutput *controlOutput { nullptr };
         GlobalGamepad *globalGamepad { nullptr };
+        LibretroVariableModel *variableModel { nullptr };
         PhoenixWindowNode *phoenixWindow { nullptr };
         VideoOutputNode *videoOutput { nullptr };
 
         // Misc (owned by us)
-        KeyboardListener *keyboardInput { nullptr };
+        KeyboardMouseListener keyboardMouseListener;
+        LibretroVariableForwarder libretroVariableForwarder;
 
         // Misc (not owned by us)
         RemapperModel *remapperModel { nullptr };
 
     private: // Property getters/setters
+        int aspectRatioMode { 0 };
+        int getAspectRatioMode();
+        void setAspectRatioMode( int aspectRatioMode );
         qreal playbackSpeed { 1.0 };
         qreal getPlaybackSpeed();
         void setPlaybackSpeed( qreal playbackSpeed );
@@ -156,6 +160,7 @@ class GameConsole : public Node {
         void videoOutputChanged();
         void variableModelChanged();
 
+        void aspectRatioModeChanged();
         void playbackSpeedChanged();
         void sourceChanged();
         void volumeChanged();

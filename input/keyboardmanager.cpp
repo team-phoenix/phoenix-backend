@@ -1,14 +1,14 @@
 #include "keyboardmanager.h"
 
-#include "keyboardlistener.h"
+#include "keyboardmouselistener.h"
 
 #include <QDebug>
 #include <QtGlobal>
 
-void KeyboardManager::connectKeyboardInput( KeyboardListener *keyboardInput ) {
+void KeyboardManager::connectKeyboardInput( KeyboardMouseListener *keyboardInput ) {
     Q_ASSERT( keyboardInput );
-    connect( keyboardInput, &KeyboardListener::keyPressed, this, &KeyboardManager::keyPressed );
-    connect( keyboardInput, &KeyboardListener::keyReleased, this, &KeyboardManager::keyReleased );
+    connect( keyboardInput, &KeyboardMouseListener::keyPressed, this, &KeyboardManager::keyPressed );
+    connect( keyboardInput, &KeyboardMouseListener::keyReleased, this, &KeyboardManager::keyReleased );
 }
 
 void KeyboardManager::keyPressed( int key ) {

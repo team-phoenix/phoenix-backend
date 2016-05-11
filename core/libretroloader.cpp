@@ -164,6 +164,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
             // Set all variables to their defaults, mark all variables as dirty
             {
+                qDebug() << core.variables;
                 for( const auto &key : core.variables.keys() ) {
                     LibretroVariable &variable = core.variables[ key ];
 
@@ -180,12 +181,9 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     // Assign
                     variable.setValue( defaultChoice );
 
-                    qDebug() << variable;
-
                     QVariant var;
                     var.setValue( variable );
                     emit commandOut( Command::LibretroVariablesEmitted, var, -1 );
-
                 }
 
                 core.updateVariables();

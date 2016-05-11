@@ -1,4 +1,4 @@
-#include "keyboardlistener.h"
+#include "keyboardmouselistener.h"
 
 #include <QGuiApplication>
 #include <QDebug>
@@ -7,7 +7,7 @@
 #include <QtGlobal>
 #include <QWindow>
 
-KeyboardListener::KeyboardListener() {
+KeyboardMouseListener::KeyboardMouseListener() {
     Q_ASSERT( QGuiApplication::topLevelWindows().size() > 0 );
 
     auto *window = QGuiApplication::topLevelWindows().at( 0 );
@@ -17,29 +17,33 @@ KeyboardListener::KeyboardListener() {
     window->installEventFilter( this );
 }
 
-bool KeyboardListener::eventFilter( QObject *watched, QEvent *event ) {
+bool KeyboardMouseListener::eventFilter( QObject *watched, QEvent *event ) {
 
     switch( event->type() ) {
         case QEvent::KeyPress: {
             emit keyPressed( static_cast<QKeyEvent *>( event )->key() );
-            event->accept();
             break;
         }
+
         case QEvent::KeyRelease: {
             emit keyReleased( static_cast<QKeyEvent *>( event )->key() );
-            event->accept();
             break;
         }
+
         case QEvent::MouseButtonPress: {
-            emit mousePressed( static_cast<QMouseEvent *>( event )->localPos() );
-            event->accept();
+            emit mousePressed( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
             break;
         }
+
         case QEvent::MouseButtonRelease: {
-            emit mouseReleased( static_cast<QMouseEvent *>( event )->localPos() );
-            event->accept();
+            emit mouseReleased( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
             break;
         }
+
+        case QEvent::MouseMove: {
+            emit mouseMoved( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
+        }
+
         default:
             break;
     }

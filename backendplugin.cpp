@@ -40,4 +40,5 @@ void BackendPlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<ProducerFormat>();
     qRegisterMetaType<QStringMap>();
     qRegisterMetaType<size_t>( "size_t" );
+    qRegisterMetaType<Qt::MouseButtons>( "Qt::MouseButtons" );
 }

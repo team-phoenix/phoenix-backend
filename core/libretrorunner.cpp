@@ -1,5 +1,5 @@
 #include "libretrorunner.h"
-#include "touchstate.h"
+#include "mousestate.h"
 
 #include <QString>
 #include <QStringBuilder>
@@ -98,6 +98,17 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             break;
         }
 
+        case Command::SetWindowGeometry: {
+            emit commandOut( command, data, timeStamp );
+            core.geometry = data.toRect();
+            break;
+        }
+
+        case Command::SetAspectRatioMode: {
+            core.aspectMode = data.toInt();
+            break;
+        }
+
         case Command::SetLibretroVariable: {
             LibretroVariable var = data.value<LibretroVariable>();
             core.variables.insert( var.key(), var );
@@ -140,16 +151,17 @@ void LibretroRunner::dataIn( DataType type, QMutex *mutex, void *data, size_t by
 
             mutex->lock();
             GamepadState gamepad = *static_cast<GamepadState *>( data );
+            mutex->unlock();
             int instanceID = gamepad.instanceID;
             core.gamepads[ instanceID ] = gamepad;
-            mutex->unlock();
             break;
         }
 
-        case DataType::TouchInput: {
-            QMutexLocker locker( mutex );
-            Q_UNUSED( locker );
-            core.m_touchState = *static_cast<TouchState *>( data );
+        // Make a copy of the incoming data and store it
+        case DataType::MouseInput: {
+            mutex->lock();
+            core.mouse = *static_cast<MouseState *>( data );
+            mutex->unlock();
             break;
         }
 

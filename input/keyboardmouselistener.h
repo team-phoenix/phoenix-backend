@@ -14,17 +14,18 @@ class QEvent;
 
 // FIXME: Keyboard events will still hit QML even while remapping
 
-class KeyboardListener : public QObject {
+class KeyboardMouseListener : public QObject {
         Q_OBJECT
 
     public:
-        KeyboardListener();
+        KeyboardMouseListener();
 
         bool eventFilter( QObject *watched, QEvent *event ) override;
 
     signals:
         void keyPressed( int key );
         void keyReleased( int key );
-        void mousePressed( QPointF );
-        void mouseReleased( QPointF );
+        void mousePressed( QPointF position, Qt::MouseButtons buttons );
+        void mouseReleased( QPointF position, Qt::MouseButtons buttons );
+        void mouseMoved( QPointF position, Qt::MouseButtons buttons );
 };

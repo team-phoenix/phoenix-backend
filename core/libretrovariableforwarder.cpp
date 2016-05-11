@@ -2,22 +2,26 @@
 
 #include <QDebug>
 
-LibretroVariableForwarder::LibretroVariableForwarder(QObject *parent) : Node(parent)
-{
+LibretroVariableForwarder::LibretroVariableForwarder( QObject *parent ) : Node( parent ) {
 
 }
 
-void LibretroVariableForwarder::commandIn(Node::Command command, QVariant data, qint64 timeStamp) {
+void LibretroVariableForwarder::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+    emit commandOut( command, data, timeStamp );
 
     switch( command ) {
         case Command::LibretroVariablesEmitted:
             emit variableFound( data.value<LibretroVariable>() );
             break;
+
         case Command::SetLibretroVariable:
-            return Node::commandIn( command, data, timeStamp );
+            emit commandOut( command, data, timeStamp );
+            break;
+
         case Command::Stop:
             emit clearVariables();
             break;
+
         default:
             break;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QRect>
 
 #include "node.h"
 #include "phoenixwindow.h"
@@ -25,9 +26,13 @@ class PhoenixWindowNode : public Node {
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
         void frameSwapped();
+        void geometryChanged();
 
     private:
         // Framerate of the monitor this Window exists in
         // TODO: Use whatever techniques are out there to get a more accurate number
         qreal hostFPS{ 60.0 };
+
+        // Window geometry
+        QRect geometry;
 };

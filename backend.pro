@@ -64,12 +64,15 @@
     core/libretrosymbols.h \
     core/libretrovariable.h \
     core/libretrovariablemodel.h \
+    core/libretrovariableforwarder.h \
     input/gamepadmanager.h \
     input/gamepadstate.h \
     input/globalgamepad.h \
-    input/keyboardlistener.h \
     input/keyboardmanager.h \
+    input/keyboardmouselistener.h \
     input/keyboardstate.h \
+    input/mousemanager.h \
+    input/mousestate.h \
     input/remapper.h \
     input/remappermodel.h \
     pipeline/node.h \
@@ -78,9 +81,6 @@
     util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
-    core/libretrovariableforwarder.h \
-    input/touchmanager.h \
-    input/touchstate.h
 
     SOURCES += \
     backendplugin.cpp \
@@ -97,12 +97,15 @@
     core/libretrosymbols.cpp \
     core/libretrovariable.cpp \
     core/libretrovariablemodel.cpp \
+    core/libretrovariableforwarder.cpp \
     input/gamepadmanager.cpp \
     input/gamepadstate.cpp \
     input/globalgamepad.cpp \
-    input/keyboardlistener.cpp \
     input/keyboardmanager.cpp \
+    input/keyboardmouselistener.cpp \
     input/keyboardstate.cpp \
+    input/mousemanager.cpp \
+    input/mousestate.cpp \
     input/remapper.cpp \
     input/remappermodel.cpp \
     pipeline/node.cpp \
@@ -110,9 +113,6 @@
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
-    core/libretrovariableforwarder.cpp \
-    input/touchmanager.cpp \
-    input/touchstate.cpp
 
     RESOURCES += input/controllerdb.qrc
 

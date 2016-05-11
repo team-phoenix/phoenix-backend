@@ -54,10 +54,20 @@ class Node : public QObject {
             SetLibretroVariable,
 
             // Set FPS of the monitor. Used for when vsync is on (track with SetVsync)
+            // qreal
             HostFPS,
 
             // Set FPS of the core in this pipeline. May not exist!
+            // qreal
             CoreFPS,
+
+            // Sets the window's geometry
+            // QRect
+            SetWindowGeometry,
+
+            // Sets the aspect ratio mode (documented inside of VideoOutput in Emulator.qml)
+            // int
+            SetAspectRatioMode,
 
             // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
             // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
@@ -116,7 +126,7 @@ class Node : public QObject {
             Video,
             Audio,
             Input,
-            TouchInput,
+            MouseInput,
             KeyboardInput,
         };
         Q_ENUM( DataType )

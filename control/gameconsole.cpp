@@ -1,5 +1,5 @@
 #include "gameconsole.h"
-#include "touchmanager.h"
+#include "mousemanager.h"
 #include "logging.h"
 
 #include <QMetaObject>
@@ -8,24 +8,26 @@
 
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
     gameThread( new QThread ),
+
+    // Pipeline nodes owned by this class (game thread)
     audioOutput( new AudioOutput ),
     gamepadManager( new GamepadManager ),
-    keyboardInputNode( new KeyboardManager ),
+    keyboardManager( new KeyboardManager ),
     libretroLoader( new LibretroLoader ),
     libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
-    remapper( new Remapper ),
-    keyboardInput( new KeyboardListener ),
-    m_touchManager( new TouchManager ) {
+    mouseManager( new MouseManager ),
+    remapper( new Remapper ) {
 
     // Move all our stuff to the game thread
-    libretroLoader->moveToThread( gameThread );
     audioOutput->moveToThread( gameThread );
     gamepadManager->moveToThread( gameThread );
-    keyboardInputNode->moveToThread( gameThread );
-    m_touchManager->moveToThread( gameThread );
+    keyboardManager->moveToThread( gameThread );
+    libretroLoader->moveToThread( gameThread );
     libretroRunner->moveToThread( gameThread );
+    libretroVariableForwarder.moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
+    mouseManager->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
 
     gameThread->setObjectName( "Game thread" );
@@ -33,13 +35,13 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     // Connect global pipeline (at least the parts that can be connected at this point)
     connectNodes( microTimer, gamepadManager );
-    connectNodes( gamepadManager, keyboardInputNode );
-    connectNodes( keyboardInputNode, m_touchManager );
-    connectNodes( m_touchManager, remapper );
+    connectNodes( gamepadManager, keyboardManager );
+    connectNodes( keyboardManager, mouseManager );
+    connectNodes( mouseManager, remapper );
 
     // Handle the wrapper nodes/node frontends/node proxies
-    m_touchManager->setListener( keyboardInput );
-    keyboardInputNode->connectKeyboardInput( keyboardInput );
+    mouseManager->setListener( &keyboardMouseListener );
+    keyboardManager->connectKeyboardInput( &keyboardMouseListener );
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
@@ -48,11 +50,14 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         }
     } );
 
-    connect( this, &GameConsole::variableModelChanged, this, [this] {
-        if ( variableModel ) {
-            variableModel->setForwarder( &m_variableForwarder );
+    // Connect VariableModel (which lives in QML) to LibretroVariableForwarder as soon as it's set
+    connect( this, &GameConsole::variableModelChanged, this, [ & ] {
+        if( variableModel ) {
+            qCDebug( phxControl ) << "VariableModel" << Q_FUNC_INFO << globalPipelineReady();
+            variableModel->setForwarder( &libretroVariableForwarder );
+            checkIfGlobalPipelineReady();
         }
-    });
+    } );
 
     // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
     connect( this, &GameConsole::globalGamepadChanged, this, [ & ]() {
@@ -179,17 +184,14 @@ void GameConsole::loadLibretro() {
     Q_ASSERT_X( videoOutput, "libretro load", "videoOutput was not set!" );
     Q_ASSERT_X( variableModel, "libretro load", "variableModel was not set!" );
 
-
     // Disconnect PhoenixWindow from MicroTimer, insert libretroLoader in between
     disconnectNodes( phoenixWindow, microTimer );
     sessionConnections << connectNodes( phoenixWindow, libretroLoader );
     sessionConnections << connectNodes( libretroLoader, microTimer );
-    sessionConnections << connectNodes( libretroLoader, m_variableForwarder );
 
-
-    // Connect LibretroRunner to the global pipeline
-    sessionConnections << connectNodes( remapper, libretroRunner );
-    sessionConnections << connectNodes( m_variableForwarder, libretroRunner );
+    // Connect LibretroVariableForwarder to the global pipeline
+    sessionConnections << connectNodes( remapper, libretroVariableForwarder );
+    sessionConnections << connectNodes( libretroVariableForwarder, libretroRunner );
 
     // Connect LibretroRunner to its children
     sessionConnections << connectNodes( libretroRunner, audioOutput );
@@ -235,20 +237,24 @@ void GameConsole::applyPendingPropertyChanges() {
     }
 
     // Call each setter again if a pending change was set
+    if( pendingPropertyChanges.contains( "aspectRatioMode" ) ) {
+        setAspectRatioMode( pendingPropertyChanges[ "aspectRatioMode" ].toInt() );
+    }
+
     if( pendingPropertyChanges.contains( "playbackSpeed" ) ) {
-        setPlaybackSpeed( pendingPropertyChanges["playbackSpeed"].toReal() );
+        setPlaybackSpeed( pendingPropertyChanges[ "playbackSpeed" ].toReal() );
     }
 
     if( pendingPropertyChanges.contains( "source" ) ) {
-        setSource( pendingPropertyChanges["source"].toMap() );
+        setSource( pendingPropertyChanges[ "source" ].toMap() );
     }
 
     if( pendingPropertyChanges.contains( "volume" ) ) {
-        setVolume( pendingPropertyChanges["volume"].toReal() );
+        setVolume( pendingPropertyChanges[ "volume" ].toReal() );
     }
 
     if( pendingPropertyChanges.contains( "vsync" ) ) {
-        setVsync( pendingPropertyChanges["vsync"].toBool() );
+        setVsync( pendingPropertyChanges[ "vsync" ].toBool() );
     }
 }
 
@@ -284,13 +290,28 @@ void GameConsole::deleteMembers() {
     // Alphabetical order because it doesn't matter
     audioOutput->deleteLater();
     gamepadManager->deleteLater();
-    keyboardInput->deleteLater();
-    keyboardInputNode->deleteLater();
-    m_touchManager->deleteLater();
+    keyboardManager->deleteLater();
+    mouseManager->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
+}
+
+int GameConsole::getAspectRatioMode() {
+    return aspectRatioMode;
+}
+
+void GameConsole::setAspectRatioMode( int aspectRatioMode ) {
+    if( !dynamicPipelineReady() ) {
+        qCDebug( phxControl ) << Q_FUNC_INFO << ": Dynamic pipeline not yet fully hooked up, caching change for later...";
+        pendingPropertyChanges[ "aspectRatioMode" ] = aspectRatioMode;
+        return;
+    }
+
+    this->aspectRatioMode = aspectRatioMode;
+    emit commandOut( Command::SetAspectRatioMode, aspectRatioMode, QDateTime::currentMSecsSinceEpoch() );
+    emit aspectRatioModeChanged();
 }
 
 // Private (property getters/setters)

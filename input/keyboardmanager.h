@@ -9,7 +9,7 @@
 #include "node.h"
 #include "keyboardstate.h"
 
-class KeyboardListener;
+class KeyboardMouseListener;
 
 /*
  * KeyboardManager is a Node whose job is to produce input data from the keyboard. It does this by listening to its
@@ -21,7 +21,7 @@ class KeyboardManager : public Node {
 
     public:
         KeyboardManager() = default;
-        void connectKeyboardInput( KeyboardListener *keyboardInput );
+        void connectKeyboardInput( KeyboardMouseListener *keyboardInput );
 
     signals:
 

@@ -19,6 +19,7 @@ LibretroCore::~LibretroCore() {
         delete audioBufferPool[i];
         delete videoBufferPool[i];
     }
+
     delete systemInfo;
 }
 
@@ -561,50 +562,108 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
 
     // Touch input
     if( device == RETRO_DEVICE_POINTER && port == 0 && index == 0 ) {
+
+        // Information taken directly from VideoOutput's QML for aspect ratio correction
+        // FIXME: Don't assume VideoOutput fills entire window
+        // TODO: Do all this upstream? Maybe in PhoenixWindow?
+
+        qreal windowWidth = core.geometry.width();
+        qreal windowHeight = core.geometry.height();
+        qreal aspectRatio = core.producerFmt.videoAspectRatio;
+
+        qreal letterBoxHeight = windowWidth / aspectRatio;
+        qreal letterBoxWidth = windowWidth;
+        qreal pillBoxWidth = windowHeight * aspectRatio;
+        qreal pillBoxHeight = windowHeight;
+        bool pillBoxing = ( windowWidth / windowHeight / aspectRatio ) > 1.0;
+
+        // Fit mode (0): Maintain aspect ratio, fit all content within window, letterboxing/pillboxing as necessary
+        qreal fitModeWidth = pillBoxing ? pillBoxWidth : letterBoxWidth;
+        qreal fitModeHeight = pillBoxing ? pillBoxHeight : letterBoxHeight;
+
+        // Stretch mode (1): Fit to parent, ignore aspect ratio
+        //qreal stretchModeWidth = windowWidth;
+        //qreal stretchModeHeight = windowHeight;
+
+        // Fill mode (2): Maintian aspect ratio, fill window with content, cropping the remaining stuff
+        // TODO
+        //qreal fillModeWidth = 0;
+        //qreal fillModeHeight = 0;
+
+        // Center mode (3): Show at core's native resolution
+        // TODO
+        //qreal centerModeWidth = 0;
+        //qreal centerModeHeight = 0;
+
         switch( id ) {
             // 0 or 1
             case RETRO_DEVICE_ID_POINTER_PRESSED: {
-                return core.m_touchState.pressed;
+                return ( core.mouse.buttons & Qt::LeftButton ) ? 1 : 0;
             }
             break;
 
-            // -0x7FFF to 0x7FFF, clamp incoming values to [0.0, 1.0]
-            // -32767 to 32767... odd range to use IMO (literally)
             case RETRO_DEVICE_ID_POINTER_X: {
+                qreal windowX = core.mouse.position.x();
+                qreal x = windowX / core.geometry.width();
 
-                qreal x = 1.0 + -core.m_touchState.point.x();
+                // Aspect ratio corrections
+                // Mode 1 requires no correction
+                // TODO: 2 and 3
+                if( core.aspectMode == 0 ) {
+                    // Center it
+                    qreal centerX = ( windowWidth / 2 ) - ( fitModeWidth / 2 );
+                    qreal center = centerX / windowWidth;
+                    x -= center;
 
+                    // Scale it
+                    qreal scale = windowWidth / fitModeWidth;
+                    x *= scale;
+                }
+
+                // Clamp to [0.0, 1.0]
                 if( x > 1.0 ) {
                     x = 1.0;
                 } else if( x < 0.0 ) {
                     x = 0.0;
                 }
 
-                qDebug() << "InputStateCB: TOuch" << x << ":" << core.m_touchState.point.x();
-
-                int ret = 0xFFFE;
+                // Map to [-32767, 32767]
+                int ret = ( 32767 * 2 ) + 1;
                 ret *= x;
-                ret -= 0x7FFF;
-                ret &= 0xFFFF;
+                ret -= 32767;
                 return ret;
             }
             break;
 
             case RETRO_DEVICE_ID_POINTER_Y: {
-                qreal y = 1.0 + -core.m_touchState.point.y();
+                qreal windowY = core.mouse.position.y();
+                qreal y = windowY / core.geometry.height();
 
-                if( y > 1.0 ) {
-                    y = 1.0;
+                // Aspect ratio corrections
+                // Mode 1 requires no correction
+                // TODO: 2 and 3
+                if( core.aspectMode == 0 ) {
+                    // Center it
+                    qreal centerY = ( windowHeight / 2 ) - ( fitModeHeight / 2 );
+                    qreal center = centerY / windowHeight;
+                    y -= center;
+
+                    // Scale it
+                    qreal scale = windowHeight / fitModeHeight;
+                    y *= scale;
                 }
 
-                if( y < 0.0 ) {
+                // Clamp to [0.0, 1.0]
+                if( y > 1.0 ) {
+                    y = 1.0;
+                } else if( y < 0.0 ) {
                     y = 0.0;
                 }
 
-                int ret = 0xFFFE;
+                // Map to [-32767, 32767]
+                int ret = ( 32767 * 2 ) + 1;
                 ret *= y;
-                ret -= 0x7FFF;
-                ret &= 0xFFFF;
+                ret -= 32767;
                 return ret;
             }
             break;
