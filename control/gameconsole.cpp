@@ -110,6 +110,10 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
         qDebug() << "";
     } );
+
+    connect( this, &GameConsole::userDataLocationChanged, this, [this] {
+        emit commandOut( Command::SetUserDataPath, userDataLocation, -1 );
+    });
 }
 
 // Public slots

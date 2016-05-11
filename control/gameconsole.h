@@ -59,6 +59,7 @@ class GameConsole : public Node {
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
         Q_PROPERTY( qreal volume READ getVolume WRITE setVolume NOTIFY volumeChanged )
         Q_PROPERTY( bool vsync READ getVsync WRITE setVsync NOTIFY vsyncChanged )
+        Q_PROPERTY( QString userDataLocation MEMBER userDataLocation NOTIFY userDataLocationChanged)
 
     public:
         explicit GameConsole( Node *parent = nullptr );
@@ -151,6 +152,7 @@ class GameConsole : public Node {
         bool vsync { true };
         bool getVsync();
         void setVsync( bool vsync );
+        QString userDataLocation;
 
     signals: // Property changed notifiers
         void controlOutputChanged();
@@ -165,4 +167,6 @@ class GameConsole : public Node {
         void sourceChanged();
         void volumeChanged();
         void vsyncChanged();
+        void userDataLocationChanged();
+
 };

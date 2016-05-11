@@ -43,6 +43,9 @@ class Node : public QObject {
             VideoFormat,
             InputFormat,
 
+            // Set the UserData( cache ) path
+            SetUserDataPath,
+
             // Core
 
             // Emitted from the core, tells the pipeline that a LibretroVariable has set by retro_init().

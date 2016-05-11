@@ -39,4 +39,6 @@ class GamepadManager : public Node {
         // A value of 100 should be sufficient for most purposes
         GamepadState gamepadBuffer[ 100 ];
         int gamepadBufferIndex{ 0 };
+
+        QString userDataPath;
 };

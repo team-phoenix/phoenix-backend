@@ -131,6 +131,10 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
             break;
         }
 
+        case Command::SetUserDataPath:
+            userDataPath = data.toString();
+            break;
+
         default: {
             emit commandOut( command, data, timeStamp );
             break;
