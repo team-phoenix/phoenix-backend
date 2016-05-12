@@ -4,6 +4,8 @@
 
 #include <QQuickItem>
 
+class QMutex;
+
 /*
  * VideoOutput is a QQuickItem that consumes video data. It is meant to be instantiated from QML.
  */
@@ -26,7 +28,7 @@ class VideoOutput : public QQuickItem {
 
         void setState( Node::State state );
         void setFormat( ProducerFormat consumerFmt );
-        void data( void *data, size_t bytes, qint64 timestamp );
+        void data( QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
 
         // Setters for the properties, will force a recheck of the aspect ratio if any are called
         void setAspectMode( int aspectMode );

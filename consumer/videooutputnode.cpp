@@ -54,7 +54,7 @@ void VideoOutputNode::dataIn( Node::DataType type, QMutex *mutex, void *data, si
 
     if( videoOutput ) {
         if( type == DataType::Video ) {
-            videoOutput->data( data, bytes, timeStamp );
+            videoOutput->data( mutex, data, bytes, timeStamp );
         }
     }
 }

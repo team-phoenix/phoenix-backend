@@ -1,9 +1,10 @@
 #include "videooutput.h"
 #include "logging.h"
 
+#include <QMutex>
+#include <QOpenGLContext>
 #include <QSGSimpleTextureNode>
 #include <QQuickWindow>
-#include <QOpenGLContext>
 
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     // Mandatory for our own drawing code to do anything
@@ -71,7 +72,7 @@ void VideoOutput::setFormat( ProducerFormat format ) {
     this->format = format;
 }
 
-void VideoOutput::data( void *data, size_t bytes, qint64 timestamp ) {
+void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
     // Copy framebuffer to our own buffer for later drawing
     if( state == Node::State::Playing ) {
         qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
@@ -91,6 +92,7 @@ void VideoOutput::data( void *data, size_t bytes, qint64 timestamp ) {
 
         const uchar *newFramebuffer = ( const uchar * )data;
 
+        mutex->lock();
         // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
         for( int i = 0; i < this->format.videoSize.height(); i++ ) {
             // Don't read past the end of the given buffer
@@ -104,6 +106,10 @@ void VideoOutput::data( void *data, size_t bytes, qint64 timestamp ) {
                     this->format.videoSize.width() * this->format.videoBytesPerPixel
                   );
         }
+        mutex->unlock();
+
+        // Schedule a call to updatePaintNode()
+        update();
     }
 }
 
