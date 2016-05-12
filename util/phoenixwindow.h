@@ -18,21 +18,33 @@
  */
 
 /*
- * PhoenixWindow extends QQuickWindow by allowing the user to toggle whether the window uses VSync (blocking on buffer swap)
- * or not (immediately returning when calling swapBuffers()).
+ * PhoenixWindow extends QQuickWindow by allowing the user to toggle whether the window uses VSync (blocking on
+ * swapBuffers() until VBlank ends) or not (immediately returning when calling swapBuffers()).
  */
 
 #pragma once
 
 #include <QObject>
+#include <QOpenGLContext>
 #include <QQuickWindow>
-#include <QSurfaceFormat>
+
+// A companion class that will run on whatever thread the scene graph runs on
+class SceneGraphHelper : public QObject {
+        Q_OBJECT
+
+    public:
+        explicit SceneGraphHelper() = default;
+
+    public slots:
+        void setVSync( QQuickWindow *window, QOpenGLContext *context, bool vsync );
+};
 
 class PhoenixWindow : public QQuickWindow {
         Q_OBJECT
 
     public:
-        explicit PhoenixWindow( QWindow *parent = 0 );
+        explicit PhoenixWindow( QQuickWindow *parent = 0 );
+        ~PhoenixWindow();
         bool vsync{ true };
 
     signals:
@@ -42,5 +54,6 @@ class PhoenixWindow : public QQuickWindow {
         void setVsync( bool vsync );
 
     private:
-        void resetPlatformWindow( QSurfaceFormat fmt );
+        bool sceneGraphIsInitialized { false };
+        SceneGraphHelper *sceneGraphHelper { nullptr };
 };

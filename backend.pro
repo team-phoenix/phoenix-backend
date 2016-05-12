@@ -16,6 +16,9 @@
 
     QT += qml quick multimedia
 
+    # Needed to grab the native OpenGL context handle
+    macx: QT += platformsupport-private
+
     TARGET = phoenix-backend
 
 ##
@@ -113,6 +116,9 @@
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
+
+    OBJECTIVE_SOURCES += \
+    util/osxhelper.mm
 
     RESOURCES += input/controllerdb.qrc
 

@@ -17,42 +17,90 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "phoenixwindow.h"
-#include "logging.h"
-
+#include <QGuiApplication>
+#include <QMetaObject>
 #include <QOpenGLContext>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
-#include <QTimer>
+#include <QThread>
 #include <QWindow>
+
 #include <memory>
 
-PhoenixWindow::PhoenixWindow( QWindow *parent ) : QQuickWindow( parent ) {
+#include "phoenixwindow.h"
+#include "logging.h"
+
+void SceneGraphHelper::setVSync( QQuickWindow *window, QOpenGLContext *context, bool vsync ) {
+    context->makeCurrent( window );
+
+#if defined( Q_OS_WIN )
+
+    void ( *wglSwapIntervalEXT )( int ) = nullptr;
+
+    if( ( wglSwapIntervalEXT =
+              reinterpret_cast<void ( * )( int )>( context->getProcAddress( "wglSwapIntervalEXT" ) ) ) ) {
+        wglSwapIntervalEXT( vsync ? 1 : 0 );
+    } else {
+        qWarning() << "Couldn't resolve wglSwapIntervalEXT. Unable to change VSync settings.";
+    }
+
+#elif defined( Q_OS_MACX )
+
+    // Call a helper to execute the necessary Objective-C code
+    extern void OSXSetSwapInterval( QVariant context, int interval );
+    OSXSetSwapInterval( context->nativeHandle(), vsync ? 1 : 0 );
+
+#elif defined( Q_OS_LINUX )
+
+    void ( *glxSwapIntervalEXT )( int ) = nullptr;
+
+    if( ( glxSwapIntervalEXT =
+              reinterpret_cast<void ( * )( int )>( context->getProcAddress( "glxSwapIntervalEXT" ) ) ) ) {
+        glxSwapIntervalEXT( vsync ? 1 : 0 );
+    } else {
+        qWarning() << "Couldn't resolve glxSwapIntervalEXT. Unable to change VSync settings.";
+    }
+
+#endif
+}
+
+PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
+    sceneGraphHelper( new SceneGraphHelper() ) {
     connect( this, &PhoenixWindow::vsyncChanged, this, &PhoenixWindow::setVsync );
 
-    // Reinitalize the scene graph when the OpenGL context gets destroyed
-    // Needed because only when the context gets recreated is the format read
-    setPersistentOpenGLContext( false );
-    setPersistentSceneGraph( false );
+    connect( this, &QQuickWindow::sceneGraphInitialized, this, [ & ]() {
+        sceneGraphIsInitialized = true;
+        // qDebug() << openglContext()->format();
+        sceneGraphHelper->moveToThread( openglContext()->thread() );
+    } );
 
     // Grab window surface format as the OpenGL context will not be created yet
     QSurfaceFormat fmt = format();
+
+    // Enforce the default value for vsync
+    fmt.setSwapInterval( vsync ? 1 : 0 );
 
 #if defined( Q_OS_WIN )
 
 #elif defined( Q_OS_MACX )
 
-    fmt.setSwapBehavior( QSurfaceFormat::SingleBuffer );
-
     // For proper OS X fullscreen
     setFlags( flags() | Qt::WindowFullscreenButtonHint );
 
 #endif
+    //    qDebug() << fmt;
+    //    qDebug() << format();
+    //    qDebug() << QSurfaceFormat::defaultFormat();
+    //    qDebug() << QSurfaceFormat();
 
-    // Enforce the default value for vsync
-    fmt.setSwapInterval( vsync ? 1 : 0 );
+    // Apply it, will be set when the context is created
     setFormat( fmt );
 
+    //    qDebug() << format();
+}
+
+PhoenixWindow::~PhoenixWindow() {
+    delete sceneGraphHelper;
 }
 
 void PhoenixWindow::setVsync( bool vsync ) {
@@ -60,86 +108,15 @@ void PhoenixWindow::setVsync( bool vsync ) {
         return;
     }
 
+    // TODO: Cache the change so it'll get applied when it is ready
+    if( !sceneGraphIsInitialized ) {
+        return;
+    }
+
     this->vsync = vsync;
 
-    QSurfaceFormat fmt = format();
+    QMetaObject::invokeMethod( sceneGraphHelper, "setVSync", Qt::QueuedConnection, Q_ARG( QQuickWindow *, this ),
+                               Q_ARG( QOpenGLContext *, openglContext() ), Q_ARG( bool, vsync ) );
 
-    // Grab OpenGL context surface format if it's ready to go, it's more filled out than the window one
-    // It can be unitialized on startup before so check that it exists before using it
-    if( openglContext() ) {
-        fmt = openglContext()->format();
-    }
-
-    fmt.setSwapInterval( vsync ? 1 : 0 );
-
-    // Window must be reset to apply the changes
-    resetPlatformWindow( fmt );
-}
-
-void PhoenixWindow::resetPlatformWindow( QSurfaceFormat fmt ) {
-    //qDebug() << "=====================" << __PRETTY_FUNCTION__ << "=====================";
-
-    // Show the window if hidden
-    if( !isVisible() ) {
-        show();
-    }
-
-    Qt::WindowState savedWindowState = windowState();
-
-#if defined( Q_OS_WIN )
-
-    // Force into windowed mode to get proper position and size
-    setWindowState( Qt::WindowNoState );
-
-#elif defined( Q_OS_MACX )
-
-    // Force into windowed mode to get proper position and size
-    // Don't do this if we're already fullscreen on OS X, it'll happen automatically
-    if( !( savedWindowState & Qt::WindowFullScreen ) ) {
-        setWindowState( Qt::WindowNoState );
-    }
-
-#endif
-
-    QPoint savedPosition = position();
-    QSize savedSize = size();
-
-
-#if defined( Q_OS_WIN )
-
-    // Destroy the window and force the context to be reloaded
-    destroy();
-
-#elif defined( Q_OS_MACX )
-
-    // Hide the window and force the QSG to reset it and its context
-    hide();
-
-#endif
-
-    releaseResources();
-    setFormat( fmt );
-
-    show();
-
-    setPosition( savedPosition );
-    resize( savedSize );
-
-#if defined( Q_OS_WIN )
-
-    setWindowState( savedWindowState );
-
-#elif defined( Q_OS_MACX )
-
-    // On OS X, if fullscreen wait for animation to finish before going back
-    // If you try to go to fullscreen during the animation, the system makes a denied sound and doesn't do anything
-    // FIXME: What if the user tweaks their animation to be slower?
-    // FIXME: This approach sucks either way
-    if( savedWindowState & Qt::WindowFullScreen ) {
-        QTimer::singleShot( 750, this, SLOT( showFullScreen() ) );
-    }
-
-#endif
-
-    // qDebug() << "==========================================================";
+    return;
 }

@@ -1,5 +1,7 @@
 #include "backendplugin.h"
 
+#include <QOpenGLContext>
+
 // Nodes
 #include "controloutput.h"
 #include "gameconsole.h"
@@ -41,4 +43,5 @@ void BackendPlugin::registerTypes( const char *uri ) {
     qRegisterMetaType<QStringMap>();
     qRegisterMetaType<size_t>( "size_t" );
     qRegisterMetaType<Qt::MouseButtons>( "Qt::MouseButtons" );
+    qRegisterMetaType<QOpenGLContext *>();
 }
