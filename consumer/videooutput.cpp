@@ -92,7 +92,9 @@ void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestam
 
         const uchar *newFramebuffer = ( const uchar * )data;
 
+        // Make sure reads and writes to this buffer are atomic
         mutex->lock();
+
         // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
         for( int i = 0; i < this->format.videoSize.height(); i++ ) {
             // Don't read past the end of the given buffer
@@ -106,6 +108,7 @@ void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestam
                     this->format.videoSize.width() * this->format.videoBytesPerPixel
                   );
         }
+
         mutex->unlock();
 
         // Schedule a call to updatePaintNode()
