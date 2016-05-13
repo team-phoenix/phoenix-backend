@@ -92,6 +92,7 @@ void loadSaveData() {
 
     if( !core.saveDataBuf ) {
         qCInfo( phxCore ) << "The core will handle saving (passed a null pointer when asked for save buffer)";
+        return;
     }
 
     QFile file( core.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
@@ -497,6 +498,12 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LANGUAGE (39)";
             break;
 
+        case RETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER: { // 40
+            //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER (40)";
+            return false;
+            break;
+        }
+
         default:
             qCDebug( phxCore ) << "Error: Environment command " << cmd << " is not defined in the frontend's libretro.h!.";
             return false;
@@ -576,8 +583,8 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         // FIXME: Don't assume VideoOutput fills entire window
         // TODO: Do all this upstream? Maybe in PhoenixWindow?
 
-        qreal windowWidth = core.geometry.width();
-        qreal windowHeight = core.geometry.height();
+        qreal windowWidth = core.windowGeometry.width();
+        qreal windowHeight = core.windowGeometry.height();
         qreal aspectRatio = core.producerFmt.videoAspectRatio;
 
         qreal letterBoxHeight = windowWidth / aspectRatio;
@@ -609,22 +616,21 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             case RETRO_DEVICE_ID_POINTER_PRESSED: {
                 return ( core.mouse.buttons & Qt::LeftButton ) ? 1 : 0;
             }
-            break;
 
             case RETRO_DEVICE_ID_POINTER_X: {
                 qreal windowX = core.mouse.position.x();
-                qreal x = windowX / core.geometry.width();
+                qreal x = windowX / core.windowGeometry.width();
 
                 // Aspect ratio corrections
                 // Mode 1 requires no correction
                 // TODO: 2 and 3
                 if( core.aspectMode == 0 ) {
-                    // Center it
-                    qreal centerX = ( windowWidth / 2 ) - ( fitModeWidth / 2 );
-                    qreal center = centerX / windowWidth;
-                    x -= center;
+                    // Change x so that 0.0 is the left edge of the game instead of the left edge of the window
+                    qreal leftEdgeX = ( windowWidth / 2 ) - ( fitModeWidth / 2 );
+                    qreal leftEdge = leftEdgeX / windowWidth;
+                    x -= leftEdge;
 
-                    // Scale it
+                    // Scale up to compensate for the game's width being narrower than the window's
                     qreal scale = windowWidth / fitModeWidth;
                     x *= scale;
                 }
@@ -636,28 +642,35 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
                     x = 0.0;
                 }
 
+                // Map to [-1.0, 1.0]
+                x *= 2.0;
+                x -= 1.0;
+
                 // Map to [-32767, 32767]
-                int ret = ( 32767 * 2 ) + 1;
+
+                // Highest possible value
+                int16_t ret = 32767;
+
+                // Scale by our input factor
                 ret *= x;
-                ret -= 32767;
+
                 return ret;
             }
-            break;
 
             case RETRO_DEVICE_ID_POINTER_Y: {
                 qreal windowY = core.mouse.position.y();
-                qreal y = windowY / core.geometry.height();
+                qreal y = windowY / core.windowGeometry.height();
 
                 // Aspect ratio corrections
                 // Mode 1 requires no correction
                 // TODO: 2 and 3
                 if( core.aspectMode == 0 ) {
-                    // Center it
-                    qreal centerY = ( windowHeight / 2 ) - ( fitModeHeight / 2 );
-                    qreal center = centerY / windowHeight;
-                    y -= center;
+                    // Change y so that 0.0 is the top edge of the game instead of the top edge of the window
+                    qreal topEdgeY = ( windowHeight / 2 ) - ( fitModeHeight / 2 );
+                    qreal topEdge = topEdgeY / windowHeight;
+                    y -= topEdge;
 
-                    // Scale it
+                    // Scale up to compensate for the game's height being shorter than the window's
                     qreal scale = windowHeight / fitModeHeight;
                     y *= scale;
                 }
@@ -669,13 +682,20 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
                     y = 0.0;
                 }
 
+                // Map to [-1.0, 1.0]
+                y *= 2.0;
+                y -= 1.0;
+
                 // Map to [-32767, 32767]
-                int ret = ( 32767 * 2 ) + 1;
+
+                // Highest possible value
+                int16_t ret = 32767;
+
+                // Scale by our input factor
                 ret *= y;
-                ret -= 32767;
+
                 return ret;
             }
-            break;
 
             default:
                 break;
