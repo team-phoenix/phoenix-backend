@@ -89,6 +89,7 @@ void loadSaveData() {
 
     if( !core.saveDataBuf ) {
         qCInfo( phxCore ) << "The core will handle saving (passed a null pointer when asked for save buffer)";
+        return;
     }
 
     QFile file( core.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
