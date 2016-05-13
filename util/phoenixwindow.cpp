@@ -69,9 +69,11 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
     connect( this, &PhoenixWindow::vsyncChanged, this, &PhoenixWindow::setVsync );
 
     connect( this, &QQuickWindow::sceneGraphInitialized, this, [ & ]() {
+        qDebug() << "Scene graph ready";
         sceneGraphIsInitialized = true;
         // qDebug() << openglContext()->format();
         sceneGraphHelper->moveToThread( openglContext()->thread() );
+        emit openglContextCreated( openglContext() );
     } );
 
     // Grab window surface format as the OpenGL context will not be created yet
@@ -97,6 +99,7 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
     setFormat( fmt );
 
     //    qDebug() << format();
+    update();
 }
 
 PhoenixWindow::~PhoenixWindow() {

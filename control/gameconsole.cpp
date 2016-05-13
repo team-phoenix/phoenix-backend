@@ -113,7 +113,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     connect( this, &GameConsole::userDataLocationChanged, this, [this] {
         emit commandOut( Command::SetUserDataPath, userDataLocation, -1 );
-    });
+    } );
 }
 
 // Public slots
@@ -129,8 +129,7 @@ void GameConsole::load() {
     Q_ASSERT( phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-    emit commandOut( Command::HostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(),
-                     QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::HostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), QDateTime::currentMSecsSinceEpoch() );
 
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
@@ -139,12 +138,10 @@ void GameConsole::load() {
         emit commandOut( Command::DynamicPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
         applyPendingPropertyChanges();
         emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-    } else if( source[ "type" ].toString().isEmpty() ||
-               pendingPropertyChanges[ "source" ].toMap()[ "type" ].toString().isEmpty() ) {
+    } else if( source[ "type" ].toString().isEmpty() || pendingPropertyChanges[ "source" ].toMap()[ "type" ].toString().isEmpty() ) {
         qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
     } else {
-        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
-                                           << source[ "type" ] << QStringLiteral( " passed to load()!" );
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " ) << source[ "type" ] << QStringLiteral( " passed to load()!" );
     }
 }
 
@@ -228,6 +225,7 @@ void GameConsole::checkIfGlobalPipelineReady() {
     if( globalPipelineReady() ) {
         qCDebug( phxControl ) << "Global pipeline ready";
         emit commandOut( Command::GlobalPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), QDateTime::currentMSecsSinceEpoch() );
     }
 }
 

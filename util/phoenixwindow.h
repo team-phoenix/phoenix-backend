@@ -25,7 +25,6 @@
 #pragma once
 
 #include <QObject>
-#include <QOpenGLContext>
 #include <QQuickWindow>
 
 // A companion class that will run on whatever thread the scene graph runs on
@@ -46,6 +45,7 @@ class PhoenixWindow : public QQuickWindow {
         explicit PhoenixWindow( QQuickWindow *parent = 0 );
         ~PhoenixWindow();
         bool vsync{ true };
+        bool sceneGraphIsInitialized { false };
 
     signals:
         void vsyncChanged( bool vsync );
@@ -54,6 +54,5 @@ class PhoenixWindow : public QQuickWindow {
         void setVsync( bool vsync );
 
     private:
-        bool sceneGraphIsInitialized { false };
         SceneGraphHelper *sceneGraphHelper { nullptr };
 };

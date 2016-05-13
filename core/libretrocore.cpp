@@ -6,6 +6,9 @@
 #include <QStringBuilder>
 #include <QThread>
 
+retro_proc_address_t procAddressCallback( const char *sym );
+uintptr_t getFramebufferCallback( void );
+
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // Private
     systemInfo( new retro_system_info ) {
@@ -283,21 +286,26 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE (13)";
             break;
 
-        case RETRO_ENVIRONMENT_SET_HW_RENDER: // 14
+        case RETRO_ENVIRONMENT_SET_HW_RENDER: { // 14
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
             core.producerFmt.videoMode = HARDWARERENDER;
 
-            core.openGLContext = *( retro_hw_render_callback * )data;
+            retro_hw_render_callback *openGLContext = ( retro_hw_render_callback * )data;
 
-            switch( core.openGLContext.context_type ) {
+            openGLContext->get_current_framebuffer = getFramebufferCallback;
+            openGLContext->get_proc_address = procAddressCallback;
+
+            core.symbols.retro_hw_context_reset = openGLContext->context_reset;
+
+            switch( openGLContext->context_type ) {
                 case RETRO_HW_CONTEXT_NONE:
                     qCDebug( phxCore ) << "\t\tNo hardware context was selected";
                     break;
 
                 case RETRO_HW_CONTEXT_OPENGL:
                     qCDebug( phxCore ) << "\t\tOpenGL 2 context was selected";
-                    break;
+                    return true;
 
                 case RETRO_HW_CONTEXT_OPENGLES2:
                     qCDebug( phxCore ) << "\t\tOpenGL ES 2 context was selected";
@@ -308,11 +316,12 @@ bool environmentCallback( unsigned cmd, void *data ) {
                     break;
 
                 default:
-                    qCritical() << "\t\tRETRO_HW_CONTEXT: " << core.openGLContext.context_type << " was not handled!";
+                    qCritical() << "\t\tRETRO_HW_CONTEXT: " << openGLContext->context_type << " was not handled!";
                     break;
             }
 
             break;
+        }
 
         case RETRO_ENVIRONMENT_GET_VARIABLE: { // 15
             // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
@@ -753,6 +762,11 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
 void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
     Q_UNUSED( width );
 
+    // Ignore this if this session is hardware-accelerated
+    if( data == RETRO_HW_FRAME_BUFFER_VALID ) {
+        return;
+    }
+
     // Current frame exists, send it on its way
     if( data ) {
         core.mutex.lock();
@@ -774,4 +788,13 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
 QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
     return QString::number( port, 16 ) % ',' % QString::number( device, 16 ) % ','
            % QString::number( index, 16 ) % ',' % QString::number( id, 16 );
+}
+
+retro_proc_address_t procAddressCallback( const char *sym ) {
+    QFunctionPointer ptr = core.context->getProcAddress( sym );
+    return ptr;
+}
+
+uintptr_t getFramebufferCallback( void ) {
+    return core.fbo->handle();
 }

@@ -44,6 +44,7 @@ class LibretroSymbols {
         void ( *retro_audio_set_state )( bool enabled );
         void ( *retro_frame_time )( retro_usec_t delta );
         void ( *retro_keyboard_event )( bool down, unsigned keycode, uint32_t character, uint16_t key_modifiers );
+        void ( *retro_hw_context_reset )( void );
 
         void clear() {
             retro_api_version = nullptr;

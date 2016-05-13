@@ -7,6 +7,8 @@
 
 #include "pipelinecommon.h"
 
+#define nodeCurrentTime QDateTime::currentMSecsSinceEpoch
+
 /*
  * A node in the pipeline tree. This class defines a set of signals and slots common to each node.
  */
@@ -25,6 +27,10 @@ class Node : public QObject {
             Pause,
             Unload,
             Reset,
+
+            // The current game thread
+            // QThread *
+            SetGameThread,
 
             // The global pipeline has been established
             GlobalPipelineReady,
@@ -99,7 +105,7 @@ class Node : public QObject {
             // qreal
             SetVolume,
 
-            // Set vsync mode
+            // Set VSync mode
             // For PhoenixWindow this determines if it should draw the QML scene using vsync or not
             // For MicroTimer this determines if its timer signals (false) or PhoenixWindow's timer signals (true)
             //     should go down the pipeline
@@ -108,6 +114,22 @@ class Node : public QObject {
             // For all other nodes this should tell you whether the incoming heartbeats are at coreFPS's rate (false)
             //     or hostFPS's rate (true)
             SetVsync,
+
+            // Video
+
+            // Current surface
+            // For use only with creating an FBO
+            // QSurface *
+            SetSurface,
+
+            // Inform the dynamic pipeline that an OpenGL context shared with the scene graph is available. This context
+            // has affinity with the game thread and must not be accessed at all from the main thread.
+            // QOpenGLContext *
+            SetOpenGLContext,
+
+            // An FBO associated with the dynamic pipeline's OpenGL context
+            // QOpenGLFramebufferObject *
+            SetOpenGLFBO,
 
             // Audio
 

@@ -155,16 +155,31 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 // Get info from the core
                 retro_system_av_info *avInfo = new retro_system_av_info();
                 core.symbols.retro_get_system_av_info( avInfo );
-                core.getAVInfo( avInfo );
                 allocateBufferPool( avInfo );
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
                 emit commandOut( Command::CoreFPS, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
+
+                // Create the fbo 3d cores will draw to
+                {
+                    core.context->makeCurrent( core.surface );
+                    // TODO: Resolution?
+                    core.fbo = new QOpenGLFramebufferObject( 1000, 1000 );
+                    core.context->doneCurrent();
+                    avInfo->geometry.max_height = 1000;
+                    avInfo->geometry.max_width = 1000;
+                    avInfo->geometry.base_height = 1000;
+                    avInfo->geometry.base_width= 1000;
+                    core.symbols.retro_hw_context_reset();
+                }
+
+                core.getAVInfo( avInfo );
                 delete avInfo;
             }
 
             // Set all variables to their defaults, mark all variables as dirty
             {
                 qDebug() << core.variables;
+
                 for( const auto &key : core.variables.keys() ) {
                     LibretroVariable &variable = core.variables[ key ];
 
@@ -174,6 +189,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
                     // Assume the defualt choice to be the first option offered
                     QByteArray defaultChoice = variable.choices()[ 0 ];
+
                     if( defaultChoice.isEmpty() ) {
                         continue;
                     }
@@ -222,6 +238,18 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
             }
 
             core.source = stringMap;
+            break;
+        }
+
+        case Command::SetSurface: {
+            emit commandOut( command, data, timeStamp );
+            core.surface = data.value<QSurface *>();
+            break;
+        }
+
+        case Command::SetOpenGLContext: {
+            emit commandOut( command, data, timeStamp );
+            core.context = data.value<QOpenGLContext *>();
             break;
         }
 

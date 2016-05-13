@@ -5,7 +5,10 @@
 #include <QHash>
 #include <QLibrary>
 #include <QObject>
+#include <QOpenGLContext>
+#include <QOpenGLFramebufferObject>
 #include <QRect>
+#include <QSurface>
 
 #include "core.h"
 #include "gamepadstate.h"
@@ -128,6 +131,11 @@ class LibretroCore : public Core {
 
         uint8_t *videoBufferPool[ POOL_SIZE ] { nullptr };
         int videoPoolCurrentBuffer{ 0 };
+
+        // Video
+        QOpenGLContext *context { nullptr };
+        QOpenGLFramebufferObject *fbo { nullptr };
+        QSurface *surface { nullptr };
 
         // Audio
 
