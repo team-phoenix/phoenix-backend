@@ -100,7 +100,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
 
         case Command::SetWindowGeometry: {
             emit commandOut( command, data, timeStamp );
-            core.geometry = data.toRect();
+            core.windowGeometry = data.toRect();
             break;
         }
 

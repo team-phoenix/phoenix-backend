@@ -140,7 +140,7 @@ class LibretroCore : public Core {
         QHash<int, GamepadState> gamepads;
 
         MouseState mouse;
-        QRect geometry;
+        QRect windowGeometry;
         int aspectMode { 0 };
 
         // Callbacks
