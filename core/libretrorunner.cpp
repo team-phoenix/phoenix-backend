@@ -2,6 +2,8 @@
 #include "mousestate.h"
 
 #include <QDebug>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QString>
 #include <QStringBuilder>
 #include <QThread>
@@ -110,6 +112,8 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
                 core.symbols.retro_run();
 
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
+                    core.context->makeCurrent( core.surface );
+                    core.context->functions()->glFlush();
                     core.context->doneCurrent();
                     //qDebug() << "LibretroRunner unlock";
                     core.videoMutex.unlock();
