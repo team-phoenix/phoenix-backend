@@ -27,6 +27,12 @@
 #include <QObject>
 #include <QQuickWindow>
 
+class QOpenGLContext;
+class QOpenGLFramebufferObject;
+class QOffscreenSurface;
+
+class PhoenixWindowNode;
+
 // A companion class that will run on whatever thread the scene graph runs on
 class SceneGraphHelper : public QObject {
         Q_OBJECT
@@ -44,15 +50,20 @@ class PhoenixWindow : public QQuickWindow {
     public:
         explicit PhoenixWindow( QQuickWindow *parent = 0 );
         ~PhoenixWindow();
-        bool vsync{ true };
+
+        bool vsync { true };
         bool sceneGraphIsInitialized { false };
 
-    signals:
-        void vsyncChanged( bool vsync );
+        PhoenixWindowNode *phoenixWindowNode { nullptr };
+
+        QOpenGLContext *dynamicPipelineContext { nullptr };
+        QOpenGLFramebufferObject *dynamicPipelineFBO { nullptr };
+        QOffscreenSurface *dynamicPipelineSurface { nullptr };
 
     public slots:
         void setVsync( bool vsync );
 
     private:
         SceneGraphHelper *sceneGraphHelper { nullptr };
+
 };

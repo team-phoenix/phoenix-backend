@@ -9,12 +9,12 @@ class LibretroVariableForwarder : public Node {
     public:
         explicit LibretroVariableForwarder( QObject *parent = nullptr );
 
-        virtual void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
+        void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
 
     signals:
-        void variableFound( LibretroVariable var );
+        void insertVariable( QString key, QStringList values, QString currentValue, QString description );
         void clearVariables();
 
     public slots:
-
+        void setVariable( QString key, QString value );
 };

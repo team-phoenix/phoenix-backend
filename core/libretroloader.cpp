@@ -1,5 +1,6 @@
 #include "libretroloader.h"
 
+#include <QOffscreenSurface>
 #include <QString>
 #include <QStringBuilder>
 
@@ -59,7 +60,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
             {
                 // Pixel format is set to QImage::Format_RGB16 by default by the struct ProducerFormat constructor
                 // However, for Libretro the default is RGB1555 aka QImage::Format_RGB555
-                core.producerFmt.videoPixelFormat = QImage::Format_RGB555;
+                core.videoFormat.videoPixelFormat = QImage::Format_RGB555;
             }
 
             // Load core
@@ -157,18 +158,32 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 core.symbols.retro_get_system_av_info( avInfo );
                 allocateBufferPool( avInfo );
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
-                emit commandOut( Command::CoreFPS, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
+                emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
 
-                // Create the fbo 3d cores will draw to
-                {
+                // Create the FBO 3d cores will draw to
+                if( core.videoFormat.videoMode == HARDWARERENDER ) {
                     core.context->makeCurrent( core.surface );
-                    // TODO: Resolution?
-                    core.fbo = new QOpenGLFramebufferObject( 1000, 1000 );
-                    core.context->doneCurrent();
-                    avInfo->geometry.max_height = 1000;
-                    avInfo->geometry.max_width = 1000;
-                    avInfo->geometry.base_height = 1000;
-                    avInfo->geometry.base_width= 1000;
+
+                    // If the core has made available its max width/height at this stage, recreate the FBO with those settings
+                    // Otherwise, use the default values set in PhoenixWindow
+                    if( ( avInfo->geometry.max_width != 0 && avInfo->geometry.max_height != 0 ) && core.fbo ) {
+                        delete core.fbo;
+
+                        core.fbo = new QOpenGLFramebufferObject( avInfo->geometry.base_width, avInfo->geometry.base_height, QOpenGLFramebufferObject::CombinedDepthStencil );
+                    } else {
+                        if( !core.fbo ) {
+                            core.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
+                        }
+
+                        avInfo->geometry.max_width = 640;
+                        avInfo->geometry.max_height = 480;
+                        avInfo->geometry.base_width = 640;
+                        avInfo->geometry.base_height = 480;
+                    }
+
+                    // Tell any video output children about this texture
+                    emit commandOut( Command::SetOpenGLTexture, core.fbo->texture(), nodeCurrentTime() );
+
                     core.symbols.retro_hw_context_reset();
                 }
 
@@ -178,8 +193,6 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
             // Set all variables to their defaults, mark all variables as dirty
             {
-                qDebug() << core.variables;
-
                 for( const auto &key : core.variables.keys() ) {
                     LibretroVariable &variable = core.variables[ key ];
 
@@ -199,10 +212,10 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
                     QVariant var;
                     var.setValue( variable );
-                    emit commandOut( Command::LibretroVariablesEmitted, var, -1 );
+                    emit commandOut( Command::SetLibretroVariable, var, nodeCurrentTime() );
                 }
 
-                core.updateVariables();
+                core.variablesAreDirty = true;
             }
 
             // Disconnect LibretroCore from the rest of the pipeline
@@ -243,13 +256,19 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
         case Command::SetSurface: {
             emit commandOut( command, data, timeStamp );
-            core.surface = data.value<QSurface *>();
+            core.surface = data.value<QOffscreenSurface *>();
             break;
         }
 
         case Command::SetOpenGLContext: {
             emit commandOut( command, data, timeStamp );
             core.context = data.value<QOpenGLContext *>();
+            break;
+        }
+
+        case Command::SetOpenGLFBO: {
+            emit commandOut( command, data, timeStamp );
+            core.fbo = static_cast<QOpenGLFramebufferObject *>( data.value<void *>() );
             break;
         }
 

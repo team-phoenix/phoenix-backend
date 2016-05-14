@@ -3,40 +3,45 @@
 #include "libretrovariable.h"
 
 #include <QAbstractTableModel>
-#include <QList>
 #include <QHash>
+#include <QList>
+#include <QMap>
+#include <QObject>
 
 class LibretroVariableForwarder;
 
-class LibretroVariableModel : public QAbstractTableModel
-{
-    Q_OBJECT
-public:
-    enum Role {
-        Key = Qt::UserRole + 1,
-        Choices,
-        Description,
-    };
+class LibretroVariableModel : public QAbstractTableModel {
+        Q_OBJECT
+    public:
+        enum Role {
+            Key = Qt::UserRole + 1,
+            Choices,
+            Description,
+        };
 
-    LibretroVariableModel( QObject *parent = nullptr );
+        LibretroVariableModel( QObject *parent = nullptr );
 
-    QHash<int, QByteArray> roleNames() const;
-    int rowCount(const QModelIndex &parent) const;
-    int columnCount(const QModelIndex &parent) const;
-    QVariant data(const QModelIndex &index, int role) const;
+        QHash<int, QByteArray> roleNames() const;
+        int rowCount( const QModelIndex &parent ) const;
+        int columnCount( const QModelIndex &parent ) const;
+        QVariant data( const QModelIndex &index, int role ) const;
 
-    void setForwarder( LibretroVariableForwarder *t_forwarder );
+        void setForwarder( LibretroVariableForwarder *forwarder );
 
-public slots:
-    void appendVariable( LibretroVariable t_var );
-    void updateVariable( QString t_key, QString t_value );
+    signals:
+        void setVariable( QString key, QString value );
 
-private slots:
-    void clear();
+    public slots:
+        void clearVariables();
+        void insertVariable( QString key, QStringList values, QString currentValue, QString description );
+        void updateVariable( QString key, QString value );
 
-private:
-    QList<LibretroVariable> m_varList;
-    LibretroVariableForwarder *m_forwarder{ nullptr };
+    private:
+        LibretroVariableForwarder *forwarder { nullptr };
 
-    QHash<int, QByteArray> m_roleNames;
+        QHash<int, QByteArray> roles;
+
+        QMap<QString, QStringList> values;
+        QMap<QString, QString> currentValues;
+        QMap<QString, QString> descriptions;
 };

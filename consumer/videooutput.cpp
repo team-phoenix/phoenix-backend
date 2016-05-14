@@ -4,6 +4,7 @@
 #include <QMutex>
 #include <QOpenGLContext>
 #include <QSGSimpleTextureNode>
+#include <QThread>
 #include <QQuickWindow>
 
 VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
@@ -28,11 +29,13 @@ VideoOutput::~VideoOutput() {
     }
 }
 
+// Public
+
 void VideoOutput::setState( Node::State state ) {
     this->state = state;
 }
 
-void VideoOutput::setFormat( ProducerFormat format ) {
+void VideoOutput::setFormat( LibretroVideoFormat format ) {
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
@@ -73,6 +76,8 @@ void VideoOutput::setFormat( ProducerFormat format ) {
 }
 
 void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+    this->mutex = mutex;
+
     // Copy framebuffer to our own buffer for later drawing
     if( state == Node::State::Playing ) {
         qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
@@ -116,58 +121,8 @@ void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestam
     }
 }
 
-QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData * ) {
-    // Don't draw unless emulation is active
-    if( state != Node::State::Playing && state != Node::State::Paused ) {
-        // Schedule a call to updatePaintNode() for this Item anyway
-        update();
-        return 0;
-    }
-
-    // Create a new texture node for the renderer if one does not already exist
-    QSGSimpleTextureNode *storedTextureNode = static_cast<QSGSimpleTextureNode *>( storedNode );
-
-    if( !storedTextureNode ) {
-        storedTextureNode = new QSGSimpleTextureNode();
-    }
-
-    // Schedule old texture for deletion
-    if( texture ) {
-        texture->deleteLater();
-        texture = nullptr;
-    }
-
-    // Create new Image that holds a reference to our framebuffer
-    QImage image( ( const uchar * )framebuffer, this->format.videoSize.width(), this->format.videoSize.height(),
-                  this->format.videoPixelFormat );
-
-    // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
-    texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
-
-    // Ensure texture lives in rendering thread so it will be deleted only once it's no longer associated with
-    // the texture node
-    texture->moveToThread( window()->openglContext()->thread() );
-
-    // Put this new texture into our QSG node and mark the node dirty so it'll be redrawn
-    storedTextureNode->setTexture( texture );
-    storedTextureNode->setRect( boundingRect() );
-    storedTextureNode->setFiltering( linearFiltering ? QSGTexture::Linear : QSGTexture::Nearest );
-
-    storedTextureNode->markDirty( QSGNode::DirtyMaterial );
-
-    // Schedule a call to updatePaintNode() for this Item
-    update();
-    return storedTextureNode;
-}
-
-qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
-    qreal newRatio = format.videoAspectRatio;
-
-    if( widescreen ) {
-        newRatio = 16.0 / 9.0;
-    }
-
-    return newRatio;
+void VideoOutput::setTextureID( GLuint textureID ) {
+    this->textureID = textureID;
 }
 
 void VideoOutput::setAspectMode( int aspectMode ) {
@@ -198,6 +153,104 @@ void VideoOutput::setWidescreen( bool widescreen ) {
     }
 }
 
+void VideoOutput::classBegin() {
+    QQuickItem::classBegin();
+}
+
+void VideoOutput::componentComplete() {
+    QQuickItem::componentComplete();
+    // Lock the mutex before we start drawing if in 3D mode
+    connect( window(), &QQuickWindow::beforeRendering, this, [ & ]() {
+        if( mutex && format.videoMode == HARDWARERENDER ) {
+            //qDebug() << "VideoOutput lock";
+            lockedByUs = true;
+            mutex->lock();
+        }
+    }, Qt::DirectConnection );
+
+    connect( window(), &QQuickWindow::afterRendering, this, [ & ]() {
+        if( mutex && format.videoMode == HARDWARERENDER && lockedByUs ) {
+            //qDebug() << "VideoOutput unlock";
+            lockedByUs = false;
+            mutex->unlock();
+        }
+    }, Qt::DirectConnection );
+}
+
+// Private
+
+QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData * ) {
+    // Don't draw unless emulation is active
+    if( state != Node::State::Playing && state != Node::State::Paused ) {
+        // Schedule a call to updatePaintNode() for this Item anyway
+        update();
+        return 0;
+    }
+
+    // Create a new texture node for the renderer if one does not already exist
+    QSGSimpleTextureNode *storedTextureNode = static_cast<QSGSimpleTextureNode *>( storedNode );
+
+    if( !storedTextureNode ) {
+        storedTextureNode = new QSGSimpleTextureNode();
+    }
+
+    // Schedule old texture for deletion
+    if( texture ) {
+        texture->deleteLater();
+        texture = nullptr;
+    }
+
+    // 2D rendering, create a texture from the stored buffer
+    if( format.videoMode == SOFTWARERENDER ) {
+        // Create new Image that holds a reference to our framebuffer
+        QImage image( ( const uchar * )framebuffer, format.videoSize.width(), format.videoSize.height(), format.videoPixelFormat );
+        // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
+        texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
+    }
+
+    // 3D rendering, use the stored texture name to render
+    // TODO: Don't delete and recreate it over and over
+    else if( textureID != 0 ) {
+        texture = window()->createTextureFromId( textureID, QSize( 640, 480 ) );
+    }
+
+    // Texture was not set yet, don't draw anything
+    else {
+        return 0;
+    }
+
+    // Ensure texture lives in rendering thread so it will be deleted only once it's no longer associated with
+    // the texture node
+    texture->moveToThread( window()->openglContext()->thread() );
+
+    // Put this new texture into our QSG node and mark the node dirty so it'll be redrawn
+    storedTextureNode->setTexture( texture );
+    storedTextureNode->setRect( boundingRect() );
+    storedTextureNode->setFiltering( linearFiltering ? QSGTexture::Linear : QSGTexture::Nearest );
+    storedTextureNode->setTextureCoordinatesTransform(
+        format.videoMode == SOFTWARERENDER ?
+        QSGSimpleTextureNode::NoTransform :
+        QSGSimpleTextureNode::MirrorVertically
+    );
+
+    storedTextureNode->markDirty( QSGNode::DirtyMaterial );
+
+    // Schedule a call to updatePaintNode() for this Item for the next frame
+    update();
+
+    return storedTextureNode;
+}
+
+qreal VideoOutput::calculateAspectRatio( LibretroVideoFormat format ) {
+    qreal newRatio = format.videoAspectRatio;
+
+    if( widescreen ) {
+        newRatio = 16.0 / 9.0;
+    }
+
+    return newRatio;
+}
+
 int VideoOutput::greatestCommonDivisor( int m, int n ) {
     int r;
 
@@ -221,4 +274,3 @@ int VideoOutput::greatestCommonDivisor( int m, int n ) {
 
     return n;
 }
-

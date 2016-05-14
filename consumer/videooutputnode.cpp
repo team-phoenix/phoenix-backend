@@ -9,8 +9,8 @@ void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 ti
     emit commandOut( command, data, timeStamp );
 
     if( videoOutput ) {
-        if( command == Command::VideoFormat ) {
-            videoOutput->setFormat( qvariant_cast<ProducerFormat>( data ) );
+        if( command == Command::SetLibretroVideoFormat ) {
+            videoOutput->setFormat( qvariant_cast<LibretroVideoFormat>( data ) );
         }
 
         switch( command ) {
@@ -34,8 +34,12 @@ void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 ti
                 videoOutput->setState( State::Unloading );
                 break;
 
-            case Command::VideoFormat:
-                videoOutput->setFormat( qvariant_cast<ProducerFormat>( data ) );
+            case Command::SetLibretroVideoFormat:
+                videoOutput->setFormat( qvariant_cast<LibretroVideoFormat>( data ) );
+                break;
+
+            case Command::SetOpenGLTexture:
+                videoOutput->setTextureID( data.toInt() );
                 break;
 
             case Command::SetAspectRatioMode: {
@@ -55,6 +59,9 @@ void VideoOutputNode::dataIn( Node::DataType type, QMutex *mutex, void *data, si
     if( videoOutput ) {
         if( type == DataType::Video ) {
             videoOutput->data( mutex, data, bytes, timeStamp );
+        } else if( type == DataType::VideoGL ) {
+            videoOutput->mutex = mutex;
+            videoOutput->update();
         }
     }
 }

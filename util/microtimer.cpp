@@ -144,13 +144,13 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
             break;
         }
 
-        case Command::GlobalPipelineReady: {
+        case Command::HandleGlobalPipelineReady: {
             globalPipelineReady = true;
             emit commandOut( command, data, timeStamp );
             break;
         }
 
-        case Command::DynamicPipelineReady: {
+        case Command::HandleDynamicPipelineReady: {
             dynamicPipelineReady = true;
             emit commandOut( command, data, timeStamp );
             break;
@@ -175,13 +175,13 @@ void MicroTimer::commandIn( Node::Command command, QVariant data, qint64 timeSta
             break;
         }
 
-        case Command::HostFPS: {
+        case Command::SetHostFPS: {
             emit commandOut( command, data, timeStamp );
             hostFPS = data.toReal();
             break;
         }
 
-        case Command::CoreFPS: {
+        case Command::SetCoreFPS: {
             emit commandOut( command, data, timeStamp );
             qCDebug( phxTimer ).nospace() << "Began timer at " << data.toReal() << "Hz (vsync: " << vsync << ")";
             startFreq( data.toReal() );

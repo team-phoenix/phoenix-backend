@@ -29,7 +29,7 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             break;
         }
 
-        case Command::GlobalPipelineReady: {
+        case Command::HandleGlobalPipelineReady: {
             emit controllerAdded( "", "Keyboard" );
 
             // TODO: Read keyboard setting from disk too
@@ -110,8 +110,8 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             }
 
             // TODO: Read value from disk
-            analogToDpad[ GUID ] = true;
-            dpadToAnalog[ GUID ] = true;
+            analogToDpad[ GUID ] = false;
+            dpadToAnalog[ GUID ] = false;
 
             // TODO: Read mappings from disk
             // For now, just init the remap with default mappings

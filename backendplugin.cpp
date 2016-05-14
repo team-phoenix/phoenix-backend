@@ -1,5 +1,8 @@
 #include "backendplugin.h"
 
+#include <QMutex>
+#include <QOffscreenSurface>
+#include <QOpenGLFramebufferObject>
 #include <QOpenGLContext>
 
 // Nodes
@@ -31,17 +34,17 @@ void BackendPlugin::registerTypes( const char *uri ) {
     qmlRegisterType<PhoenixWindow>( uri, 1, 0, "PhoenixWindow" );
     qmlRegisterType<RemapperModel>( uri, 1, 0, "RemapperModel" );
     qmlRegisterType<VideoOutput>( uri, 1, 0, "VideoOutput" );
+    qmlRegisterUncreatableType<Node>( uri, 1, 0, "Node", "Node cannot be directly instantiated from QML." );
 
     // Node structs and enums
     qRegisterMetaType<Node::Command>( "Command" );
     qRegisterMetaType<Node::DataType>( "DataType" );
-    qmlRegisterUncreatableType<Node>( uri, 1, 0, "Node", "Node cannot be directly instantiated from QML." );
     qRegisterMetaType<Node::State>( "State" );
 
     // Misc
-    qRegisterMetaType<ProducerFormat>();
+    qRegisterMetaType<LibretroVideoFormat>();
     qRegisterMetaType<QStringMap>();
     qRegisterMetaType<size_t>( "size_t" );
-    qRegisterMetaType<Qt::MouseButtons>( "Qt::MouseButtons" );
+    qRegisterMetaType<Qt::MouseButtons>();
     qRegisterMetaType<QOpenGLContext *>();
 }

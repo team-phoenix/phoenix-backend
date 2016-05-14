@@ -17,9 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "phoenixwindow.h"
+
 #include <QGuiApplication>
 #include <QMetaObject>
+#include <QOffscreenSurface>
 #include <QOpenGLContext>
+#include <QOpenGLFramebufferObject>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
 #include <QThread>
@@ -27,8 +31,8 @@
 
 #include <memory>
 
-#include "phoenixwindow.h"
 #include "logging.h"
+#include "phoenixwindownode.h"
 
 void SceneGraphHelper::setVSync( QQuickWindow *window, QOpenGLContext *context, bool vsync ) {
     context->makeCurrent( window );
@@ -65,15 +69,53 @@ void SceneGraphHelper::setVSync( QQuickWindow *window, QOpenGLContext *context, 
 }
 
 PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
-    sceneGraphHelper( new SceneGraphHelper() ) {
-    connect( this, &PhoenixWindow::vsyncChanged, this, &PhoenixWindow::setVsync );
+    dynamicPipelineSurface( new QOffscreenSurface() ), sceneGraphHelper( new SceneGraphHelper() ) {
+
+    // As soon as the scene graph is initialized we can set up the surface, context and FBO
+    connect( this, &QQuickWindow::openglContextCreated, this, [ & ]( QOpenGLContext * context ) {
+        qDebug() << "Scene graph context ready" << QThread::currentThread() << context->thread();
+
+        // Create an OpenGL context
+        dynamicPipelineContext = new QOpenGLContext();
+
+        // Grab the main window's format now that it's fully resolved
+        QSurfaceFormat format = context->format();
+        qDebug() << format;
+
+        // Match the context and surface's format to the main window's format
+        dynamicPipelineSurface->setFormat( format );
+        dynamicPipelineContext->setFormat( format );
+
+        // Create the surface now
+        dynamicPipelineSurface->create();
+
+        // Share the context with the QSG's context
+        dynamicPipelineContext->setShareContext( context );
+
+        // Set the alpha buffer size
+        //format.setAlphaBufferSize( 8 );
+
+        // Create the context and make it current
+        dynamicPipelineContext->create();
+        dynamicPipelineContext->makeCurrent( dynamicPipelineSurface );
+
+        // Now that there's a valid context current, create the FBO with a default size
+        dynamicPipelineFBO = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
+
+        // Not really necessary but good practice
+        dynamicPipelineContext->doneCurrent();
+
+        // Make PhoenixWindowNode check if we're good to go
+        if( phoenixWindowNode ) {
+            phoenixWindowNode->checkIfCommandsShouldFire();
+        }
+    } );
 
     connect( this, &QQuickWindow::sceneGraphInitialized, this, [ & ]() {
-        qDebug() << "Scene graph ready";
+        qDebug() << "Scene graph ready" << QThread::currentThread() << openglContext()->thread();
         sceneGraphIsInitialized = true;
-        // qDebug() << openglContext()->format();
-        sceneGraphHelper->moveToThread( openglContext()->thread() );
-        emit openglContextCreated( openglContext() );
+        QThread *sceneGraphThread = openglContext()->thread();
+        sceneGraphHelper->moveToThread( sceneGraphThread );
     } );
 
     // Grab window surface format as the OpenGL context will not be created yet
@@ -100,10 +142,13 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
 
     //    qDebug() << format();
     update();
+    qDebug() << Q_FUNC_INFO;
 }
 
 PhoenixWindow::~PhoenixWindow() {
     delete sceneGraphHelper;
+    dynamicPipelineContext->deleteLater();
+    dynamicPipelineSurface->deleteLater();
 }
 
 void PhoenixWindow::setVsync( bool vsync ) {

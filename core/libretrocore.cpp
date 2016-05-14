@@ -2,6 +2,9 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+#include <QOpenGLFunctions>
+#include <QOpenGLFunctions_4_5_Compatibility>
+#include <QOpenGLFunctions_4_5_Compatibility>
 #include <QString>
 #include <QStringBuilder>
 #include <QThread>
@@ -28,63 +31,45 @@ LibretroCore::~LibretroCore() {
 
 // Public
 
+void LibretroCore::fireCommandOut( Node::Command command, QVariant data, qint64 timeStamp ) {
+    emit commandOut( command, data, timeStamp );
+}
+
+void LibretroCore::fireDataOut( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) {
+    emit dataOut( type, mutex, data, bytes, timeStamp );
+}
+
 void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     // Audio
 
     // The Libretro API only support 16-bit stereo PCM
     core.audioSampleRate = avInfo->timing.sample_rate;
-    emit commandOut( Node::Command::SampleRate, core.audioSampleRate, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Node::Command::SetSampleRate, core.audioSampleRate, nodeCurrentTime() );
 
     // Video
 
-    core.producerFmt.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
+    core.videoFormat.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
                                         ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
                                         avInfo->geometry.aspect_ratio;
-    core.producerFmt.videoBytesPerPixel = QImage().toPixelFormat( core.producerFmt.videoPixelFormat ).bitsPerPixel() / 8;
-    core.producerFmt.videoBytesPerLine = avInfo->geometry.base_width * core.producerFmt.videoBytesPerPixel;
-    core.producerFmt.videoFramerate = avInfo->timing.fps;
+    core.videoFormat.videoBytesPerPixel = QImage().toPixelFormat( core.videoFormat.videoPixelFormat ).bitsPerPixel() / 8;
+    core.videoFormat.videoBytesPerLine = avInfo->geometry.base_width * core.videoFormat.videoBytesPerPixel;
+    core.videoFormat.videoFramerate = avInfo->timing.fps;
 
-    core.producerFmt.videoSize.setWidth( avInfo->geometry.base_width );
-    core.producerFmt.videoSize.setHeight( avInfo->geometry.base_height );
+    core.videoFormat.videoSize.setWidth( avInfo->geometry.base_width );
+    core.videoFormat.videoSize.setHeight( avInfo->geometry.base_height );
 
     qCDebug( phxCore ) << "Core claims an aspect ratio of:" << avInfo->geometry.aspect_ratio;
-    qCDebug( phxCore ) << "Using aspect ratio:" << core.producerFmt.videoAspectRatio;
+    qCDebug( phxCore ) << "Using aspect ratio:" << core.videoFormat.videoAspectRatio;
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
     QVariant variant;
-    variant.setValue( core.producerFmt );
-    emit commandOut( Node::Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-}
-
-void LibretroCore::emitAudioData( void *data, size_t bytes ) {
-    emit dataOut( Node::DataType::Audio, &core.mutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
-}
-
-void LibretroCore::emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes ) {
-    // Cores can change the size of the video they output (within the bounds they set on load) at any time
-    if( core.producerFmt.videoSize != QSize( width, height ) || core.producerFmt.videoBytesPerLine != pitch ) {
-        qCDebug( phxCore ) << "Video resized!";
-        qCDebug( phxCore ) << "Old video size:" << core.producerFmt.videoSize;
-        qCDebug( phxCore ) << "New video size:" << QSize( width, height );
-
-        core.producerFmt.videoBytesPerLine = pitch;
-        core.producerFmt.videoSize.setWidth( width );
-        core.producerFmt.videoSize.setHeight( height );
-
-        QVariant variant;
-        variant.setValue( core.producerFmt );
-        emit commandOut( Node::Command::VideoFormat, variant, QDateTime::currentMSecsSinceEpoch() );
-    }
-
-    emit dataOut( Node::DataType::Video, &core.mutex, data, bytes, QDateTime::currentMSecsSinceEpoch() );
-}
-
-void LibretroCore::updateVariables() {
-    variablesAreDirty = true;
+    variant.setValue( core.videoFormat );
+    emit commandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
 }
 
 // Global
+
 LibretroCore core;
 
 void loadSaveData() {
@@ -153,17 +138,18 @@ void audioSampleCallback( int16_t left, int16_t right ) {
                 "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core.audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
-    core.mutex.lock();
+    core.audioMutex.lock();
     core.audioBufferPool[ core.audioPoolCurrentBuffer ][ core.audioBufferCurrentByte / 2 ] = left;
     core.audioBufferPool[ core.audioPoolCurrentBuffer ][ core.audioBufferCurrentByte / 2 + 1 ] = right;
-    core.mutex.unlock();
+    core.audioMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core.audioBufferCurrentByte += 4;
 
     // Flush if we have more than 1/2 of a frame's worth of data
-    if( core.audioBufferCurrentByte > core.audioSampleRate * 4 / core.producerFmt.videoFramerate / 2 ) {
-        core.emitAudioData( core.audioBufferPool[ core.audioPoolCurrentBuffer ], core.audioBufferCurrentByte );
+    if( core.audioBufferCurrentByte > core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
+        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, core.audioBufferPool[ core.audioPoolCurrentBuffer ],
+                          core.audioBufferCurrentByte, nodeCurrentTime() );
         core.audioBufferCurrentByte = 0;
         core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
@@ -180,16 +166,17 @@ size_t audioSampleBatchCallback( const int16_t *data, size_t frames ) {
     int16_t *dst = dst_init + ( core.audioBufferCurrentByte / 2 );
 
     // Copy the incoming data
-    core.mutex.lock();
+    core.audioMutex.lock();
     memcpy( dst, data, frames * 4 );
-    core.mutex.unlock();
+    core.audioMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
     core.audioBufferCurrentByte += frames * 4;
 
     // Flush if we have 1/2 of a frame's worth of data or more
-    if( core.audioBufferCurrentByte >= core.audioSampleRate * 4 / core.producerFmt.videoFramerate / 2 ) {
-        core.emitAudioData( core.audioBufferPool[ core.audioPoolCurrentBuffer ], core.audioBufferCurrentByte );
+    if( core.audioBufferCurrentByte >= core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
+        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, core.audioBufferPool[ core.audioPoolCurrentBuffer ],
+                          core.audioBufferCurrentByte, nodeCurrentTime() );
         core.audioBufferCurrentByte = 0;
         core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
@@ -200,7 +187,6 @@ size_t audioSampleBatchCallback( const int16_t *data, size_t frames ) {
 bool environmentCallback( unsigned cmd, void *data ) {
 
     switch( cmd ) {
-
         case RETRO_ENVIRONMENT_SET_ROTATION: // 1
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_ROTATION (1)";
             break;
@@ -242,17 +228,17 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    core.producerFmt.videoPixelFormat = QImage::Format_RGB555;
+                    core.videoFormat.videoPixelFormat = QImage::Format_RGB555;
                     qCDebug( phxCore ) << "\t\tPixel format: 0RGB1555 aka QImage::Format_RGB555";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    core.producerFmt.videoPixelFormat = QImage::Format_RGB16;
+                    core.videoFormat.videoPixelFormat = QImage::Format_RGB16;
                     qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    core.producerFmt.videoPixelFormat = QImage::Format_RGB32;
+                    core.videoFormat.videoPixelFormat = QImage::Format_RGB32;
                     qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
 
@@ -290,16 +276,16 @@ bool environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_SET_HW_RENDER: { // 14
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
-            core.producerFmt.videoMode = HARDWARERENDER;
+            core.videoFormat.videoMode = HARDWARERENDER;
 
-            retro_hw_render_callback *openGLContext = ( retro_hw_render_callback * )data;
+            retro_hw_render_callback *hardwareRenderData = ( retro_hw_render_callback * )data;
 
-            openGLContext->get_current_framebuffer = getFramebufferCallback;
-            openGLContext->get_proc_address = procAddressCallback;
+            hardwareRenderData->get_current_framebuffer = getFramebufferCallback;
+            hardwareRenderData->get_proc_address = procAddressCallback;
 
-            core.symbols.retro_hw_context_reset = openGLContext->context_reset;
+            core.symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
 
-            switch( openGLContext->context_type ) {
+            switch( hardwareRenderData->context_type ) {
                 case RETRO_HW_CONTEXT_NONE:
                     qCDebug( phxCore ) << "\t\tNo hardware context was selected";
                     break;
@@ -317,7 +303,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
                     break;
 
                 default:
-                    qCritical() << "\t\tRETRO_HW_CONTEXT: " << openGLContext->context_type << " was not handled!";
+                    qCritical() << "\t\tRETRO_HW_CONTEXT: " << hardwareRenderData->context_type << " was not handled!";
                     break;
             }
 
@@ -422,7 +408,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
             break;
 
         case RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: // 26
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIROxNMENT_EXPERIMENTAL)(26)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL)(26)";
             break;
 
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27
@@ -432,9 +418,18 @@ bool environmentCallback( unsigned cmd, void *data ) {
             return true;
         }
 
-        case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: // 28
+        case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: { // 28
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_PERF_INTERFACE (28)";
-            break;
+            core.performanceCallback.get_cpu_features = 0;
+            core.performanceCallback.get_perf_counter = 0;
+            core.performanceCallback.get_time_usec = 0;
+            core.performanceCallback.perf_log = 0;
+            core.performanceCallback.perf_register = 0;
+            core.performanceCallback.perf_start = 0;
+            core.performanceCallback.perf_stop = 0;
+            *( retro_perf_callback * )data = core.performanceCallback;
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_GET_LOCATION_INTERFACE: // 29
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LOCATION_INTERFACE (29)";
@@ -512,7 +507,6 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
     // Command was not handled
     return false;
-
 }
 
 void inputPollCallback( void ) {
@@ -574,18 +568,20 @@ void logCallback( enum retro_log_level level, const char *fmt, ... ) {
 }
 
 int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    // Q_UNUSED( index )
+    Q_UNUSED( port );
+
+    int16_t value = 0;
 
     // Touch input
-    if( device == RETRO_DEVICE_POINTER && port == 0 && index == 0 ) {
-
+    // TODO: Multitouch?
+    if( device == RETRO_DEVICE_POINTER && index == 0 ) {
         // Information taken directly from VideoOutput's QML for aspect ratio correction
         // FIXME: Don't assume VideoOutput fills entire window
         // TODO: Do all this upstream? Maybe in PhoenixWindow?
 
         qreal windowWidth = core.windowGeometry.width();
         qreal windowHeight = core.windowGeometry.height();
-        qreal aspectRatio = core.producerFmt.videoAspectRatio;
+        qreal aspectRatio = core.videoFormat.videoAspectRatio;
 
         qreal letterBoxHeight = windowWidth / aspectRatio;
         qreal letterBoxWidth = windowWidth;
@@ -700,79 +696,105 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             default:
                 break;
         }
-
     }
 
-    // TODO: Support more than the default joypad
-    if( device != RETRO_DEVICE_JOYPAD ) {
-        return 0;
+    // Analog input
+    // index is the stick and id is the axis
+    // TODO: Don't add all controller axes together!
+    if( device == RETRO_DEVICE_ANALOG ) {
+        int64_t value = 0;
+
+        for( GamepadState gamepad : core.gamepads ) {
+            switch( index ) {
+                case RETRO_DEVICE_INDEX_ANALOG_LEFT:
+                    value += gamepad.axis[ id == RETRO_DEVICE_ID_ANALOG_X ? SDL_CONTROLLER_AXIS_LEFTX : SDL_CONTROLLER_AXIS_LEFTY ];
+
+                case RETRO_DEVICE_INDEX_ANALOG_RIGHT:
+                    value += gamepad.axis[ id == RETRO_DEVICE_ID_ANALOG_X ? SDL_CONTROLLER_AXIS_RIGHTX : SDL_CONTROLLER_AXIS_RIGHTY ];
+            }
+        }
+
+        // Clamp value to [-0x8000, 0x7fff]
+        if( value < -0x8000 ) {
+            value = -0x8000;
+        }
+
+        if( value > 0x7FFF ) {
+            value = 0x7FFF;
+        }
     }
 
-    // TODO: ...and their buttons
-    if( id > 15 ) {
-        return 0;
-    }
+    // Joypad input
+    // TODO: Don't OR all controllers buttons together!
+    if( device == RETRO_DEVICE_JOYPAD ) {
+        for( GamepadState gamepad : core.gamepads ) {
+            // Analog to digital
+            // TODO: Make configurable
+            int triggerThreshold = 20000;
 
-    int16_t value = 0;
+            if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
+                value |= 1;
+            }
 
-    // TODO: Don't OR all controllers together!
-    for( GamepadState gamepad : core.gamepads ) {
-        if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_B ] && id == RETRO_DEVICE_ID_JOYPAD_B ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_B ] && id == RETRO_DEVICE_ID_JOYPAD_B ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_X ] && id == RETRO_DEVICE_ID_JOYPAD_X ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_X ] && id == RETRO_DEVICE_ID_JOYPAD_X ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_Y ] && id == RETRO_DEVICE_ID_JOYPAD_Y ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_Y ] && id == RETRO_DEVICE_ID_JOYPAD_Y ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_L ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_L ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_R ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER ] && id == RETRO_DEVICE_ID_JOYPAD_R ) {
-            value |= 1;
-        }
+            else if( gamepad.axis[ SDL_CONTROLLER_AXIS_TRIGGERLEFT ] > triggerThreshold && id == RETRO_DEVICE_ID_JOYPAD_L2 ) {
+                value |= 1;
+            }
 
-        // TODO: L2? R2?
+            else if( gamepad.axis[ SDL_CONTROLLER_AXIS_TRIGGERLEFT ] > triggerThreshold && id == RETRO_DEVICE_ID_JOYPAD_R2 ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_L3 ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_LEFTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_L3 ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_R3 ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_RIGHTSTICK ] && id == RETRO_DEVICE_ID_JOYPAD_R3 ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] && id == RETRO_DEVICE_ID_JOYPAD_UP ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] && id == RETRO_DEVICE_ID_JOYPAD_UP ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] && id == RETRO_DEVICE_ID_JOYPAD_DOWN ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] && id == RETRO_DEVICE_ID_JOYPAD_DOWN ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] && id == RETRO_DEVICE_ID_JOYPAD_LEFT ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] && id == RETRO_DEVICE_ID_JOYPAD_LEFT ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] && id == RETRO_DEVICE_ID_JOYPAD_RIGHT ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] && id == RETRO_DEVICE_ID_JOYPAD_RIGHT ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_BACK ] && id == RETRO_DEVICE_ID_JOYPAD_SELECT ) {
-            value |= 1;
-        }
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_BACK ] && id == RETRO_DEVICE_ID_JOYPAD_SELECT ) {
+                value |= 1;
+            }
 
-        else if( gamepad.button[ SDL_CONTROLLER_BUTTON_START ] && id == RETRO_DEVICE_ID_JOYPAD_START ) {
-            value |= 1;
+            else if( gamepad.button[ SDL_CONTROLLER_BUTTON_START ] && id == RETRO_DEVICE_ID_JOYPAD_START ) {
+                value |= 1;
+            }
         }
     }
 
@@ -783,23 +805,63 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
     Q_UNUSED( width );
 
     // Ignore this if this session is hardware-accelerated
-    if( data == RETRO_HW_FRAME_BUFFER_VALID ) {
+    if( data == RETRO_HW_FRAME_BUFFER_VALID || core.videoFormat.videoMode == HARDWARERENDER ) {
+        // Cores can change the size of the video they output (within the bounds they set on load) at any time
+        if( core.videoFormat.videoSize != QSize( width, height ) ) {
+            qCDebug( phxCore ) << "Video resized!";
+            qCDebug( phxCore ) << "Old video size:" << core.videoFormat.videoSize;
+            qCDebug( phxCore ) << "New video size:" << QSize( width, height );
+
+            core.videoFormat.videoBytesPerLine = pitch;
+            core.videoFormat.videoSize.setWidth( width );
+            core.videoFormat.videoSize.setHeight( height );
+
+            QVariant variant;
+            variant.setValue( core.videoFormat );
+            core.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
+
+            // Recreate the FBO, send out the new FBO and texture ID
+            delete core.fbo;
+            core.fbo = new QOpenGLFramebufferObject( core.videoFormat.videoSize, QOpenGLFramebufferObject::CombinedDepthStencil );
+            core.fireCommandOut( Node::Command::SetOpenGLTexture, core.fbo->texture(), nodeCurrentTime() );
+        }
+
+        core.fireDataOut( Node::DataType::VideoGL, &core.videoMutex, nullptr, 0, nodeCurrentTime() );
         return;
     }
 
     // Current frame exists, send it on its way
     if( data ) {
-        core.mutex.lock();
+        core.videoMutex.lock();
         memcpy( core.videoBufferPool[ core.videoPoolCurrentBuffer ], data, height * pitch );
-        core.mutex.unlock();
+        core.videoMutex.unlock();
 
-        core.emitVideoData( core.videoBufferPool[ core.videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
+        size_t bytes = pitch * height;
+        {
+            // Cores can change the size of the video they output (within the bounds they set on load) at any time
+            if( core.videoFormat.videoSize != QSize( width, height ) || core.videoFormat.videoBytesPerLine != pitch ) {
+                qCDebug( phxCore ) << "Video resized!";
+                qCDebug( phxCore ) << "Old video size:" << core.videoFormat.videoSize;
+                qCDebug( phxCore ) << "New video size:" << QSize( width, height );
+
+                core.videoFormat.videoBytesPerLine = pitch;
+                core.videoFormat.videoSize.setWidth( width );
+                core.videoFormat.videoSize.setHeight( height );
+
+                QVariant variant;
+                variant.setValue( core.videoFormat );
+                core.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
+            }
+        }
+        core.fireDataOut( Node::DataType::Video, &core.videoMutex, core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+                          bytes, nodeCurrentTime() );
         core.videoPoolCurrentBuffer = ( core.videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 
     // Current frame is a dupe, send the last actual frame again
     else {
-        core.emitVideoData( core.videoBufferPool[ core.videoPoolCurrentBuffer ], width, height, pitch, pitch * height );
+        core.fireDataOut( Node::DataType::Video, &core.videoMutex, core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+                          pitch * height, nodeCurrentTime() );
     }
 
     return;
@@ -811,7 +873,8 @@ QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsi
 }
 
 retro_proc_address_t procAddressCallback( const char *sym ) {
-    QFunctionPointer ptr = core.context->getProcAddress( sym );
+    QFunctionPointer ptr;
+    ptr = core.context->getProcAddress( sym );
     return ptr;
 }
 

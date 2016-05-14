@@ -3,14 +3,15 @@
 #include "node.h"
 
 #include <QQuickItem>
+#include <QOpenGLContext>
+#include <QQmlParserStatus>
 
 class QMutex;
+class QSGTexture;
 
 /*
  * VideoOutput is a QQuickItem that consumes video data. It is meant to be instantiated from QML.
  */
-
-class QSGTexture;
 
 class VideoOutput : public QQuickItem {
         Q_OBJECT
@@ -27,14 +28,23 @@ class VideoOutput : public QQuickItem {
         ~VideoOutput();
 
         void setState( Node::State state );
-        void setFormat( ProducerFormat consumerFmt );
+        void setFormat( LibretroVideoFormat consumerFmt );
         void data( QMutex *mutex, void *data, size_t bytes, qint64 timestamp );
+
+        void setTextureID( GLuint textureID );
 
         // Setters for the properties, will force a recheck of the aspect ratio if any are called
         void setAspectMode( int aspectMode );
         void setTelevision( bool television );
         void setNtsc( bool ntsc );
         void setWidescreen( bool widescreen );
+
+        // The mutex used by the core to draw video
+        // We'll need to lock it during 3D rendering
+        QMutex *mutex { nullptr };
+
+        void classBegin() override;
+        void componentComplete() override;
 
     signals:
         // Properties
@@ -48,7 +58,7 @@ class VideoOutput : public QQuickItem {
     private:
         // Current state. Used to ignore data that arrives after already being told we're no longer playing
         Node::State state{ Node::State::Stopped };
-        ProducerFormat format;
+        LibretroVideoFormat format;
 
         // The framebuffer that holds the latest frame from Core
         uchar *framebuffer{ nullptr };
@@ -57,6 +67,9 @@ class VideoOutput : public QQuickItem {
         // Holds a pointer to the framebuffer via its underlying QImage, used by renderer to upload framebuffer to GPU
         QSGTexture *texture{ nullptr };
 
+        // The texture name used by 3d cores
+        GLuint textureID { 0 };
+
         // Called by render thread whenever it's time to render and needs an update from us
         // We'll assign the current texture to the stored node given to us, creating this stored node if it does not
         // already exist
@@ -64,12 +77,14 @@ class VideoOutput : public QQuickItem {
         // paintData is a pointer to a QSGTransformNode which contains the transformation matrix (unused)
         QSGNode *updatePaintNode( QSGNode *storedNode, UpdatePaintNodeData * ) override;
 
+        // Properties
+
         // The mode to scale the picture in
         int aspectMode { 0 };
 
         // The correct aspect ratio to display this picture in
         qreal aspectRatio{ 1.0 };
-        qreal calculateAspectRatio( ProducerFormat format );
+        qreal calculateAspectRatio( LibretroVideoFormat format );
 
         // Linear vs nearest-neighbor filtering
         bool linearFiltering{ false };
@@ -89,4 +104,7 @@ class VideoOutput : public QQuickItem {
         // Helper for printing aspect ratios as fractions
         // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
         int greatestCommonDivisor( int m, int n );
+
+        // Has this mutex been locked by us?
+        bool lockedByUs { false };
 };

@@ -1,8 +1,10 @@
 #include "libretrorunner.h"
 #include "mousestate.h"
 
+#include <QDebug>
 #include <QString>
 #include <QStringBuilder>
+#include <QThread>
 #include <QMutexLocker>
 
 #include "SDL.h"
@@ -17,39 +19,42 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             // emulation is active (in other words, never during loading)
             if( !connectedToCore ) {
                 connectedToCore = true;
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+                qDebug() << "connection";
+                connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+                connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
 
             qCDebug( phxCore ) << command;
             core.state = State::Playing;
-            emit commandOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Play, QVariant(), nodeCurrentTime() );
             break;
         }
 
         case Command::Pause: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+                qDebug() << "connection";
+                connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+                connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
 
             qCDebug( phxCore ) << command;
             core.state = State::Paused;
-            emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
             break;
         }
 
         case Command::Stop: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+                qDebug() << "connection";
+                connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+                connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
 
             qCDebug( phxCore ) << command;
             core.state = State::Unloading;
-            emit commandOut( Command::Unload, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Unload, QVariant(), nodeCurrentTime() );
 
             // Write SRAM
 
@@ -71,12 +76,16 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             }
 
             // Disconnect LibretroCore from the rest of the pipeline
-            disconnect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-            disconnect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+            disconnect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+            disconnect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             connectedToCore = false;
 
+            if( core.fbo ) {
+                delete core.fbo;
+            }
+
             core.state = State::Stopped;
-            emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
 
             break;
         }
@@ -84,15 +93,27 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         // Run the emulator for a frame if we're supposed to
         case Command::Heartbeat: {
             // Drop any heartbeats from too far in the past
-            if( QDateTime::currentMSecsSinceEpoch() - timeStamp > 50 ) {
+            if( nodeCurrentTime() - timeStamp > 50 ) {
                 return;
             }
 
             emit commandOut( command, data, timeStamp );
 
             if( core.state == State::Playing ) {
+                // If in 3D mode, lock the mutex before emulating
+                if( core.videoFormat.videoMode == HARDWARERENDER ) {
+                    core.videoMutex.lock();
+                    //qDebug() << "LibretroRunner lock";
+                    core.context->makeCurrent( core.surface );
+                }
                 // Invoke libretro core
                 core.symbols.retro_run();
+
+                if( core.videoFormat.videoMode == HARDWARERENDER ) {
+                    core.context->doneCurrent();
+                    //qDebug() << "LibretroRunner unlock";
+                    core.videoMutex.unlock();
+                }
             }
 
             break;
@@ -112,15 +133,16 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::SetLibretroVariable: {
             LibretroVariable var = data.value<LibretroVariable>();
             core.variables.insert( var.key(), var );
-            core.updateVariables();
+            core.variablesAreDirty = true;
             break;
         }
 
         case Command::ControllerRemoved: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+                qDebug() << "connection";
+                connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+                connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
 
             GamepadState gamepad = data.value<GamepadState>();
@@ -143,12 +165,6 @@ void LibretroRunner::dataIn( DataType type, QMutex *mutex, void *data, size_t by
     switch( type ) {
         // Make a copy of the data into our own gamepad list
         case DataType::Input: {
-            if( !connectedToCore ) {
-                connectedToCore = true;
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
-            }
-
             mutex->lock();
             GamepadState gamepad = *static_cast<GamepadState *>( data );
             mutex->unlock();

@@ -11,6 +11,8 @@
 
 /*
  * A node in the pipeline tree. This class defines a set of signals and slots common to each node.
+ *
+ * Creating a new command: Make sure it has a verb in it
  */
 
 class Node : public QObject {
@@ -28,47 +30,40 @@ class Node : public QObject {
             Unload,
             Reset,
 
+            // Meta
+
             // The current game thread
             // QThread *
             SetGameThread,
 
             // The global pipeline has been established
-            GlobalPipelineReady,
+            HandleGlobalPipelineReady,
 
             // The dynamic pipeline has been established
-            DynamicPipelineReady,
+            HandleDynamicPipelineReady,
+
+            // Set the UserData( cache ) path
+            SetUserDataPath,
 
             // Run pipeline for a frame
             Heartbeat,
 
             // Inform consumers about heartbeat rate
-            HeartbeatRate,
-
-            // Change consumer format
-            AudioFormat,
-            VideoFormat,
-            InputFormat,
-
-            // Set the UserData( cache ) path
-            SetUserDataPath,
-
-            // Core
-
-            // Emitted from the core, tells the pipeline that a LibretroVariable has set by retro_init().
-            // Useful for initial aggregation of variables within LibretroVariableModel.
-            LibretroVariablesEmitted,
-
-            // Sent from the LibretroVariableForwarder to the core, telling the core that the
-            // user has changed a variable's value. The core's variables need to be updated on the next frame.
-            SetLibretroVariable,
+            SetHeartbeatRate,
 
             // Set FPS of the monitor. Used for when vsync is on (track with SetVsync)
             // qreal
-            HostFPS,
+            SetHostFPS,
 
             // Set FPS of the core in this pipeline. May not exist!
             // qreal
-            CoreFPS,
+            SetCoreFPS,
+
+            // Core
+
+            // A Libretro variable has been set
+            // LibretroVariable
+            SetLibretroVariable,
 
             // Sets the window's geometry
             // QRect
@@ -117,13 +112,18 @@ class Node : public QObject {
 
             // Video
 
-            // Current surface
-            // For use only with creating an FBO
-            // QSurface *
+            // Geometry and timing information from Libretro cores
+            // struct LibretroVideoFormat
+            // TODO: Make generic
+            SetLibretroVideoFormat,
+
+            // An offscreen surface to make the OpenGL context current against
+            // Its format matches PhoenixWindow's
+            // QOffscreenSurface *
             SetSurface,
 
-            // Inform the dynamic pipeline that an OpenGL context shared with the scene graph is available. This context
-            // has affinity with the game thread and must not be accessed at all from the main thread.
+            // An OpenGL context for rendering
+            // Its format matches PhoenixWindow's
             // QOpenGLContext *
             SetOpenGLContext,
 
@@ -131,10 +131,14 @@ class Node : public QObject {
             // QOpenGLFramebufferObject *
             SetOpenGLFBO,
 
+            // Set the texture for rendering
+            // GLuint
+            SetOpenGLTexture,
+
             // Audio
 
             // Sample rate in Hz
-            SampleRate,
+            SetSampleRate,
 
             // Input
 
@@ -149,6 +153,7 @@ class Node : public QObject {
 
         enum class DataType {
             Video,
+            VideoGL,
             Audio,
             Input,
             MouseInput,

@@ -26,6 +26,14 @@ QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child ) {
     return connectNodes( &t_parent, &t_child );
 }
 
+QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node *t_child ) {
+    return connectNodes( &t_parent, t_child );
+}
+
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node &t_child ) {
+    return connectNodes( t_parent, &t_child );
+}
+
 bool disconnectNodes( Node *t_parent, Node *t_child ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
@@ -36,12 +44,4 @@ bool disconnectNodes( Node *t_parent, Node *t_child ) {
 
 bool disconnectNodes( Node &t_parent, Node &t_child ) {
     return disconnectNodes( &t_parent, &t_child );
-}
-
-QList<QMetaObject::Connection> connectNodes(Node &t_parent, Node *t_child) {
-    return connectNodes( &t_parent, t_child );
-}
-
-QList<QMetaObject::Connection> connectNodes(Node *t_parent, Node &t_child) {
-    return connectNodes( t_parent, &t_child );
 }

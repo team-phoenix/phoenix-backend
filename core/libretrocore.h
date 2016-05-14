@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QLibrary>
 #include <QObject>
+#include <QOffscreenSurface>
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
 #include <QRect>
@@ -26,7 +27,7 @@
  * C++ wrapper around a Libretro core. Currently, only one LibretroCore instance may safely exist at any time due to the
  * lack of a context pointer for callbacks to use.
  *
- * The following keys are mandatory for source from setSource():
+ * The following keys are mandatory for source from Node::Command::SetSource:
  * "type": "libretro"
  * "core": Absolute path to the Libretro core
  * "game": Absolute path to a game the Libretro core accepts
@@ -53,6 +54,12 @@ class LibretroCore : public Core {
         void dataOut( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
 
     public:
+        // Fire commandOut from a static context
+        void fireCommandOut( Node::Command command, QVariant data, qint64 timeStamp );
+
+        // Fire dataOut from a static context
+        void fireDataOut( Node::DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp );
+
         // Struct containing libretro methods
         LibretroSymbols symbols;
 
@@ -97,12 +104,7 @@ class LibretroCore : public Core {
         // Information about the core (we store, Libretro core fills out with symbols.retro_get_system_info())
         retro_system_info *systemInfo;
 
-        // Information about the controllers and buttons used by the core
-        // FIXME: Where's the max number of controllers defined?
-        // Key format: "port,device,index,id" (all 4 unsigned integers are represented as strings)
-        //     ex. "0,0,0,0"
-        // Value is a human-readable description
-        QMap<QString, QString> inputDescriptors;
+        retro_perf_callback performanceCallback;
 
         // Node data
 
@@ -110,16 +112,38 @@ class LibretroCore : public Core {
 
         // Producer data (for consumers like AudioOutput, VideoOutput...)
 
-        // Get AV info from the core and pass along to consumers
+        // Get AV info from the core and fire signals to consumers
         void getAVInfo( retro_system_av_info *avInfo );
 
-        // Format going out to the consumers
-        ProducerFormat producerFmt;
+        // Video
 
-        // Mutex for consumers (ensures reads/writes to/from the buffer pool are atomic)
-        QMutex mutex;
+        // Buffer pool (aka circular buffer of buffers), ensures thread safety (via the pipeline's unload/shutdown mechanism),
+        // ensures atomic reads and writes (via a mutex) and prevents per-frame heap allocations
+        // TODO: Individual mutexes for each pool?
+        QMutex videoMutex;
+        uint8_t *videoBufferPool[ POOL_SIZE ] { nullptr };
+        int videoPoolCurrentBuffer{ 0 };
 
-        // Circular buffer pools. Used to avoid having to track when consumers have consumed a buffer
+        // An OpenGL context for 3D cores to draw with
+        QOpenGLContext *context { nullptr };
+
+        // An FBO that serves as the target for the 3D core
+        QOpenGLFramebufferObject *fbo { nullptr };
+
+        // FIXME: Race condition with the render thread when making this current?
+        QOffscreenSurface *surface { nullptr };
+
+        // Video geometry info for use by video consumers
+        LibretroVideoFormat videoFormat;
+
+        // Audio
+
+        qreal audioSampleRate{ 44100 };
+
+        // Buffer pool (aka circular buffer of buffers), ensures thread safety (via the pipeline's unload/shutdown mechanism),
+        // ensures atomic reads and writes (via a mutex) and prevents per-frame heap allocations
+        // TODO: Individual mutexes for each pool?
+        QMutex audioMutex;
         int16_t *audioBufferPool[ POOL_SIZE ] { nullptr };
         int audioPoolCurrentBuffer{ 0 };
 
@@ -129,21 +153,9 @@ class LibretroCore : public Core {
         // FIXME: In practice, that's not always the case? Some cores only hit that *on average*
         int audioBufferCurrentByte{ 0 };
 
-        uint8_t *videoBufferPool[ POOL_SIZE ] { nullptr };
-        int videoPoolCurrentBuffer{ 0 };
-
-        // Video
-        QOpenGLContext *context { nullptr };
-        QOpenGLFramebufferObject *fbo { nullptr };
-        QSurface *surface { nullptr };
-
-        // Audio
-
-        qreal audioSampleRate{ 44100 };
-
         // Input
 
-        ProducerFormat consumerFmt;
+        LibretroVideoFormat consumerFmt;
 
         QHash<int, GamepadState> gamepads;
 
@@ -151,24 +163,20 @@ class LibretroCore : public Core {
         QRect windowGeometry;
         int aspectMode { 0 };
 
-        // Callbacks
-
-        // Used by audio callback
-        void emitAudioData( void *data, size_t bytes );
-
-        // Used by video callback
-        void emitVideoData( void *data, unsigned width, unsigned height, size_t pitch, size_t bytes );
+        // Information about the controllers and buttons used by the core
+        // FIXME: Where's the max number of controllers defined?
+        // Key format: "port,device,index,id" (all 4 unsigned integers are represented as strings)
+        //     ex. "0,0,0,0"
+        // Value is a human-readable description
+        QMap<QString, QString> inputDescriptors;
 
         // Misc
 
         // Core-specific variables
         QMap<QByteArray, LibretroVariable> variables;
 
-        // True if variables are dirty and the core needs to know about them
+        // True if variables are dirty and the core needs to reload them from us
         bool variablesAreDirty{ false };
-
-        void updateVariables();
-
 };
 
 // Libretro is a C API. This limits us to one LibretroCore per process.
@@ -187,7 +195,7 @@ size_t audioSampleBatchCallback( const int16_t *data, size_t frames );
 bool environmentCallback( unsigned cmd, void *data );
 void inputPollCallback( void );
 void logCallback( enum retro_log_level level, const char *fmt, ... );
-int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
+int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id );
 void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
 
 // Helper that generates key for looking up the inputDescriptors

@@ -79,13 +79,13 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
             break;
         }
 
-        case Command::HostFPS: {
+        case Command::SetHostFPS: {
             hostFPS = data.toReal();
             qCDebug( phxAudioOutput ).nospace() << "hostFPS = " << hostFPS << "fps, vsync: " << vsync;
             break;
         }
 
-        case Command::CoreFPS: {
+        case Command::SetCoreFPS: {
             coreFPS = data.toReal();
             qCDebug( phxAudioOutput ).nospace() << "coreFPS = " << coreFPS << "fps, vsync: " << vsync;
             break;
@@ -106,7 +106,7 @@ void AudioOutput::commandIn( Node::Command command, QVariant data, qint64 timeSt
         }
 
         // Attempt to find suitable output format for given input sample rate, reload audio output and reset buffers
-        case Command::SampleRate: {
+        case Command::SetSampleRate: {
             sampleRate = data.toInt();
 
             // qCDebug( phxAudioOutput, "Init audio: %i Hz, %ffps (core), %ffps (host)", sampleRate, coreFPS, hostFPS );

@@ -30,6 +30,9 @@ class PhoenixWindowNode : public Node {
         ~PhoenixWindowNode();
         PhoenixWindow *phoenixWindow{ nullptr };
 
+        // Sends the context out iff not done this session, dynamic pipeline and OpenGL context is ready
+        void checkIfCommandsShouldFire();
+
     signals:
         void phoenixWindowChanged( PhoenixWindow *phoenixWindow );
 
@@ -40,18 +43,14 @@ class PhoenixWindowNode : public Node {
         void geometryChanged();
 
     private:
-        // The game thread
-        // An OpenGL context that lives on the game thread and shares resources with the scene graph's context
-        QOpenGLContext *dynamicPipelineContext { nullptr };
-
         // A copy of the game thread, used to push the context and its FBO to it
         QThread *gameThread { nullptr };
 
-        // Sends the context out iff not done this session, dynamic pipeline and OpenGL context is ready
-        void checkIfCommandsShouldFire();
-
         // True if we already told the dynamic pipeline the GL context for this session
         bool firedOpenGLContextCommand { false };
+
+        // Is there a load pending that we can't emit because we don't have an OpenGL context ready yet?
+        bool fireLoad { false };
 
         // Framerate of the monitor this Window exists in
         // TODO: Use whatever techniques are out there to get a more accurate number
@@ -60,6 +59,4 @@ class PhoenixWindowNode : public Node {
         // Window geometry
         QRect geometry;
 
-        // Is there a load pending that we can't emit because we don't have an OpenGL context ready yet?
-        bool fireLoad { false };
 };

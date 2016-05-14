@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QOpenGLFramebufferObject>
 #include <QAudioFormat>
 #include <QImage>
 
@@ -19,27 +20,9 @@ enum VideoRendererType {
 
 };
 
-struct ProducerFormat {
-    ProducerFormat() = default;
-    ~ProducerFormat() = default;
-
-    // Control
-
-    // "libretro", etc.
-    QString producerType;
-
-    // Audio
-
-    QAudioFormat audioFormat;
-
-    // If audio data is sent at a regular rate, but the amount is too much/insufficient to keep the buffer from
-    // over/underflowing, stretch the incoming audio data by this factor to compensate
-    // In Libretro cores, this factor compensates for the emulation rate differing from the console's native framerate
-    // if using VSync, for example
-    // The ratio is hostFPS / coreFPS
-    qreal audioRatio{ 1.0 };
-
-    // Video
+struct LibretroVideoFormat {
+    LibretroVideoFormat() = default;
+    ~LibretroVideoFormat() = default;
 
     qreal videoAspectRatio{ 1.0 };
     size_t videoBytesPerLine{ 0 };
@@ -52,7 +35,7 @@ struct ProducerFormat {
     QSize videoSize;
 };
 Q_DECLARE_METATYPE( size_t )
-Q_DECLARE_METATYPE( ProducerFormat )
+Q_DECLARE_METATYPE( LibretroVideoFormat )
 
 typedef QMap<QString, QString> QStringMap;
 Q_DECLARE_METATYPE( QStringMap )

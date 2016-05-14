@@ -4,84 +4,81 @@
 
 #include <QDebug>
 
-LibretroVariableModel::LibretroVariableModel(QObject *parent)
+LibretroVariableModel::LibretroVariableModel( QObject *parent )
     : QAbstractTableModel( parent ),
-      m_roleNames {
-          { Role::Key, QByteArrayLiteral( "key" ) },
-          { Role::Choices, QByteArrayLiteral( "choices" ) },
-          { Role::Description, QByteArrayLiteral( "description" ) },
-      }
-{
+      roles {
+    { Role::Key, QByteArrayLiteral( "key" ) },
+    { Role::Choices, QByteArrayLiteral( "choices" ) },
+    { Role::Description, QByteArrayLiteral( "description" ) },
+} {
 
 }
 
+// Public
+
 QHash<int, QByteArray> LibretroVariableModel::roleNames() const {
-    return m_roleNames;
+    return roles;
 }
 
 int LibretroVariableModel::rowCount( const QModelIndex & ) const {
-    return m_varList.size();
+    return values.size();
 }
 
 int LibretroVariableModel::columnCount( const QModelIndex & ) const {
-    return m_roleNames.size();
+    return roles.size();
 }
 
-QVariant LibretroVariableModel::data(const QModelIndex &index, int role) const
-{
-    if ( index.isValid() ) {
-
+QVariant LibretroVariableModel::data( const QModelIndex &index, int role ) const {
+    if( index.isValid() && index.row() < values.size() ) {
         switch( role ) {
-            case Role::Key:
-                return QString( m_varList[ index.row() ].key() );
-            case Role::Choices: {
-                QStringList _result;
-                for ( const QByteArray &bytes : m_varList[ index.row() ].choices() ) {
-                    _result.append( bytes );
-                }
-                return _result;
+            case Role::Key: {
+                QString key = values.keys()[ index.row() ];
+                return key;
             }
-            case Role::Description:
-                return QString( m_varList[ index.row() ].description() );
+
+            case Role::Choices: {
+                QString key = values.keys()[ index.row() ];
+                return values[ key ];
+            }
+
+            case Role::Description: {
+                QString key = values.keys()[ index.row() ];
+                return descriptions[ key ];
+            }
+
             default:
                 break;
         }
-
     }
 
     return QVariant();
 }
 
-void LibretroVariableModel::setForwarder( LibretroVariableForwarder *t_forwarder ) {
-    m_forwarder = t_forwarder;
-    connect( m_forwarder, &LibretroVariableForwarder::variableFound, this, &LibretroVariableModel::appendVariable );
-    connect( m_forwarder, &LibretroVariableForwarder::clearVariables, this, &LibretroVariableModel::clear );
-
+void LibretroVariableModel::setForwarder( LibretroVariableForwarder *forwarder ) {
+    this->forwarder = forwarder;
+    connect( this, &LibretroVariableModel::setVariable, forwarder, &LibretroVariableForwarder::setVariable );
+    connect( forwarder, &LibretroVariableForwarder::insertVariable, this, &LibretroVariableModel::insertVariable );
+    connect( forwarder, &LibretroVariableForwarder::clearVariables, this, &LibretroVariableModel::clearVariables );
 }
 
-void LibretroVariableModel::appendVariable( LibretroVariable t_var ) {
-    beginInsertRows( QModelIndex(), m_varList.size(), m_varList.size() );
-    m_varList.append( t_var );
-    endInsertRows();
+void LibretroVariableModel::clearVariables() {
+    beginResetModel();
+    this->values.clear();
+    this->currentValues.clear();
+    this->descriptions.clear();
+    endResetModel();
 }
 
-void LibretroVariableModel::clear() {
-    beginRemoveRows( QModelIndex(), 0, m_varList.size() );
-    m_varList.clear();
-    endRemoveRows();
+void LibretroVariableModel::insertVariable( QString key, QStringList values, QString currentValue, QString description ) {
+    beginResetModel();
+    this->values[ key ] = values;
+    this->currentValues[ key ] = currentValue;
+    this->descriptions[ key ] = description;
+    endResetModel();
 }
 
-void LibretroVariableModel::updateVariable( QString t_key, QString t_value ) {
-    const QByteArray _keyBytes = t_key.toUtf8();
-    for ( int i=0; i < m_varList.size(); ++i ) {
-        LibretroVariable variable = m_varList[ i ];
-        if ( _keyBytes == variable.key() ) {
-            variable.setValue( t_value.toUtf8() );
-            QVariant var;
-            var.setValue( variable );
-            m_forwarder->commandIn( Node::Command::SetLibretroVariable, var, -1 );
-
-            break;
-        }
+void LibretroVariableModel::updateVariable( QString key, QString value ) {
+    if( this->currentValues[ key ] != value ) {
+        emit setVariable( key, value );
     }
 }

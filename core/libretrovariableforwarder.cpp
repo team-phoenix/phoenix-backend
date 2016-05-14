@@ -6,27 +6,38 @@ LibretroVariableForwarder::LibretroVariableForwarder( QObject *parent ) : Node( 
 
 }
 
-void LibretroVariableForwarder::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+void LibretroVariableForwarder::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     emit commandOut( command, data, timeStamp );
 
     switch( command ) {
-        case Command::LibretroVariablesEmitted:
-            emit variableFound( data.value<LibretroVariable>() );
-            break;
+        case Command::SetLibretroVariable: {
+            LibretroVariable variable = data.value<LibretroVariable>();
+            QString key = variable.key();
+            QStringList values;
 
-        case Command::SetLibretroVariable:
-            emit commandOut( command, data, timeStamp );
-            break;
+            for( QByteArray array : variable.choices() ) {
+                values.append( array );
+            }
 
-        case Command::Stop:
+            QString description = variable.description();
+            // TODO: Read saved value
+            emit insertVariable( key, values, values[ 0 ], description );
+            break;
+        }
+
+        case Command::Unload: {
             emit clearVariables();
             break;
+        }
 
-        default:
+        default: {
             break;
+        }
     }
+}
 
-    // Do not emit commands unspecific to the LibretroVariableModel, or else the
-    // commands calls will double because the other nodes are already emitting those other signals.
-
+void LibretroVariableForwarder::setVariable( QString key, QString value ) {
+    LibretroVariable variable( key.toLatin1() );
+    variable.setValue( value.toLatin1() );
+    emit commandOut( Command::SetLibretroVariable, QVariant::fromValue<LibretroVariable>( variable ), nodeCurrentTime() );
 }

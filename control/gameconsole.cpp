@@ -129,13 +129,13 @@ void GameConsole::load() {
     Q_ASSERT( phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-    emit commandOut( Command::HostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetHostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), QDateTime::currentMSecsSinceEpoch() );
 
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
         qCDebug( phxControl ) << "Dynamic pipeline ready";
-        emit commandOut( Command::DynamicPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::HandleDynamicPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
         applyPendingPropertyChanges();
         emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
     } else if( source[ "type" ].toString().isEmpty() || pendingPropertyChanges[ "source" ].toMap()[ "type" ].toString().isEmpty() ) {
@@ -224,7 +224,7 @@ bool GameConsole::globalPipelineReady() {
 void GameConsole::checkIfGlobalPipelineReady() {
     if( globalPipelineReady() ) {
         qCDebug( phxControl ) << "Global pipeline ready";
-        emit commandOut( Command::GlobalPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::HandleGlobalPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
         emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), QDateTime::currentMSecsSinceEpoch() );
     }
 }
