@@ -9,6 +9,7 @@
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
+#include "SDL_haptic.h"
 
 /*
  * GamepadManager is a Node whose job is to produce input data from physical controllers connected to the system running

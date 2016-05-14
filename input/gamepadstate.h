@@ -7,6 +7,7 @@
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
+#include "SDL_haptic.h"
 
 /*
  * GamepadState is a small struct designed to hold the metadata and states of a single controller made available using
@@ -16,10 +17,19 @@
  */
 
 struct GamepadState {
-    GamepadState() = default;
+    GamepadState();
 
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
+
+    // A handle for rumble
+    SDL_Haptic *haptic { nullptr };
+
+    // Another handle for rumble
+    int hapticID { -1 };
+
+    // Rumble effect parameters
+    SDL_HapticEffect hapticEffect;
 
     // Friendly name
     QString friendlyName;

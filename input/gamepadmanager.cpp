@@ -19,7 +19,7 @@ GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
     gameControllerDBFile.close();
 
     // Init SDL
-    if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER ) < 0 ) {
+    if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC ) < 0 ) {
         qFatal( "Fatal: Unable to initialize SDL2: %s", SDL_GetError() );
     }
 
@@ -44,26 +44,87 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         SDL_GameController *gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
                         SDL_Joystick *joystickHandle = SDL_GameControllerGetJoystick( gamecontrollerHandle );
                         int instanceID = SDL_JoystickInstanceID( joystickHandle );
+                        SDL_Haptic *haptic = SDL_HapticOpenFromJoystick( joystickHandle );
 
+                        gamepads[ instanceID ].haptic = haptic;
                         gamepads[ instanceID ].joystickID = joystickID;
                         gamepads[ instanceID ].instanceID = instanceID;
                         gamepads[ instanceID ].GUID = SDL_JoystickGetGUID( joystickHandle );
+                        gamepadHandles[ instanceID ] = gamecontrollerHandle;
 
-                        const char *controllerName = SDL_GameControllerName( gamecontrollerHandle );
+                        const char *friendlyName = SDL_GameControllerName( gamecontrollerHandle );
 
-                        if( controllerName ) {
-                            int len = static_cast<int>( strnlen( controllerName, 1024 ) );
+                        if( friendlyName ) {
+                            int len = static_cast<int>( strnlen( friendlyName, 1024 ) );
 
                             if( len ) {
-                                gamepads[ instanceID ].friendlyName = QString::fromUtf8( controllerName, len );
+                                gamepads[ instanceID ].friendlyName = QString::fromUtf8( friendlyName, len );
                             }
                         }
 
-                        gamepadHandles[ instanceID ] = gamecontrollerHandle;
+                        qDebug().noquote() << "Added controller:" << gamepads[ instanceID ].friendlyName
+                                           << "joystickID:" << joystickID << "instanceID:"
+                                           << instanceID << "Number of gamepads (SDL):" << SDL_NumJoysticks()
+                                           << "Number of gamepads (Phoenix):" << gamepads.size();
 
-                        qCDebug( phxInput ) << "Added controller, joystickID:" << joystickID << "instanceID:"
-                                            << instanceID << "Number of gamepads (SDL):" << SDL_NumJoysticks()
-                                            << "Number of gamepads (Phoenix):" << gamepads.size();
+                        int hapticID = -1;
+
+                        QString hapticSupport;
+
+                        // Set up the haptic effect and start it immediately
+                        // Since the magnitude is at 0 the controller will not actually rumble until something tells it to
+                        if( haptic ) {
+                            gamepads[ instanceID ].hapticEffect.type = SDL_HAPTIC_LEFTRIGHT;
+                            gamepads[ instanceID ].hapticEffect.leftright.length = SDL_HAPTIC_INFINITY;
+                            hapticID = SDL_HapticNewEffect( gamepads[ instanceID ].haptic, &gamepads[ instanceID ].hapticEffect );
+
+                            // If either effect set up correctly, start it now
+                            if( hapticID >= 0 ) {
+
+                                // Start the effect now
+                                if( SDL_HapticRunEffect( haptic, hapticID, 1 ) < 0 ) {
+                                    qWarning() << "SDL_HapticRunEffect failed on" << gamepads[ instanceID ].friendlyName << hapticID << SDL_GetError();
+                                } else {
+                                    qDebug() << "Started haptic effect successfully, hapticID:" << hapticID;
+
+                                    // Set the effect ID for later use
+                                    gamepads[ instanceID ].hapticID = hapticID;
+                                }
+                            } else {
+                                qWarning() << "SDL_HapticNewEffect failed on" << gamepads[ instanceID ].friendlyName << hapticID << SDL_GetError();
+                            }
+
+                            // Build a string to dump to console containing info about all possible types and their support
+                            hapticSupport = QString(
+                                                "SDL_HAPTIC_CONSTANT: %1 "
+                                                "SDL_HAPTIC_SINE: %2 "
+                                                "SDL_HAPTIC_TRIANGLE: %3 "
+                                                "SDL_HAPTIC_SAWTOOTHUP: %4 "
+                                                "SDL_HAPTIC_SAWTOOTHDOWN: %5 "
+                                                "SDL_HAPTIC_SPRING: %6 "
+                                                "SDL_HAPTIC_DAMPER: %7 "
+                                                "SDL_HAPTIC_INERTIA: %8 "
+                                                "SDL_HAPTIC_FRICTION: %9 "
+                                                "SDL_HAPTIC_RAMP: %10 "
+                                                "SDL_HAPTIC_LEFTRIGHT: %11 "
+                                                "SDL_HAPTIC_CUSTOM: %12 "
+                                            )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_CONSTANT ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SINE ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_TRIANGLE ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SAWTOOTHUP ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SAWTOOTHDOWN ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SPRING ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_DAMPER ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_INERTIA ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_FRICTION ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_RAMP ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_LEFTRIGHT ) != 0 )
+                                            .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_CUSTOM ) != 0 );
+                        }
+
+                        qDebug().noquote() << "Haptic support" << ( haptic != nullptr ) << ( haptic != nullptr ? hapticSupport : QString() );
+                        qDebug() << "Current configuration supported:" << SDL_HapticEffectSupported( haptic, &gamepads[ instanceID ].hapticEffect );
                         emit commandOut( Command::ControllerAdded, QVariant::fromValue( gamepads[ instanceID ] ), QDateTime::currentMSecsSinceEpoch() );
                         break;
                     }
@@ -73,6 +134,11 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         int instanceID = sdlEvent.cdevice.which;
                         int joystickID = gamepads[ instanceID ].joystickID;
                         SDL_GameController *gamecontrollerHandle = SDL_GameControllerFromInstanceID( instanceID );
+
+                        if( gamepads[ instanceID ].haptic ) {
+                            SDL_HapticStopAll( gamepads[ instanceID ].haptic );
+                            SDL_HapticClose( gamepads[ instanceID ].haptic );
+                        }
 
                         SDL_GameControllerClose( gamecontrollerHandle );
 

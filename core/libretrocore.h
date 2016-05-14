@@ -198,5 +198,10 @@ void logCallback( enum retro_log_level level, const char *fmt, ... );
 int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id );
 void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
 
+// Extra callbacks
+uintptr_t getFramebufferCallback( void );
+retro_proc_address_t procAddressCallback( const char *sym );
+bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength );
+
 // Helper that generates key for looking up the inputDescriptors
 QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );

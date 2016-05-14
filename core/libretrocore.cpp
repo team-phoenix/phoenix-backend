@@ -1,6 +1,7 @@
 #include "libretrocore.h"
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
+#include "SDL_haptic.h"
 
 #include <QOpenGLContext>
 #include <QOpenGLFramebufferObject>
@@ -8,9 +9,6 @@
 #include <QString>
 #include <QStringBuilder>
 #include <QThread>
-
-retro_proc_address_t procAddressCallback( const char *sym );
-uintptr_t getFramebufferCallback( void );
 
 LibretroCore::LibretroCore( Core *parent ): Core( parent ),
     // Private
@@ -132,6 +130,8 @@ void allocateBufferPool( retro_system_av_info *avInfo ) {
     }
 }
 
+// Callbacks
+
 void audioSampleCallback( int16_t left, int16_t right ) {
     // Sanity check
     Q_ASSERT_X( core.audioBufferCurrentByte < core.audioSampleRate * 5,
@@ -191,15 +191,17 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_ROTATION (1)";
             break;
 
-        case RETRO_ENVIRONMENT_GET_OVERSCAN: // 2
+        case RETRO_ENVIRONMENT_GET_OVERSCAN: {// 2
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_OVERSCAN (2) (handled)";
             // Crop away overscan
             return true;
+        }
 
-        case RETRO_ENVIRONMENT_GET_CAN_DUPE: // 3
+        case RETRO_ENVIRONMENT_GET_CAN_DUPE: { // 3
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAN_DUPE (3) (handled)";
             *( bool * )data = true;
             return true;
+        }
 
         // 4 and 5 have been deprecated
 
@@ -327,7 +329,8 @@ bool environmentCallback( unsigned cmd, void *data ) {
                 }
             }
 
-            break;
+            // Variable was not found
+            return false;
         }
 
         case RETRO_ENVIRONMENT_SET_VARIABLES: { // 16
@@ -344,7 +347,6 @@ bool environmentCallback( unsigned cmd, void *data ) {
             }
 
             return true;
-            break;
         }
 
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: { // 17
@@ -364,40 +366,42 @@ bool environmentCallback( unsigned cmd, void *data ) {
                 *static_cast<bool *>( data ) = false;
                 return false;
             }
-
-
         }
 
-        case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: // 18
+        case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: { // 18
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME (18) (handled)";
 
             if( !( *( const bool * )data ) ) {
                 qCWarning( phxCore ) << "Core does not expect a game!";
             }
 
-            break;
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH: { // 19
             // This is done with the assumption that the core file path from setSource() will always be an absolute path
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LIBRETRO_PATH (19) (handled)";
             *( const char ** )data = core.corePathCString;
-            break;
+            return true;
         }
 
         // 20 has been deprecated
 
-        case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: // 21
+        case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: { // 21
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
             core.symbols.retro_frame_time = ( decltype( LibretroSymbols::retro_frame_time ) )data;
-            break;
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: // 22
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_AUDIO_CALLBACK (22)";
             break;
 
-        case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: // 23
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE (23)";
-            break;
+        case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: { // 23
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE (23) (handled)";
+            static_cast<struct retro_rumble_interface *>( data )->set_rumble_state = &rumbleCallback;
+            return true;
+        }
 
         case RETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES: { // 24
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_INPUT_DEVICE_CAPABILITIES (24) (handled)";
@@ -407,11 +411,11 @@ bool environmentCallback( unsigned cmd, void *data ) {
         }
 
         case RETRO_ENVIRONMENT_GET_SENSOR_INTERFACE: // 25
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SENSOR_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL)(25)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SENSOR_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL) (25)";
             break;
 
         case RETRO_ENVIRONMENT_GET_CAMERA_INTERFACE: // 26
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL)(26)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CAMERA_INTERFACE (RETRO_ENVIRONMENT_EXPERIMENTAL) (26)";
             break;
 
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27
@@ -422,7 +426,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
         }
 
         case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: { // 28
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_PERF_INTERFACE (28)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_PERF_INTERFACE (28) (handled)";
             core.performanceCallback.get_cpu_features = 0;
             core.performanceCallback.get_perf_counter = 0;
             core.performanceCallback.get_time_usec = 0;
@@ -439,11 +443,10 @@ bool environmentCallback( unsigned cmd, void *data ) {
             break;
 
         case RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY: { // 30
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY (30)";
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY (30) (handled)";
             *( const char ** )data = core.systemPathCString;
             return true;
         }
-        break;
 
         case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: { // 31
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SAVE_DIRECTORY (31) (handled)";
@@ -455,7 +458,6 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_systemAVInfo (32) (handled)";
             return true;
         }
-        break;
 
         case RETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK: // 33
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_PROC_ADDRESS_CALLBACK (33)";
@@ -465,9 +467,20 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO (34)";
             break;
 
-        case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: // 35
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_CONTROLLER_INFO (35)";
-            break;
+        case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: { // 35
+            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_CONTROLLER_INFO (35) (handled)";
+
+            // TODO: Return true once we handle this properly
+            return false;
+
+            for( const struct retro_controller_info *controllerInfo = ( const struct retro_controller_info * )data;
+                 controllerInfo->types;
+                 controllerInfo += sizeof( struct retro_controller_info )
+               ) {
+                qDebug() << "Special controller:" << controllerInfo->types->desc;
+            }
+
+        }
 
         case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: //36
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_MEMORY_MAPS (RETRO_ENVIRONMENT_EXPERIMENTAL)(36)";
@@ -496,11 +509,9 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LANGUAGE (39)";
             break;
 
-        case RETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER: { // 40
-            //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER (40)";
-            return false;
+        case RETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER: // 40
+            //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER (RETRO_ENVIRONMENT_EXPERIMENTAL) (40)";
             break;
-        }
 
         default:
             qCDebug( phxCore ) << "Error: Environment command " << cmd << " is not defined in the frontend's libretro.h!.";
@@ -573,7 +584,6 @@ void logCallback( enum retro_log_level level, const char *fmt, ... ) {
 int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
     Q_UNUSED( port );
 
-    int16_t value = 0;
 
     // Touch input
     // TODO: Multitouch?
@@ -725,11 +735,15 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         if( value > 0x7FFF ) {
             value = 0x7FFF;
         }
+
+        return value;
     }
 
     // Joypad input
     // TODO: Don't OR all controllers buttons together!
     if( device == RETRO_DEVICE_JOYPAD ) {
+        int16_t value = 0;
+
         for( GamepadState gamepad : core.gamepads ) {
             // Analog to digital
             // TODO: Make configurable
@@ -799,15 +813,17 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
                 value |= 1;
             }
         }
+
+        return value;
     }
 
-    return value;
+    return 0;
 }
 
 void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
     Q_UNUSED( width );
 
-    // Ignore this if this session is hardware-accelerated
+    // Send out blank data if this session is hardware-accelerated
     if( data == RETRO_HW_FRAME_BUFFER_VALID || core.videoFormat.videoMode == HARDWARERENDER ) {
         // Cores can change the size of the video they output (within the bounds they set on load) at any time
         if( core.videoFormat.videoSize != QSize( width, height ) ) {
@@ -875,9 +891,10 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
     return;
 }
 
-QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
-    return QString::number( port, 16 ) % ',' % QString::number( device, 16 ) % ','
-           % QString::number( index, 16 ) % ',' % QString::number( id, 16 );
+// Extra callbacks
+
+uintptr_t getFramebufferCallback( void ) {
+    return core.fbo->handle();
 }
 
 retro_proc_address_t procAddressCallback( const char *sym ) {
@@ -886,6 +903,39 @@ retro_proc_address_t procAddressCallback( const char *sym ) {
     return ptr;
 }
 
-uintptr_t getFramebufferCallback( void ) {
-    return core.fbo->handle();
+bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength ) {
+    Q_UNUSED( port );
+
+    for( GamepadState gamepad : core.gamepads ) {
+        if( gamepad.instanceID == -1 || !gamepad.haptic || gamepad.hapticID < 0 ) {
+            continue;
+        }
+
+        if( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT ) {
+            if( effect == RETRO_RUMBLE_STRONG ) {
+                gamepad.hapticEffect.leftright.large_magnitude = strength;
+            } else {
+                gamepad.hapticEffect.leftright.small_magnitude = strength;
+            }
+        }
+
+        if( SDL_HapticUpdateEffect( gamepad.haptic, gamepad.hapticID, &gamepad.hapticEffect ) != 0 ) {
+            qWarning() << gamepad.friendlyName << SDL_GetError()
+                       << ( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT )
+                       << ( gamepad.hapticEffect.type == SDL_HAPTIC_CONSTANT );
+        }
+
+        //QString strengthString = effect == RETRO_RUMBLE_STRONG ? "Strong" : "Weak";
+        //qDebug().noquote() << strengthString << "rumble on port" << port << "with strength" << strength << "hapticID"
+        //                   << gamepad.hapticID << "instanceID" << gamepad.instanceID << gamepad.hapticEffect.leftright.large_magnitude << gamepad.hapticEffect.leftright.small_magnitude;
+    }
+
+    return true;
+}
+
+// Helpers
+
+QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
+    return QString::number( port, 16 ) % ',' % QString::number( device, 16 ) % ','
+           % QString::number( index, 16 ) % ',' % QString::number( id, 16 );
 }
