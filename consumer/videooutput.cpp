@@ -194,14 +194,14 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
         storedTextureNode = new QSGSimpleTextureNode();
     }
 
-    // Schedule old texture for deletion
-    if( texture ) {
-        texture->deleteLater();
-        texture = nullptr;
-    }
-
     // 2D rendering, create a texture from the stored buffer
     if( format.videoMode == SOFTWARERENDER ) {
+        // Schedule old texture for deletion
+        if( texture ) {
+            texture->deleteLater();
+            texture = nullptr;
+        }
+
         // Create new Image that holds a reference to our framebuffer
         QImage image( ( const uchar * )framebuffer, format.videoSize.width(), format.videoSize.height(), format.videoPixelFormat );
         // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
@@ -209,9 +209,15 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     }
 
     // 3D rendering, use the stored texture name to render
-    // TODO: Don't delete and recreate it over and over
     else if( textureID != 0 ) {
-        texture = window()->createTextureFromId( textureID, QSize( 640, 480 ) );
+        if( !texture ) {
+            texture = window()->createTextureFromId( textureID, QSize( format.videoSize.width(), format.videoSize.height() ) );
+        }
+
+        if( textureID != static_cast<GLuint>( texture->textureId() ) ) {
+            delete texture;
+            texture = window()->createTextureFromId( textureID, QSize( format.videoSize.width(), format.videoSize.height() ) );
+        }
     }
 
     // Texture was not set yet, don't draw anything
