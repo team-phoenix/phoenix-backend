@@ -94,8 +94,10 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         }
 
         // Wait up to 30 seconds to let the pipeline finish its events
-        gameThread->wait( 30 * 1000 );
-        gameThread->deleteLater();
+        if( gameThread != QThread::currentThread() ) {
+            gameThread->wait( 30 * 1000 );
+            gameThread->deleteLater();
+        }
 
         // Destroy our global pipeline objects *from the bottom up* (depending on core type)
         if( source[ "type" ] == QStringLiteral( "libretro" ) ||
