@@ -2,9 +2,9 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+#include <QOpenGLContext>
+#include <QOpenGLFramebufferObject>
 #include <QOpenGLFunctions>
-#include <QOpenGLFunctions_4_5_Compatibility>
-#include <QOpenGLFunctions_4_5_Compatibility>
 #include <QString>
 #include <QStringBuilder>
 #include <QThread>
@@ -826,6 +826,11 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
             // Recreate the FBO, send out the new FBO and texture ID
             delete core.fbo;
             core.fbo = new QOpenGLFramebufferObject( core.videoFormat.videoSize, QOpenGLFramebufferObject::CombinedDepthStencil );
+
+            // Clear the newly created FBO
+            core.fbo->bind();
+            core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+
             core.fireCommandOut( Node::Command::SetOpenGLTexture, core.fbo->texture(), nodeCurrentTime() );
         }
 

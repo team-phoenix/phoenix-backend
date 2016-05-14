@@ -1,6 +1,8 @@
 #include "libretroloader.h"
 
 #include <QOffscreenSurface>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
 #include <QString>
 #include <QStringBuilder>
 
@@ -173,6 +175,10 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     } else {
                         if( !core.fbo ) {
                             core.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
+
+                            // Clear the newly created FBO
+                            core.fbo->bind();
+                            core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
                         }
 
                         avInfo->geometry.max_width = 640;
