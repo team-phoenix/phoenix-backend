@@ -21,11 +21,13 @@ bool KeyboardMouseListener::eventFilter( QObject *watched, QEvent *event ) {
 
     switch( event->type() ) {
         case QEvent::KeyPress: {
+            //qDebug() << "press" << static_cast<QKeyEvent *>( event )->text() << static_cast<QKeyEvent *>( event )->modifiers();
             emit keyPressed( static_cast<QKeyEvent *>( event )->key() );
             break;
         }
 
         case QEvent::KeyRelease: {
+            //qDebug() << "release" << static_cast<QKeyEvent *>( event )->text() << static_cast<QKeyEvent *>( event )->modifiers();
             emit keyReleased( static_cast<QKeyEvent *>( event )->key() );
             break;
         }

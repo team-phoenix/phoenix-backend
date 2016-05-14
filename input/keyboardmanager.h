@@ -13,7 +13,7 @@ class KeyboardMouseListener;
 
 /*
  * KeyboardManager is a Node whose job is to produce input data from the keyboard. It does this by listening to its
- * two slots keyPressed() and keyReleased() which are connected to a KeyboardListener living on the main thread.
+ * two slots, keyPressed() and keyReleased(), which are connected to a KeyboardMouseListener living on the main thread.
  */
 
 class KeyboardManager : public Node {
