@@ -94,7 +94,7 @@ void PhoenixWindowNode::geometryChanged() {
 }
 
 void PhoenixWindowNode::checkIfCommandsShouldFire() {
-    qDebug() << "Check" << !firedOpenGLContextCommand << ( phoenixWindow && phoenixWindow->dynamicPipelineContext != nullptr ) << fireLoad << ( gameThread != nullptr );
+    qDebug() << "Check" << !firedOpenGLContextCommand << ( phoenixWindow && ( phoenixWindow->dynamicPipelineContext != nullptr ) ) << fireLoad << ( gameThread != nullptr );
 
     // Check if it's time to tell the dynamic pipeline about the context and the load
     if( !firedOpenGLContextCommand && phoenixWindow && phoenixWindow->dynamicPipelineContext && fireLoad && gameThread ) {

@@ -76,7 +76,7 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
     connect( this, &QQuickWindow::openglContextCreated, this, [ & ]( QOpenGLContext * context ) {
         qDebug() << "Scene graph context ready" << QThread::currentThread() << context->thread();
 
-        // Create an OpenGL context
+        // Allocate an OpenGL context controller
         dynamicPipelineContext = new QOpenGLContext();
 
         // Grab the main window's format now that it's fully resolved
@@ -91,6 +91,9 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
         dynamicPipelineSurface->create();
 
         // Share the context with the QSG's context
+        // This allows the FBO's texture (created automatically by QOpenGLFramebufferObject's constructor) to be
+        // shared between two contexts. Use mutexes to ensure access by either context (they live on separate
+        // threads) is atomic
         dynamicPipelineContext->setShareContext( context );
 
         // Set the alpha buffer size
@@ -120,9 +123,9 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
     } );
 
     connect( this, &QQuickWindow::sceneGraphInitialized, this, [ & ]() {
-        qDebug() << "Scene graph ready" << QThread::currentThread() << openglContext()->thread();
-        sceneGraphIsInitialized = true;
         QThread *sceneGraphThread = openglContext()->thread();
+        qDebug() << "Scene graph ready" << QThread::currentThread() << sceneGraphThread;
+        sceneGraphIsInitialized = true;
         sceneGraphHelper->moveToThread( sceneGraphThread );
     } );
 
