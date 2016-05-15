@@ -2,6 +2,7 @@
 #include "remapper.h"
 
 RemapperModel::RemapperModel( QAbstractListModel *parent ) : QAbstractListModel( parent ) {
+
 }
 
 // Public
@@ -94,9 +95,11 @@ void RemapperModel::controllerRemoved( QString GUID ) {
 }
 
 void RemapperModel::buttonUpdate( QString GUID, bool pressed ) {
-    this->pressed[ GUID ] = pressed;
-    int row = GUIDToRow( GUID );
-    emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { PressedRole } );
+    if ( this->pressed[ GUID ] != pressed ) {
+        this->pressed[ GUID ] = pressed;
+        int row = GUIDToRow( GUID );
+        emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { PressedRole } );
+    }
 }
 
 void RemapperModel::remappingEnded() {
