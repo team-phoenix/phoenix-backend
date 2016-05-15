@@ -108,7 +108,6 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
                     //qDebug() << "LibretroRunner lock";
                     core.context->makeCurrent( core.surface );
                     core.fbo->bind();
-                    core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
                 }
 
                 // Invoke libretro core
