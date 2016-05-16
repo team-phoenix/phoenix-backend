@@ -906,7 +906,7 @@ retro_proc_address_t procAddressCallback( const char *sym ) {
 bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength ) {
     Q_UNUSED( port );
 
-    for( GamepadState gamepad : core.gamepads ) {
+    for( GamepadState &gamepad : core.gamepads ) {
         if( gamepad.instanceID == -1 || !gamepad.haptic || gamepad.hapticID < 0 ) {
             continue;
         }
@@ -917,12 +917,6 @@ bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t st
             } else {
                 gamepad.hapticEffect.leftright.small_magnitude = strength;
             }
-        }
-
-        if( SDL_HapticUpdateEffect( gamepad.haptic, gamepad.hapticID, &gamepad.hapticEffect ) != 0 ) {
-            qWarning() << gamepad.friendlyName << SDL_GetError()
-                       << ( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT )
-                       << ( gamepad.hapticEffect.type == SDL_HAPTIC_CONSTANT );
         }
 
         //QString strengthString = effect == RETRO_RUMBLE_STRONG ? "Strong" : "Weak";

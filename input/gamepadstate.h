@@ -22,10 +22,12 @@ struct GamepadState {
     // Uniquely identifies the *type* of controller
     SDL_JoystickGUID GUID;
 
+    // String representation of the GUID
+    // Most likely ASCII (convert with to/fromLatin1())
+    QString GUIDString;
+
     // A handle for rumble
     SDL_Haptic *haptic { nullptr };
-
-    // Another handle for rumble
     int hapticID { -1 };
 
     // Rumble effect parameters
@@ -34,12 +36,24 @@ struct GamepadState {
     // Friendly name
     QString friendlyName;
 
-    // For internal use
-    int joystickID{ 0 };
-    int instanceID{ 0 };
-
     // Button and axis states
     Sint16 axis[ SDL_CONTROLLER_AXIS_MAX ] { 0 };
     Uint8 button[ SDL_CONTROLLER_BUTTON_MAX ] { 0 };
+
+    // For internal use
+
+    int joystickID{ 0 };
+    int instanceID{ 0 };
+    SDL_GameController *gamecontrollerHandle { nullptr };
+    SDL_Joystick *joystickHandle { nullptr };
+
+    QString mappingString;
+
+    // Joystick button and axis states
+    // For use by Remapper only. For all other uses, use axis and button from above
+    // TODO: Support more than 16 axes, 16 hats and 256 buttons?
+    Sint16 joystickAxis[ 16 ] { 0 };
+    Uint8 joystickButton[ 256 ] { 0 };
+    Uint8 joystickHat[ 16 ] { 0 };
 };
 Q_DECLARE_METATYPE( GamepadState )

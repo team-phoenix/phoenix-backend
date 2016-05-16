@@ -10,6 +10,7 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 #include "SDL_haptic.h"
+#include "SDL_joystick.h"
 
 /*
  * GamepadManager is a Node whose job is to produce input data from physical controllers connected to the system running
@@ -32,9 +33,6 @@ class GamepadManager : public Node {
 
         // A list of stored button states, indexed by instanceID
         QHash<int, GamepadState> gamepads;
-
-        // Handles to the underlying game controller API handle, indexed by instanceID
-        QHash<int, SDL_GameController *> gamepadHandles;
 
         // A circular buffer that holds gamepad state updates
         // A value of 100 should be sufficient for most purposes

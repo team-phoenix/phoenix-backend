@@ -44,6 +44,7 @@ bool KeyboardMouseListener::eventFilter( QObject *watched, QEvent *event ) {
 
         case QEvent::MouseMove: {
             emit mouseMoved( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
+            break;
         }
 
         default:

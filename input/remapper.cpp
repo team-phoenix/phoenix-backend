@@ -265,7 +265,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             }
 
             // Remap button states according to stored data
-            {
+            {/*
                 GamepadState virtualGamepad = gamepad;
 
                 // Clear remappedGamepad's states
@@ -284,7 +284,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 }
 
                 gamepad = virtualGamepad;
-            }
+            */}
 
             // Send updated data out
             {

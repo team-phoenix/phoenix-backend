@@ -11,6 +11,7 @@
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
+#include "SDL_haptic.h"
 
 void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
@@ -102,7 +103,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             emit commandOut( command, data, timeStamp );
 
             if( core.state == State::Playing ) {
-                // If in 3D mode, lock the mutex before emulating
+                // If in 3D mode, lock the mutex before emulating then activate our context and FBO
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
                     core.videoMutex.lock();
                     //qDebug() << "LibretroRunner lock";
@@ -112,6 +113,21 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
 
                 // Invoke libretro core
                 core.symbols.retro_run();
+
+                // Update rumble state
+                // TODO: Apply per-controller
+                for( GamepadState &gamepad : core.gamepads ) {
+                    if( gamepad.instanceID == -1 || !gamepad.haptic || gamepad.hapticID < 0 ) {
+                        //qDebug() << gamepad.instanceID << ( !gamepad.haptic ) << ( gamepad.hapticID < 0 );
+                        continue;
+                    }
+
+                    if( SDL_HapticUpdateEffect( gamepad.haptic, gamepad.hapticID, &gamepad.hapticEffect ) != 0 ) {
+                        qWarning() << gamepad.friendlyName << SDL_GetError()
+                                   << ( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT )
+                                   << ( gamepad.hapticEffect.type == SDL_HAPTIC_CONSTANT );
+                    }
+                }
 
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
                     core.context->makeCurrent( core.surface );

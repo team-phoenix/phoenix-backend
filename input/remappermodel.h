@@ -59,8 +59,7 @@ class RemapperModel : public QAbstractListModel {
         QVariant data( const QModelIndex &index, int role = Qt::DisplayRole ) const override;
 
         // One row per GUID
-        // Ignore parent, this isn't a table
-        int rowCount( const QModelIndex &/*parent = QModelIndex()*/ ) const override;
+        int rowCount( const QModelIndex &parent = QModelIndex() ) const override;
 
     signals:
         void remapModeChanged();
@@ -68,7 +67,7 @@ class RemapperModel : public QAbstractListModel {
 
     public slots:
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString GUID , QString friendlyName );
+        void controllerAdded( QString GUID, QString friendlyName );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
         void controllerRemoved( QString GUID );
