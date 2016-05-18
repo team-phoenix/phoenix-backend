@@ -20,6 +20,9 @@
 /*
  * PhoenixWindow extends QQuickWindow by allowing the user to toggle whether the window uses VSync (blocking on
  * swapBuffers() until VBlank ends) or not (immediately returning when calling swapBuffers()).
+ *
+ * It will also send keyboard and mouse input directly to its counterpart, PhoenixWindowNode, so that input can be used
+ * by a core for game input.
  */
 
 #pragma once
@@ -51,6 +54,8 @@ class PhoenixWindow : public QQuickWindow {
         explicit PhoenixWindow( QQuickWindow *parent = 0 );
         ~PhoenixWindow();
 
+        bool event( QEvent *event ) override;
+
         bool vsync { true };
         bool sceneGraphIsInitialized { false };
 
@@ -59,6 +64,13 @@ class PhoenixWindow : public QQuickWindow {
         QOpenGLContext *dynamicPipelineContext { nullptr };
         QOpenGLFramebufferObject *dynamicPipelineFBO { nullptr };
         QOffscreenSurface *dynamicPipelineSurface { nullptr };
+
+    signals:
+        void keyPressed( int key );
+        void keyReleased( int key );
+        void mousePressed( QPointF position, Qt::MouseButtons buttons );
+        void mouseReleased( QPointF position, Qt::MouseButtons buttons );
+        void mouseMoved( QPointF position, Qt::MouseButtons buttons );
 
     public slots:
         void setVsync( bool vsync );

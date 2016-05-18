@@ -12,8 +12,6 @@
 #include "sdlmanager.h"
 #include "controloutput.h"
 #include "globalgamepad.h"
-#include "keyboardmouselistener.h"
-#include "keyboardmanager.h"
 #include "libretroloader.h"
 #include "libretrorunner.h"
 #include "microtimer.h"
@@ -42,8 +40,6 @@
  * To hook the propogation of these commands down to the running Core, see ControlOutput. Usually this is directly
  * connected to the Core of a particular dynamic pipeline.
  */
-
-class MouseManager;
 
 class GameConsole : public Node {
         Q_OBJECT
@@ -114,11 +110,9 @@ class GameConsole : public Node {
         //     - Add to deleteMembers() if adding a new one no matter what pipeline it belongs to
         //     - Move to gameThread in the constructor
         AudioOutput *audioOutput { nullptr };
-        KeyboardManager *keyboardManager { nullptr };
         LibretroLoader *libretroLoader { nullptr };
         LibretroRunner *libretroRunner { nullptr };
         MicroTimer *microTimer { nullptr };
-        MouseManager *mouseManager{ nullptr };
         Remapper *remapper { nullptr };
         SDLManager *sdlManager { nullptr };
         SDLUnloader *sdlUnloader { nullptr };
@@ -132,7 +126,6 @@ class GameConsole : public Node {
         VideoOutputNode *videoOutput { nullptr };
 
         // Misc (owned by us)
-        KeyboardMouseListener keyboardMouseListener;
         LibretroVariableForwarder libretroVariableForwarder;
 
         // Misc (not owned by us)

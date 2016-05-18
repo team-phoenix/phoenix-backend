@@ -70,10 +70,7 @@
     core/libretrovariableforwarder.h \
     input/gamepadstate.h \
     input/globalgamepad.h \
-    input/keyboardmanager.h \
-    input/keyboardmouselistener.h \
     input/keyboardstate.h \
-    input/mousemanager.h \
     input/mousestate.h \
     input/remapper.h \
     input/remappermodel.h \
@@ -104,10 +101,7 @@
     core/libretrovariableforwarder.cpp \
     input/gamepadstate.cpp \
     input/globalgamepad.cpp \
-    input/keyboardmanager.cpp \
-    input/keyboardmouselistener.cpp \
     input/keyboardstate.cpp \
-    input/mousemanager.cpp \
     input/mousestate.cpp \
     input/remapper.cpp \
     input/remappermodel.cpp \

@@ -1,8 +1,11 @@
 #pragma once
 
+#include <QMutex>
 #include <QObject>
 #include <QRect>
 
+#include "keyboardstate.h"
+#include "mousestate.h"
 #include "node.h"
 #include "phoenixwindow.h"
 
@@ -14,7 +17,7 @@ class QThread;
  * PhoenixWindowNode is a Node that wraps around an underlying PhoenixWindow. It fires heartbeat commands whenever the
  * window emits a QQuickWindow::frameSwapped() signal and will tell the underlying window whenever VSync mode changes.
  *
- * It also handles creating and setting up a shared QOpenGLContext for the dynamic pipeline's use. Since the dynamic
+ * It handles creating and setting up a shared QOpenGLContext for the dynamic pipeline's use. Since the dynamic
  * pipeline and the scene graph's OpenGL context are created at different times, we must check that both are good to go
  * before sending any loads down the dynamic pipeline.
  *
@@ -42,6 +45,12 @@ class PhoenixWindowNode : public Node {
         void frameSwapped();
         void geometryChanged();
 
+        void mousePressd( QPointF point, Qt::MouseButtons buttons );
+        void mouseReleased( QPointF point, Qt::MouseButtons buttons );
+        void mouseMoved( QPointF point, Qt::MouseButtons buttons );
+        void keyPressed( int key );
+        void keyReleased( int key );
+
     private:
         // A copy of the game thread, used to push the context and its FBO to it
         QThread *gameThread { nullptr };
@@ -59,4 +68,24 @@ class PhoenixWindowNode : public Node {
         // Window geometry
         QRect geometry;
 
+        // Keyboard/mouse producer stuff
+
+        // Holds the keyboard state as it's being built
+        KeyboardState keyboard;
+
+        // Circular buffer of keyboard states
+        KeyboardState keyboardBuffer[ 100 ];
+        int keyboardBufferIndex { 0 };
+
+        // Ensure reads/writes to keyboardBuffer are atomic
+        QMutex mutex;
+
+        // Helpers
+        void insertState( int key, bool state );
+
+        // Circular buffer of mouse states
+        MouseState mouseBuffer[ 100 ];
+        int mouseBufferIndex { 0 };
+
+        MouseState mouse;
 };

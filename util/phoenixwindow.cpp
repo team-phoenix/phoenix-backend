@@ -19,7 +19,10 @@
 
 #include "phoenixwindow.h"
 
+#include <QDebug>
+#include <QEvent>
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QMetaObject>
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
@@ -27,6 +30,7 @@
 #include <QOpenGLFunctions>
 #include <QQuickWindow>
 #include <QSurfaceFormat>
+#include <QtGlobal>
 #include <QThread>
 #include <QWindow>
 
@@ -160,6 +164,42 @@ PhoenixWindow::~PhoenixWindow() {
     delete sceneGraphHelper;
     dynamicPipelineContext->deleteLater();
     dynamicPipelineSurface->deleteLater();
+}
+
+bool PhoenixWindow::event( QEvent *event ) {
+    switch( event->type() ) {
+        case QEvent::KeyPress: {
+            //qDebug() << "press" << static_cast<QKeyEvent *>( event )->text() << static_cast<QKeyEvent *>( event )->modifiers();
+            emit keyPressed( static_cast<QKeyEvent *>( event )->key() );
+            break;
+        }
+
+        case QEvent::KeyRelease: {
+            //qDebug() << "release" << static_cast<QKeyEvent *>( event )->text() << static_cast<QKeyEvent *>( event )->modifiers();
+            emit keyReleased( static_cast<QKeyEvent *>( event )->key() );
+            break;
+        }
+
+        case QEvent::MouseButtonPress: {
+            emit mousePressed( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
+            break;
+        }
+
+        case QEvent::MouseButtonRelease: {
+            emit mouseReleased( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
+            break;
+        }
+
+        case QEvent::MouseMove: {
+            emit mouseMoved( static_cast<QMouseEvent *>( event )->windowPos(), static_cast<QMouseEvent *>( event )->buttons() );
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    return QQuickWindow::event( event );
 }
 
 void PhoenixWindow::setVsync( bool vsync ) {

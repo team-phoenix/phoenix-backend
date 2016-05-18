@@ -1,5 +1,4 @@
 #include "gameconsole.h"
-#include "mousemanager.h"
 #include "logging.h"
 
 #include <QMetaObject>
@@ -11,23 +10,19 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     // Pipeline nodes owned by this class (game thread)
     audioOutput( new AudioOutput ),
-    keyboardManager( new KeyboardManager ),
     libretroLoader( new LibretroLoader ),
     libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
-    mouseManager( new MouseManager ),
     remapper( new Remapper ),
     sdlManager( new SDLManager ),
     sdlUnloader( new SDLUnloader ) {
 
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
-    keyboardManager->moveToThread( gameThread );
     libretroLoader->moveToThread( gameThread );
     libretroRunner->moveToThread( gameThread );
     libretroVariableForwarder.moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
-    mouseManager->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
     sdlManager->moveToThread( gameThread );
     sdlUnloader->moveToThread( gameThread );
@@ -37,14 +32,8 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     // Connect global pipeline (at least the parts that can be connected at this point)
     connectNodes( microTimer, sdlManager );
-    connectNodes( sdlManager, keyboardManager );
-    connectNodes( keyboardManager, mouseManager );
-    connectNodes( mouseManager, remapper );
+    connectNodes( sdlManager, remapper );
     connectNodes( remapper, sdlUnloader );
-
-    // Handle the wrapper nodes/node frontends/node proxies
-    mouseManager->setListener( &keyboardMouseListener );
-    keyboardManager->connectKeyboardInput( &keyboardMouseListener );
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
@@ -302,8 +291,6 @@ void GameConsole::deleteMembers() {
     // Delete everything owned by this class
     // Alphabetical order because it doesn't matter
     audioOutput->deleteLater();
-    keyboardManager->deleteLater();
-    mouseManager->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
     microTimer->deleteLater();
