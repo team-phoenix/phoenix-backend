@@ -30,7 +30,7 @@ void KeyboardManager::commandIn( Node::Command command, QVariant data, qint64 ti
                 mutex.unlock();
 
                 // Send buffer on its way
-                emit dataOut( DataType::KeyboardInput, &mutex, &keyboardBuffer[ keyboardBufferIndex ], 0, QDateTime::currentMSecsSinceEpoch() );
+                emit dataOut( DataType::KeyboardInput, &mutex, &keyboardBuffer[ keyboardBufferIndex ], 0, nodeCurrentTime() );
 
                 // Increment the index
                 keyboardBufferIndex = ( keyboardBufferIndex + 1 ) % 100;

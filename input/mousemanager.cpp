@@ -42,7 +42,7 @@ void MouseManager::commandIn( Command command, QVariant data, qint64 timeStamp )
                 mutex.unlock();
 
                 // Send buffer on its way
-                emit dataOut( DataType::MouseInput, &mutex, &mouseBuffer[ mouseBufferIndex ], 0, QDateTime::currentMSecsSinceEpoch() );
+                emit dataOut( DataType::MouseInput, &mutex, &mouseBuffer[ mouseBufferIndex ], 0, nodeCurrentTime() );
 
                 // Increment the index
                 mouseBufferIndex = ( mouseBufferIndex + 1 ) % 100;

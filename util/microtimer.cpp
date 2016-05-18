@@ -61,7 +61,7 @@ bool MicroTimer::event( QEvent *e ) {
             }
 
             if( ( !vsync || state != State::Playing || !fpsDiffOkay() ) && globalPipelineReady ) {
-                commandOut( Command::Heartbeat, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+                commandOut( Command::Heartbeat, QVariant(), nodeCurrentTime() );
             }
 
             // This situation should be dealt with as soon as possible... but can only be reliably dealt with once
@@ -69,7 +69,7 @@ bool MicroTimer::event( QEvent *e ) {
             if( vsync && !fpsDiffOkay() && dynamicPipelineReady ) {
                 vsync = false;
                 qCDebug( phxTimer ) << "VSync enabled but coreFPS and hostFPS differ by at least 2%. Telling remainder of pipeline to assume VSync is off...";
-                emit commandOut( Command::SetVsync, false, QDateTime::currentMSecsSinceEpoch() );
+                emit commandOut( Command::SetVsync, false, nodeCurrentTime() );
             }
         }
         return true;

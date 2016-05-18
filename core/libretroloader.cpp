@@ -23,7 +23,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
             qCDebug( phxCore ) << command;
             core.state = State::Loading;
-            emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
 
             // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
             core.coreFileInfo.setFile( core.source[ "core" ] );
@@ -160,7 +160,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 core.symbols.retro_get_system_av_info( avInfo );
                 allocateBufferPool( avInfo );
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
-                emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), QDateTime::currentMSecsSinceEpoch() );
+                emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), nodeCurrentTime() );
 
                 // Create the FBO 3d cores will draw to
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
@@ -230,10 +230,10 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
             connectedToCore = false;
 
             core.pausable = true;
-            emit commandOut( Command::SetPausable, true, QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::SetPausable, true, nodeCurrentTime() );
 
             core.state = State::Paused;
-            emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
 
             break;
         }

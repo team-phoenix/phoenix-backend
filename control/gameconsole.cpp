@@ -90,7 +90,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         // Tell the pipeline to stop if loaded
         if( dynamicPipelineReady() ) {
             quitFlag = true;
-            emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
         } else {
             qCInfo( phxControl ) << "No core loaded";
             gameThread->quit();
@@ -134,15 +134,15 @@ void GameConsole::load() {
     Q_ASSERT( phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-    emit commandOut( Command::SetHostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetHostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), nodeCurrentTime() );
 
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
         qCDebug( phxControl ) << "Dynamic pipeline ready";
-        emit commandOut( Command::HandleDynamicPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::HandleDynamicPipelineReady, QVariant(), nodeCurrentTime() );
         applyPendingPropertyChanges();
-        emit commandOut( Command::Load, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
     } else if( source[ "type" ].toString().isEmpty() || pendingPropertyChanges[ "source" ].toMap()[ "type" ].toString().isEmpty() ) {
         qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
     } else {
@@ -151,19 +151,19 @@ void GameConsole::load() {
 }
 
 void GameConsole::play() {
-    emit commandOut( Command::Play, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Play, QVariant(), nodeCurrentTime() );
 }
 
 void GameConsole::pause() {
-    emit commandOut( Command::Pause, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
 }
 
 void GameConsole::stop() {
-    emit commandOut( Command::Stop, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
 }
 
 void GameConsole::reset() {
-    emit commandOut( Command::Reset, QVariant(), QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::Reset, QVariant(), nodeCurrentTime() );
 }
 
 void GameConsole::unload() {
@@ -233,8 +233,8 @@ bool GameConsole::globalPipelineReady() {
 void GameConsole::checkIfGlobalPipelineReady() {
     if( globalPipelineReady() ) {
         qCDebug( phxControl ) << "Global pipeline ready";
-        emit commandOut( Command::HandleGlobalPipelineReady, QVariant(), QDateTime::currentMSecsSinceEpoch() );
-        emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), QDateTime::currentMSecsSinceEpoch() );
+        emit commandOut( Command::HandleGlobalPipelineReady, QVariant(), nodeCurrentTime() );
+        emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), nodeCurrentTime() );
     }
 }
 
@@ -324,7 +324,7 @@ void GameConsole::setAspectRatioMode( int aspectRatioMode ) {
     }
 
     this->aspectRatioMode = aspectRatioMode;
-    emit commandOut( Command::SetAspectRatioMode, aspectRatioMode, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetAspectRatioMode, aspectRatioMode, nodeCurrentTime() );
     emit aspectRatioModeChanged();
 }
 
@@ -342,7 +342,7 @@ void GameConsole::setPlaybackSpeed( qreal playbackSpeed ) {
     }
 
     this->playbackSpeed = playbackSpeed;
-    emit commandOut( Command::SetPlaybackSpeed, playbackSpeed, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetPlaybackSpeed, playbackSpeed, nodeCurrentTime() );
     emit playbackSpeedChanged();
 }
 
@@ -358,7 +358,7 @@ void GameConsole::setSource( QVariantMap source ) {
     }
 
     this->source = source;
-    emit commandOut( Command::SetSource, source, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetSource, source, nodeCurrentTime() );
     emit sourceChanged();
 }
 
@@ -374,7 +374,7 @@ void GameConsole::setVolume( qreal volume ) {
     }
 
     this->volume = volume;
-    emit commandOut( Command::SetVolume, volume, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetVolume, volume, nodeCurrentTime() );
     emit volumeChanged();
 }
 
@@ -390,6 +390,6 @@ void GameConsole::setVsync( bool vsync ) {
     }
 
     this->vsync = vsync;
-    emit commandOut( Command::SetVsync, vsync, QDateTime::currentMSecsSinceEpoch() );
+    emit commandOut( Command::SetVsync, vsync, nodeCurrentTime() );
     emit vsyncChanged();
 }

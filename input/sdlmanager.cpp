@@ -151,7 +151,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                         }
 
                         // Inform the consumers a new controller was just added
-                        emit commandOut( Command::AddController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
+                        emit commandOut( Command::AddController, QVariant::fromValue( gamepad ), nodeCurrentTime() );
 
                         break;
                     }
@@ -162,7 +162,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                         GamepadState &gamepad = gamepads[ instanceID ];
 
                         // Inform the consumers this controller was removed so it can be deleted from their lists or otherwise marked as unplugged
-                        emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
+                        emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), nodeCurrentTime() );
 
                         // Remove it here, too
                         gamepads.remove( instanceID );
@@ -231,7 +231,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                 mutex.unlock();
 
                 // Send buffer on its way
-                emit dataOut( DataType::Input, &mutex, &gamepadBuffer[ gamepadBufferIndex ], 0, QDateTime::currentMSecsSinceEpoch() );
+                emit dataOut( DataType::Input, &mutex, &gamepadBuffer[ gamepadBufferIndex ], 0, nodeCurrentTime() );
 
                 // Increment the index
                 gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;

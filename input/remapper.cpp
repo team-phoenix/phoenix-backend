@@ -278,7 +278,7 @@ void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
 
             gameControllerHandles.remove( instanceID );
 
-            emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
+            emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), nodeCurrentTime() );
             break;
         }
 
@@ -653,7 +653,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 // Send buffer on its way
                 emit dataOut( DataType::Input, &( this->mutex ),
                               reinterpret_cast< void * >( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
-                              QDateTime::currentMSecsSinceEpoch() );
+                              nodeCurrentTime() );
 
                 // Increment the index
                 gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
@@ -699,7 +699,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 // Send buffer on its way
                 emit dataOut( DataType::Input, &( this->mutex ),
                               reinterpret_cast< void * >( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
-                              QDateTime::currentMSecsSinceEpoch() );
+                              nodeCurrentTime() );
 
                 // Increment the index
                 gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
