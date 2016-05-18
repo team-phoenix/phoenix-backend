@@ -146,14 +146,8 @@ class Node : public QObject {
             // Usually you'll only want to bother hooking the removal so you can remove your copy of the controller data
             // The UI would be interested in showing to the user a game controller being plugged in
             // QVariant<GamepadState>
-            ControllerAdded,
-            ControllerRemoved,
-
-            // For use by Remapper only
-            // Use ControllerAdded/Removed for everything else
-            // QVariant<GamepadState>
-            JoystickAdded,
-            JoystickRemoved,
+            AddController,
+            RemoveController,
         };
         Q_ENUM( Command )
 

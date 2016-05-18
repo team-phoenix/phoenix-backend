@@ -157,7 +157,16 @@ class LibretroCore : public Core {
 
         LibretroVideoFormat consumerFmt;
 
+        // Gamepad states
+        // Everything is indexed by instanceID here as we need to see the states of every connected controller individually
+        // Note that gamepads is overwritten with data from its parent at the beginning of each frame.
+        // Nothing you set will be preserved.
         QHash<int, GamepadState> gamepads;
+
+        // For fallback rumble, which requires us to explicitly stop and set a rumble effect each time we want to change
+        // the strength, we must make sure not to waste time resetting it unless the value's actually changed. Store the value of the
+        // current/active strength here. Indexed by instanceID, given a default of 0.0 on controller connect.
+        QHash<int, qreal> fallbackRumbleCurrentStrength;
 
         MouseState mouse;
         QRect windowGeometry;

@@ -42,16 +42,25 @@ QVariant RemapperModel::data( const QModelIndex &index, int role ) const {
             // Get the remap data
             QVariantMap remapData;
 
-            // Generate virtualButton -> physicalButtons
-            for( int virtualButton = 0; virtualButton < SDL_CONTROLLER_BUTTON_MAX; virtualButton++ ) {
-                remapData[ buttonToString( virtualButton ) ] = QStringList();
-                QStringList list;
-                for( QString physicalButton : this->remapData[ GUID ].keys() ) {
-                    if( this->remapData[ GUID ][ physicalButton ] == buttonToString( virtualButton ) ) {
-                        list.append( physicalButton );
+            // Generate virtualButton -> physicalButtons for the keyboard
+            if( GUID.isEmpty() ){
+                for( int virtualButton = 0; virtualButton < SDL_CONTROLLER_BUTTON_MAX; virtualButton++ ) {
+                    remapData[ gameControllerIDToMappingString( virtualButton ) ] = QStringList();
+                    QStringList list;
+                    for( QString physicalButton : this->remapData[ GUID ].keys() ) {
+                        if( this->remapData[ GUID ][ physicalButton ] == gameControllerIDToMappingString( virtualButton ) ) {
+                            list.append( physicalButton );
+                        }
                     }
+                    remapData[ gameControllerIDToMappingString( virtualButton ) ].setValue( list );
                 }
-                remapData[ buttonToString( virtualButton ) ].setValue( list );
+            }
+
+            // Convert QMap<QString, QString> to QMap<QString, QVariant> for controllers
+            else {
+                for( QString key : this->remapData[ GUID ].keys() ) {
+                    remapData[ key ] = this->remapData[ GUID ][ key ];
+                }
             }
 
             return remapData;
@@ -95,7 +104,7 @@ void RemapperModel::controllerRemoved( QString GUID ) {
 }
 
 void RemapperModel::buttonUpdate( QString GUID, bool pressed ) {
-    if ( this->pressed[ GUID ] != pressed ) {
+    if( this->pressed[ GUID ] != pressed ) {
         this->pressed[ GUID ] = pressed;
         int row = GUIDToRow( GUID );
         emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { PressedRole } );
@@ -133,7 +142,7 @@ void RemapperModel::beginRemapping( QString GUID, QString button ) {
         emit remapModeChanged();
         emit beginRemappingProxy( GUID, button );
     } else {
-        qCWarning( phxInput ) << "Remap mode already active!";
+        qInfo() << "Remap mode already active!";
     }
 }
 

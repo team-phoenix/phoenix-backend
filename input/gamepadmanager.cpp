@@ -10,11 +10,11 @@
 #include "logging.h"
 
 GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
-    // Set the built-in mapping file
+    // Load the built-in mapping file
     QFile gameControllerDBFile( ":/input/gamecontrollerdb.txt" );
     bool status = gameControllerDBFile.open( QIODevice::ReadOnly );
     Q_ASSERT( status );
-    auto mappingData = gameControllerDBFile.readAll();
+    QByteArray mappingData = gameControllerDBFile.readAll();
     SDL_SetHint( SDL_HINT_GAMECONTROLLERCONFIG, mappingData.constData() );
     gameControllerDBFile.close();
 
@@ -81,29 +81,6 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             }
                         }
 
-                        // Set up the joystick as a game controller if a mapping is available
-                        {
-                            // If this is a game controller, reopen as one and grab some more info
-                            SDL_GameController *gamecontrollerHandle = nullptr;
-
-                            if( SDL_IsGameController( joystickID ) ) {
-                                SDL_JoystickClose( joystickHandle );
-                                gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
-                                joystickHandle = SDL_GameControllerGetJoystick( gamecontrollerHandle );
-                                char *mappingString = SDL_GameControllerMapping( gamecontrollerHandle );
-                                gamepad.mappingString = QString::fromUtf8( mappingString );
-                                SDL_free( mappingString );
-                                const char *friendlyName = SDL_GameControllerName( gamecontrollerHandle );
-
-                                if( friendlyName ) {
-                                    gamepad.friendlyName = QString::fromUtf8( friendlyName );
-                                }
-
-                                gamepad.gamecontrollerHandle = gamecontrollerHandle;
-                                gamepad.joystickHandle = joystickHandle;
-                            }
-                        }
-
                         // Print some info about the controller
                         {
                             qDebug().noquote() << "Added controller:" << gamepad.friendlyName
@@ -116,72 +93,65 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                             }
                         }
 
-                        // Set up haptic (rumble) support
+                        // Set up rumble support
                         {
-                            int hapticID = -1;
-
                             SDL_Haptic *haptic = SDL_HapticOpenFromJoystick( joystickHandle );
-                            gamepad.haptic = haptic;
-                            QString hapticSupport;
 
-                            // Set up the haptic effect and start it immediately
-                            // Since the magnitude is at 0 the controller will not actually rumble until something tells it to
-                            if( haptic && SDL_HapticQuery( haptic ) ) {
-                                gamepads[ instanceID ].hapticEffect.type = SDL_HAPTIC_LEFTRIGHT;
-                                gamepads[ instanceID ].hapticEffect.leftright.length = SDL_HAPTIC_INFINITY;
-                                hapticID = SDL_HapticNewEffect( gamepads[ instanceID ].haptic, &gamepads[ instanceID ].hapticEffect );
-
-                                // If either effect set up correctly, start it now
-                                if( hapticID >= 0 ) {
-
-                                    // Start the effect now
-                                    if( SDL_HapticRunEffect( haptic, hapticID, 1 ) < 0 ) {
-                                        qWarning() << "SDL_HapticRunEffect failed on" << gamepads[ instanceID ].friendlyName << hapticID << SDL_GetError();
-                                    } else {
-                                        qDebug() << "Started haptic effect successfully, hapticID:" << hapticID;
-
-                                        // Set the effect ID for later use
-                                        gamepads[ instanceID ].hapticID = hapticID;
-                                    }
-                                } else {
-                                    qWarning() << "SDL_HapticNewEffect failed on" << gamepads[ instanceID ].friendlyName << hapticID << SDL_GetError();
-                                }
-
-                                // Build a string to dump to console containing info about all possible types and their support
-                                hapticSupport = QString(
-                                                    "SDL_HAPTIC_CONSTANT: %1 "
-                                                    "SDL_HAPTIC_SINE: %2 "
-                                                    "SDL_HAPTIC_TRIANGLE: %3 "
-                                                    "SDL_HAPTIC_SAWTOOTHUP: %4 "
-                                                    "SDL_HAPTIC_SAWTOOTHDOWN: %5 "
-                                                    "SDL_HAPTIC_SPRING: %6 "
-                                                    "SDL_HAPTIC_DAMPER: %7 "
-                                                    "SDL_HAPTIC_INERTIA: %8 "
-                                                    "SDL_HAPTIC_FRICTION: %9 "
-                                                    "SDL_HAPTIC_RAMP: %10 "
-                                                    "SDL_HAPTIC_LEFTRIGHT: %11 "
-                                                    "SDL_HAPTIC_CUSTOM: %12 "
-                                                )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_CONSTANT ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SINE ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_TRIANGLE ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SAWTOOTHUP ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SAWTOOTHDOWN ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_SPRING ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_DAMPER ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_INERTIA ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_FRICTION ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_RAMP ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_LEFTRIGHT ) != 0 )
-                                                .arg( ( SDL_HapticQuery( haptic ) & SDL_HAPTIC_CUSTOM ) != 0 );
+                            if( !haptic ) {
+                                qWarning() << "SDL_HapticOpenFromJoystick(" << joystickHandle << ") = nullptr, rumble not available";
+                                qWarning() << "SDL:" << SDL_GetError();
                             }
 
-                            qDebug().noquote() << "Haptic (rumble) support" << ( haptic != nullptr ) << ( haptic != nullptr ? hapticSupport : QString() );
-                            qDebug() << "Current configuration supported:" << SDL_HapticEffectSupported( haptic, &gamepad.hapticEffect );
+                            if( haptic && ( SDL_HapticRumbleSupported( haptic ) == SDL_FALSE ) ) {
+                                qWarning() << "SDL_HapticRumbleSupported(" << haptic << ") = SDL_FALSE, rumble not available";
+                                SDL_HapticClose( haptic );
+                                haptic = nullptr;
+                            }
+
+                            if( haptic && ( SDL_HapticRumbleInit( haptic ) != 0 ) ) {
+                                qWarning() << "SDL_HapticRumbleInit(" << haptic << ") != 0, rumble not available";
+                                qWarning() << "SDL:" << SDL_GetError();
+                                SDL_HapticClose( haptic );
+                                haptic = nullptr;
+                            }
+
+                            if( haptic && ( SDL_HapticRumblePlay( haptic, 0.0, SDL_HAPTIC_INFINITY ) != 0 ) ) {
+                                qWarning().nospace() << "SDL_HapticRumblePlay( " << haptic << ", 0.0, SDL_HAPTIC_INFINITY ) != 0, rumble not available";
+                                qWarning() << "SDL:" << SDL_GetError();
+                                SDL_HapticClose( haptic );
+                                haptic = nullptr;
+                            }
+
+                            if( haptic ) {
+                                qDebug() << "Rumble initialized successfully, haptic =" << haptic;
+                            }
+
+                            // If we had failed at any step in initialization, this will be nullptr
+                            gamepad.haptic = haptic;
+                        }
+
+                        // Set up the joystick as a game controller if a mapping is available
+                        {
+                            // If this is a game controller, reopen as one and grab some more info
+                            SDL_GameController *gamecontrollerHandle = nullptr;
+
+                            if( SDL_IsGameController( joystickID ) ) {
+                                gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
+                                char *mappingString = SDL_GameControllerMapping( gamecontrollerHandle );
+                                gamepad.mappingString = QString::fromUtf8( mappingString );
+                                SDL_free( mappingString );
+                                const char *friendlyName = SDL_GameControllerName( gamecontrollerHandle );
+
+                                if( friendlyName ) {
+                                    gamepad.friendlyName = QString::fromUtf8( friendlyName );
+                                }
+
+                                gamepad.gamecontrollerHandle = gamecontrollerHandle;
+                            }
                         }
 
                         // Inform the consumers a new controller was just added
-                        emit commandOut( Command::ControllerAdded, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
+                        emit commandOut( Command::AddController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
 
                         break;
                     }
@@ -191,40 +161,20 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                         int instanceID = sdlEvent.jdevice.which;
                         GamepadState &gamepad = gamepads[ instanceID ];
 
-                        int joystickID = gamepad.joystickID;
-                        SDL_GameController *gamecontrollerHandle = gamepad.gamecontrollerHandle;
-                        SDL_Joystick *joystickHandle = gamepad.joystickHandle;
-
-                        // Shut down controller-related SDL structures
-                        {
-                            if( gamepads[ instanceID ].haptic ) {
-                                SDL_HapticStopAll( gamepads[ instanceID ].haptic );
-                                SDL_HapticClose( gamepads[ instanceID ].haptic );
-                            }
-
-                            if( SDL_IsGameController( joystickID ) ) {
-                                SDL_GameControllerClose( gamecontrollerHandle );
-                            } else {
-                                SDL_JoystickClose( joystickHandle );
-                            }
-                        }
-
                         // Inform the consumers this controller was removed so it can be deleted from their lists or otherwise marked as unplugged
-                        emit commandOut( Command::ControllerRemoved, QVariant::fromValue( gamepads[ instanceID ] ), QDateTime::currentMSecsSinceEpoch() );
+                        emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
 
                         // Remove it here, too
                         gamepads.remove( instanceID );
 
-                        qCDebug( phxInput ) << "Removed controller, joystickID:" << joystickID << "instanceID:"
-                                            << instanceID << "Number of gamepads (SDL):" << SDL_NumJoysticks()
-                                            << "Number of gamepads (Phoenix):" << gamepads.size();
+                        qCDebug( phxInput ) << "A controller has been removed, number of gamepads (Phoenix):" << gamepads.size();
                         break;
                     }
 
                     // Update our button state
                     case SDL_CONTROLLERBUTTONDOWN:
                     case SDL_CONTROLLERBUTTONUP: {
-                        SDL_JoystickID instanceID = sdlEvent.cbutton.which;
+                        int instanceID = sdlEvent.cbutton.which;
                         Uint8 buttonID = sdlEvent.cbutton.button;
                         Uint8 state = sdlEvent.cbutton.state;
                         gamepads[ instanceID ].button[ buttonID ] = state;
@@ -232,7 +182,7 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                     }
 
                     case SDL_CONTROLLERAXISMOTION: {
-                        SDL_JoystickID instanceID = sdlEvent.cbutton.which;
+                        int instanceID = sdlEvent.caxis.which;
                         Uint8 axis = sdlEvent.caxis.axis;
                         Sint16 value = sdlEvent.caxis.value;
                         gamepads[ instanceID ].axis[ axis ] = value;
@@ -240,15 +190,30 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
                     }
 
                     case SDL_JOYAXISMOTION: {
-                        break;
-                    }
-
-                    case SDL_JOYHATMOTION: {
+                        int instanceID = sdlEvent.jaxis.which;
+                        Uint8 axis = sdlEvent.jaxis.axis;
+                        Sint16 value = sdlEvent.jaxis.value;
+                        gamepads[ instanceID ].joystickAxis[ axis ] = value;
+                        //qDebug() << instanceID << "axis motion, axis:" << axis << "value:" << value;
                         break;
                     }
 
                     case SDL_JOYBUTTONDOWN:
                     case SDL_JOYBUTTONUP: {
+                        int instanceID = sdlEvent.jbutton.which;
+                        Uint8 buttonID = sdlEvent.jbutton.button;
+                        Uint8 state = sdlEvent.jbutton.state;
+                        gamepads[ instanceID ].joystickButton[ buttonID ] = state;
+                        //qDebug() << "button event," << "instanceID:" << instanceID << "buttonID:" << buttonID << "state:" << state;
+                        break;
+                    }
+
+                    case SDL_JOYHATMOTION: {
+                        int instanceID = sdlEvent.jhat.which;
+                        Uint8 hat = sdlEvent.jhat.hat;
+                        Uint8 value = sdlEvent.jhat.value;
+                        gamepads[ instanceID ].joystickHat[ hat ] = value;
+                        //qDebug() << instanceID << "hat motion, hat:" << hat << "value:" << value;
                         break;
                     }
 
@@ -278,10 +243,33 @@ void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 tim
             break;
         }
 
-        case Command::SetUserDataPath:
+        case Command::SetUserDataPath: {
             userDataPath = data.toString();
-            qDebug() << "Using path" << userDataPath;
+
+            // Create the file if it doesn't exist yet
+            QFile gameControllerDBFile( userDataPath + "/gamecontrollerdb.txt" );
+
+            if( !gameControllerDBFile.exists() ) {
+                gameControllerDBFile.open( QIODevice::ReadWrite );
+                QTextStream stream( &gameControllerDBFile );
+                stream << "# Insert your custom definitions here" << endl;
+            }
+
+            gameControllerDBFile.close();
+
+            // Load remappings from user data file
+            int ret = SDL_GameControllerAddMappingsFromFile( ( userDataPath + "/gamecontrollerdb.txt" ).toUtf8().constData() );
+
+            if( ret >= 0 ) {
+                qInfo() << "Added" << ret << "custom mappings from file" << userDataPath + "/gamecontrollerdb.txt";
+                qInfo() << "Note: SDL2 may have also read overwrites that don't add to the above count";
+            } else {
+                qWarning() << "Unable to read mappings from file!" << userDataPath + "/gamecontrollerdb.txt" << SDL_GetError();
+            }
+
+            emit commandOut( command, data, timeStamp );
             break;
+        }
 
         default: {
             emit commandOut( command, data, timeStamp );

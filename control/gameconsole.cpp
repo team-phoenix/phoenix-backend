@@ -17,7 +17,8 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
     mouseManager( new MouseManager ),
-    remapper( new Remapper ) {
+    remapper( new Remapper ),
+    sdlUnloader( new SDLUnloader ) {
 
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
@@ -29,6 +30,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     microTimer->moveToThread( gameThread );
     mouseManager->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
+    sdlUnloader->moveToThread( gameThread );
 
     gameThread->setObjectName( "Game thread" );
     gameThread->start();
@@ -38,6 +40,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connectNodes( gamepadManager, keyboardManager );
     connectNodes( keyboardManager, mouseManager );
     connectNodes( mouseManager, remapper );
+    connectNodes( remapper, sdlUnloader );
 
     // Handle the wrapper nodes/node frontends/node proxies
     mouseManager->setListener( &keyboardMouseListener );
@@ -192,12 +195,16 @@ void GameConsole::loadLibretro() {
     sessionConnections << connectNodes( phoenixWindow, libretroLoader );
     sessionConnections << connectNodes( libretroLoader, microTimer );
 
+    // Disconnect SDLRunner from Remapper, it'll get inserted after LibretroRunner
+    disconnectNodes( remapper, sdlUnloader );
+
     // Connect LibretroVariableForwarder to the global pipeline
     sessionConnections << connectNodes( remapper, libretroVariableForwarder );
     sessionConnections << connectNodes( libretroVariableForwarder, libretroRunner );
 
     // Connect LibretroRunner to its children
     sessionConnections << connectNodes( libretroRunner, audioOutput );
+    sessionConnections << connectNodes( libretroRunner, sdlUnloader );
     sessionConnections << connectNodes( libretroRunner, videoOutput );
     sessionConnections << connectNodes( libretroRunner, controlOutput );
 
@@ -271,10 +278,11 @@ void GameConsole::unloadLibretro() {
         disconnect( connection );
     }
 
-    // Restore connection between PhoenixWindow and MicroTimer
-    connectNodes( phoenixWindow, microTimer );
-
     sessionConnections.clear();
+
+    // Restore global pipeline connections severed by the Libretro pipeline
+    connectNodes( phoenixWindow, microTimer );
+    connectNodes( remapper, sdlUnloader );
 
     if( quitFlag ) {
         gameThread->quit();
@@ -285,6 +293,7 @@ void GameConsole::deleteLibretro() {
     // Delete the dynamic pipeline created by the Libretro core
     // Bottom to top
     audioOutput->deleteLater();
+    sdlUnloader->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
 }
@@ -300,6 +309,7 @@ void GameConsole::deleteMembers() {
     libretroRunner->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
+    sdlUnloader->deleteLater();
 }
 
 int GameConsole::getAspectRatioMode() {

@@ -21,6 +21,7 @@
 #include "phoenixwindownode.h"
 #include "remapper.h"
 #include "remappermodel.h"
+#include "sdlunloader.h"
 #include "videooutput.h"
 #include "videooutputnode.h"
 
@@ -120,6 +121,7 @@ class GameConsole : public Node {
         MicroTimer *microTimer { nullptr };
         MouseManager *mouseManager{ nullptr };
         Remapper *remapper { nullptr };
+        SDLUnloader *sdlUnloader { nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)
         // Must be given to us via properties

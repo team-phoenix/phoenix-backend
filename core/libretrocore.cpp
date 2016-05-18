@@ -907,16 +907,19 @@ bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t st
     Q_UNUSED( port );
 
     for( GamepadState &gamepad : core.gamepads ) {
-        if( gamepad.instanceID == -1 || !gamepad.haptic || gamepad.hapticID < 0 ) {
+        if( gamepad.instanceID == -1 || !gamepad.haptic ) {
             continue;
         }
 
-        if( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT ) {
-            if( effect == RETRO_RUMBLE_STRONG ) {
-                gamepad.hapticEffect.leftright.large_magnitude = strength;
-            } else {
-                gamepad.hapticEffect.leftright.small_magnitude = strength;
-            }
+        if( effect == RETRO_RUMBLE_STRONG ) {
+            gamepad.fallbackRumbleRequestedStrength += static_cast<qreal>( strength ) / 65535.0;
+        } else {
+            gamepad.fallbackRumbleRequestedStrength += 0.5 * ( static_cast<qreal>( strength ) / 65535.0 );
+        }
+
+        // Clamp to [0.0, 1.0]
+        if( gamepad.fallbackRumbleRequestedStrength > 1.0 ) {
+            gamepad.fallbackRumbleRequestedStrength = 1.0;
         }
 
         //QString strengthString = effect == RETRO_RUMBLE_STRONG ? "Strong" : "Weak";

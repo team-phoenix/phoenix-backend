@@ -93,7 +93,6 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             break;
         }
 
-        // Run the emulator for a frame if we're supposed to
         case Command::Heartbeat: {
             // Drop any heartbeats from too far in the past
             if( nodeCurrentTime() - timeStamp > 50 ) {
@@ -117,15 +116,31 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
                 // Update rumble state
                 // TODO: Apply per-controller
                 for( GamepadState &gamepad : core.gamepads ) {
-                    if( gamepad.instanceID == -1 || !gamepad.haptic || gamepad.hapticID < 0 ) {
+                    if( gamepad.instanceID == -1 || !gamepad.haptic ) {
                         //qDebug() << gamepad.instanceID << ( !gamepad.haptic ) << ( gamepad.hapticID < 0 );
                         continue;
                     }
 
-                    if( SDL_HapticUpdateEffect( gamepad.haptic, gamepad.hapticID, &gamepad.hapticEffect ) != 0 ) {
-                        qWarning() << gamepad.friendlyName << SDL_GetError()
-                                   << ( gamepad.hapticEffect.type == SDL_HAPTIC_LEFTRIGHT )
-                                   << ( gamepad.hapticEffect.type == SDL_HAPTIC_CONSTANT );
+                    else if( core.fallbackRumbleCurrentStrength[ gamepad.instanceID ] != gamepad.fallbackRumbleRequestedStrength ) {
+                        //qDebug() << "from" << core.fallbackRumbleCurrentStrength[ gamepad.instanceID ] << "to" << gamepad.fallbackRumbleRequestedStrength;
+
+                        core.fallbackRumbleCurrentStrength[ gamepad.instanceID ] = gamepad.fallbackRumbleRequestedStrength;
+
+                        SDL_HapticRumbleStop( gamepad.haptic );
+
+                        if( SDL_HapticRumblePlay( gamepad.haptic, core.fallbackRumbleCurrentStrength[ gamepad.instanceID ], SDL_HAPTIC_INFINITY ) != 0 ) {
+                            qWarning() << gamepad.friendlyName << SDL_GetError();
+
+                            qWarning().nospace() << gamepad.friendlyName << ": SDL_HapticRumblePlay( "
+                                                 << gamepad.haptic << ", "
+                                                 << core.fallbackRumbleCurrentStrength
+                                                 << ", SDL_HAPTIC_INFINITY ) != 0, rumble not available";
+                            qWarning() << "SDL:" << SDL_GetError();
+                        }
+
+                        // Reset the requested strength
+                        // Implicitly reset by incoming Gamepads overwriting the value set by us with the default of 0.0
+                        // gamepad.fallbackRumbleRequestedStrength = 0.0;
                     }
                 }
 
@@ -144,11 +159,13 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::SetWindowGeometry: {
             emit commandOut( command, data, timeStamp );
             core.windowGeometry = data.toRect();
+            emit commandOut( command, data, timeStamp );
             break;
         }
 
         case Command::SetAspectRatioMode: {
             core.aspectMode = data.toInt();
+            emit commandOut( command, data, timeStamp );
             break;
         }
 
@@ -156,10 +173,26 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             LibretroVariable var = data.value<LibretroVariable>();
             core.variables.insert( var.key(), var );
             core.variablesAreDirty = true;
+            emit commandOut( command, data, timeStamp );
             break;
         }
 
-        case Command::ControllerRemoved: {
+        case Command::AddController: {
+            if( !connectedToCore ) {
+                connectedToCore = true;
+                qDebug() << "connection";
+                connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
+                connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
+            }
+
+            GamepadState gamepad = data.value<GamepadState>();
+            int instanceID = gamepad.instanceID;
+            core.fallbackRumbleCurrentStrength[ instanceID ] = 0.0;
+            emit commandOut( command, data, timeStamp );
+            break;
+        }
+
+        case Command::RemoveController: {
             if( !connectedToCore ) {
                 connectedToCore = true;
                 qDebug() << "connection";

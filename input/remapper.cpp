@@ -1,7 +1,13 @@
 #include "remapper.h"
 #include "remappermodel.h"
 
+#include <QByteArray>
+#include <QFile>
+#include <QFileInfo>
+#include <QFlags>
+#include <QIODevice>
 #include <QKeySequence>
+#include <QTextStream>
 #include <QVector2D>
 #include <QtMath>
 
@@ -11,25 +17,26 @@ Remapper::Remapper( Node *parent ) : Node( parent ) {
 
 // Public slots
 
-void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
-    emit commandOut( command, data, timeStamp );
-
+void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         case Command::Stop:
         case Command::Load:
         case Command::Pause:
         case Command::Unload:
         case Command::Reset: {
+            emit commandOut( command, data, timeStamp );
             playing = false;
             break;
         }
 
         case Command::Play: {
+            emit commandOut( command, data, timeStamp );
             playing = true;
             break;
         }
 
         case Command::HandleGlobalPipelineReady: {
+            emit commandOut( command, data, timeStamp );
             emit controllerAdded( "", "Keyboard" );
 
             // TODO: Read keyboard setting from disk too
@@ -69,13 +76,21 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
                     keyString = keyString.section( '+', 0, 0 );
                 }
 
-                emit setMapping( "",  keyString, buttonToString( virtualButton ) );
+                emit setMapping( "",  keyString, gameControllerIDToMappingString( virtualButton ) );
             }
 
             break;
         }
 
+        case Command::SetUserDataPath: {
+            userDataPath = data.toString();
+            qDebug() << "Using path" << userDataPath;
+            break;
+        }
+
         case Command::Heartbeat: {
+            emit commandOut( command, data, timeStamp );
+
             // Send out per-GUID OR'd states to RemapperModel then clear stored pressed states
             for( QString GUID : pressed.keys() ) {
                 emit buttonUpdate( GUID, pressed[ GUID ] );
@@ -96,8 +111,10 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
             break;
         }
 
-        case Command::ControllerAdded: {
+        case Command::AddController: {
+            emit commandOut( command, data, timeStamp );
             GamepadState gamepad = data.value<GamepadState>();
+            int instanceID = gamepad.instanceID;
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
             // Add to map if it hasn't been encountered yet
@@ -109,22 +126,142 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
                 GUIDCount[ GUID ]++;
             }
 
+            // Initialize mappings with invalid values
+            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                Key key = Key( BUTTON, i );
+                Val val = Val( INVALID, VHat( -1, -1 ) );
+                gameControllerToJoystick[ GUID ][ key ] = val;
+                emit setMapping( GUID, keyToMappingString( key ), valToFriendlyString( val ) );
+            }
+
+            // Grab gamepad handle
+            gameControllerHandles[ instanceID ] = gamepad.gamecontrollerHandle;
+
+            for( int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++ ) {
+                Key key = Key( AXIS, i );
+                Val val = Val( INVALID, VHat( -1, -1 ) );
+                gameControllerToJoystick[ GUID ][ key ] = val;
+                emit setMapping( GUID, keyToMappingString( key ), valToFriendlyString( val ) );
+            }
+
             // TODO: Read value from disk
             analogToDpad[ GUID ] = false;
             dpadToAnalog[ GUID ] = false;
 
-            // TODO: Read mappings from disk
-            // For now, just init the remap with default mappings
-            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                gamepadSDLButtonToSDLButton[ GUID ][ i ] = i;
-                emit setMapping( GUID, buttonToString( i ), buttonToString( i ) );
+            QString mappingString = gamepad.mappingString;
+
+            if( mappingString.isEmpty() ) {
+                return;
+            }
+
+            // Parse mapping string
+            {
+                QStringList mappings = mappingString.split( ',', QString::SkipEmptyParts );
+
+                // No one likes QList asserts failing
+                if( mappings.isEmpty() ) {
+                    return;
+                }
+
+                /*QString gamepadGUID =*/ mappings.takeFirst();
+
+                if( mappings.isEmpty() ) {
+                    return;
+                }
+
+                QString friendlyName = mappings.takeFirst();
+
+                if( mappings.isEmpty() ) {
+                    return;
+                }
+
+                QString platform;
+
+                // Parse the main part of the remapping string
+                for( QString mapping : mappings ) {
+                    if( mapping.contains( "platform" ) ) {
+                        platform = mapping;
+                        continue;
+                    }
+
+                    QString keyString = mapping.section( ':', 0, 0 );
+                    QString valueString = mapping.section( ':', 1, 1 );
+
+                    // Give up if there's nothing parsed
+                    if( keyString.isEmpty() || valueString.isEmpty() ) {
+                        continue;
+                    }
+
+                    Type valueType;
+
+                    // Parse the key
+                    Key key = Key( BUTTON, SDL_CONTROLLER_BUTTON_INVALID );
+                    {
+                        bool okay;
+                        key = mappingStringToKey( keyString, &okay );
+
+                        if( !okay ) {
+                            continue;
+                        }
+                    }
+
+                    // Parse the value
+                    int value = -1;
+                    int hatValue = -1;
+                    {
+                        // Button, format: bX
+                        if( valueString.startsWith( "b" ) ) {
+                            valueType = BUTTON;
+                            bool okay;
+                            value = valueString.right( valueString.size() - 1 ).toInt( &okay );
+
+                            if( !okay ) {
+                                continue;
+                            }
+                        }
+                        // Hat, format: hX.Y
+                        else if( valueString.startsWith( "h" ) ) {
+                            valueType = HAT;
+                            bool okay;
+                            value = valueString.right( valueString.size() - 1 ).split( '.' )[ 0 ].toInt( &okay );
+
+                            if( !okay ) {
+                                continue;
+                            }
+
+                            hatValue = valueString.split( '.' )[ 1 ].toInt( &okay );
+
+                            if( !okay ) {
+                                continue;
+                            }
+                        }
+
+                        // Axis, format aX
+                        else if( valueString.startsWith( "a" ) ) {
+                            valueType = AXIS;
+                            bool okay;
+                            value = valueString.right( valueString.size() - 1 ).toInt( &okay );
+
+                            if( !okay ) {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    //qDebug() << keyString << valueString << key << keyType << value << hatValue << valueType;
+                    gameControllerToJoystick[ GUID ][ key ] = Val( valueType, VHat( value, hatValue ) );
+                    emit setMapping( GUID, keyToMappingString( key ), valToFriendlyString( Val( valueType, VHat( value, hatValue ) ) ) );
+                }
             }
 
             break;
         }
 
-        case Command::ControllerRemoved: {
+        case Command::RemoveController: {
             GamepadState gamepad = data.value<GamepadState>();
+            int instanceID = gamepad.instanceID;
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
             GUIDCount[ GUID ]--;
 
@@ -134,10 +271,19 @@ void Remapper::commandIn( Node::Command command, QVariant data, qint64 timeStamp
                 emit controllerRemoved( GUID );
             }
 
+            // If we opened an SDL2 Game controller handle from this class, keep it and inject it into all gamepads we send out
+            if( gameControllerHandles[ instanceID ] ) {
+                gamepad.gamecontrollerHandle = gameControllerHandles[ instanceID ];
+            }
+
+            gameControllerHandles.remove( instanceID );
+
+            emit commandOut( Command::RemoveController, QVariant::fromValue( gamepad ), QDateTime::currentMSecsSinceEpoch() );
             break;
         }
 
         default: {
+            emit commandOut( command, data, timeStamp );
             break;
         }
     }
@@ -150,141 +296,352 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             GamepadState gamepad;
             {
                 mutex->lock();
-                gamepad = *reinterpret_cast< GamepadState * >( data );
+                gamepad = *reinterpret_cast<GamepadState *>( data );
                 mutex->unlock();
             }
 
+            int instanceID = gamepad.instanceID;
+            int joystickID = gamepad.joystickID;
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
-            // Apply axis to d-pad, if enabled
-            // This will always be enabled if we're not currently playing so GlobalGamepad can use the analog stick
-            if( analogToDpad[ GUID ] || !playing ) {
-                // TODO: Support other axes?
-                int xAxis = SDL_CONTROLLER_AXIS_LEFTX;
-                int yAxis = SDL_CONTROLLER_AXIS_LEFTY;
-
-                // TODO: Let user configure these
-
-                qreal threshold = 16384.0;
-
-                // Size in degrees of the arc covering and centered around each cardinal direction
-                // If <90, there will be gaps in the diagonals
-                // If >180, this code will always produce diagonal inputs
-                qreal rangeDegrees = 180.0 - 45.0;
-
-                // Get axis coords in cartesian coords
-                // Bottom right is positive -> top right is positive
-                float xCoord = gamepad.axis[ xAxis ];
-                float yCoord = -gamepad.axis[ yAxis ];
-
-                // Get radius from center
-                QVector2D position( xCoord, yCoord );
-                qreal radius = position.length();
-
-                // Get angle in degrees
-                qreal angle = qRadiansToDegrees( qAtan2( yCoord, xCoord ) );
-
-                if( angle < 0.0 ) {
-                    angle += 360.0;
-                }
-
-                if( radius > threshold ) {
-                    qreal halfRange = rangeDegrees / 2.0;
-
-                    if( angle > 90.0 - halfRange && angle < 90.0 + halfRange ) {
-                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] = true;
-                    }
-
-                    if( angle > 270.0 - halfRange && angle < 270.0 + halfRange ) {
-                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] = true;
-                    }
-
-                    if( angle > 180.0 - halfRange && angle < 180.0 + halfRange ) {
-                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] = true;
-                    }
-
-                    if( angle > 360.0 - halfRange || angle < 0.0 + halfRange ) {
-                        gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] = true;
-                    }
-                }
-            }
-
-            // Apply d-pad to axis, if enabled
-            if( dpadToAnalog[ GUID ] ) {
-                gamepad = mapDpadToAnalog( gamepad );
-            }
-
-            // OR all button states together by GUID
-            for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                pressed[ GUID ] |= gamepad.button[ i ];
-            }
-
-            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
-            // Don't go past this block if in remap mode
+            // Apply deadzones to each stick and both triggers independently
             {
-                if( remapMode && GUID == remapModeGUID ) {
-                    // Find a button press, the first one we encounter will be the new remapping
-                    for( int physicalButton = 0; physicalButton < SDL_CONTROLLER_BUTTON_MAX; physicalButton++ ) {
-                        if( gamepad.button[ physicalButton ] == SDL_PRESSED ) {
-                            int virtualButton = remapModeButton;
-                            // TODO: Store this mapping to disk
-                            qCDebug( phxInput ) << "Button" << buttonToString( physicalButton )
-                                                << "from GUID" << GUID << "now activates" << buttonToString( virtualButton );
+                // TODO: Per GUID deadzones
+                // TODO: Per stick/trigger deadzones
+                qreal deadzoneRadius = 10000.0;
 
-                            // Store the new remapping internally
-                            gamepadSDLButtonToSDLButton[ GUID ][ physicalButton ] = virtualButton;
+                for( int i = 0; i < 4; i++ ) {
+                    int xAxis;
+                    int yAxis;
 
-                            // Tell the model we're done
-                            remapMode = false;
-                            ignoreMode = true;
-                            ignoreModeGUID = GUID;
-                            ignoreModeButton = physicalButton;
-                            ignoreModeInstanceID = gamepad.instanceID;
-                            emit setMapping( GUID, buttonToString( physicalButton ), buttonToString( virtualButton ) );
-                            emit remappingEnded();
+                    switch( i ) {
+                        case 0:
+                            xAxis = SDL_CONTROLLER_AXIS_LEFTX;
+                            yAxis = SDL_CONTROLLER_AXIS_LEFTY;
                             break;
-                        }
+
+                        case 1:
+                            xAxis = SDL_CONTROLLER_AXIS_RIGHTX;
+                            yAxis = SDL_CONTROLLER_AXIS_RIGHTY;
+                            break;
+
+                        // For simplicity, just map the triggers to the line y = x
+                        case 2:
+                            xAxis = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+                            yAxis = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
+                            break;
+
+                        case 3:
+                            xAxis = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+                            yAxis = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+                            break;
                     }
 
-                    // Do not go any further in this data handler
-                    return;
-                } else if( remapMode ) {
-                    // Do not go any further in this data handler
-                    return;
+                    // Get axis coords in cartesian coords
+                    // Bottom right is positive -> top right is positive
+                    float xCoord = gamepad.axis[ xAxis ];
+                    float yCoord = -gamepad.axis[ yAxis ];
+
+                    // Get radius from center
+                    QVector2D position( xCoord, yCoord );
+                    qreal radius = position.length();
+
+                    if( !( radius > deadzoneRadius ) ) {
+                        gamepad.axis[ xAxis ] = 0;
+                        gamepad.axis[ yAxis ] = 0;
+                    }
+                }
+            }
+
+            // Apply deadzones to all joystick axes
+            {
+                // TODO: Per GUID deadzones
+                // TODO: Per axis deadzones
+                qreal deadzoneRadius = 10000.0;
+
+                for( int i = 0; i < 16; i++ ) {
+                    float coord = gamepad.joystickAxis[ i ];
+
+                    if( !( qAbs( coord ) > deadzoneRadius ) ) {
+                        gamepad.joystickAxis[ i ] = 0;
+                    }
                 }
             }
 
             // If ignoreButton is set, the user hasn't let go of the button they were remapping to
             // Do not let the button go through until they let go
-            if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
-                if( gamepad.button[ ignoreModeButton ] == SDL_PRESSED ) {
-                    gamepad.button[ ignoreModeButton ] = SDL_RELEASED;
-                } else {
-                    ignoreMode = false;
+            {
+                if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
+                    if( ignoreModeVal.first == BUTTON ) {
+                        if( gamepad.joystickButton[ ignoreModeVal.second.first ] == SDL_PRESSED ) {
+                            gamepad.joystickButton[ ignoreModeVal.second.first ] = SDL_RELEASED;
+                        } else {
+                            ignoreMode = false;
+                        }
+                    } else if( ignoreModeVal.first == HAT ) {
+                        if( gamepad.joystickHat[ ignoreModeVal.second.first ] != SDL_HAT_CENTERED ) {
+                            gamepad.joystickHat[ ignoreModeVal.second.first ] = SDL_HAT_CENTERED;
+                        } else {
+                            ignoreMode = false;
+                        }
+                    } else if( ignoreModeVal.first == AXIS ) {
+                        if( gamepad.joystickAxis[ ignoreModeVal.second.first ] != 0 ) {
+                            gamepad.joystickAxis[ ignoreModeVal.second.first ] = 0;
+                        } else {
+                            ignoreMode = false;
+                        }
+                    }
                 }
             }
 
-            // Remap button states according to stored data
-            {/*
-                GamepadState virtualGamepad = gamepad;
+            // If we opened an SDL2 Game controller handle from this class, keep it and inject it into all gamepads we send out
+            {
+                if( gameControllerHandles[ instanceID ] ) {
+                    gamepad.gamecontrollerHandle = gameControllerHandles[ instanceID ];
+                }
+            }
 
-                // Clear remappedGamepad's states
-                for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
-                    virtualGamepad.button[ i ] = SDL_RELEASED;
+            // If we are in remap mode, check for a button press from the stored GUID, and remap the stored button to that button
+            // All game controller states are cleared past this point if in remap mode
+            {
+                if( remapMode && GUID == remapModeGUID ) {
+                    // Find a button press, the first one we encounter will be the new remapping
+                    bool foundInput = false;
+                    Key key = remapModeKey;
+                    Val value = Val( INVALID, VHat( -1, -1 ) );
+
+                    // Prioritize buttons and hats over analog sticks
+                    for( int joystickButton = 0; joystickButton < 256; joystickButton++ ) {
+                        if( gamepad.joystickButton[ joystickButton ] == SDL_PRESSED ) {
+                            qCDebug( phxInput ).nospace() << "Button b" << joystickButton
+                                                          << " from GUID " << GUID << " now activates " << keyToMappingString( key );
+
+                            foundInput = true;
+                            value.first = BUTTON;
+                            value.second = VHat( joystickButton, -1 );
+                            break;
+                        }
+                    }
+
+                    for( int joystickHat = 0; joystickHat < 16; joystickHat++ ) {
+                        if( gamepad.joystickHat[ joystickHat ] != SDL_HAT_CENTERED ) {
+                            qCDebug( phxInput ).nospace() << "Hat h" << joystickHat << "." << gamepad.joystickHat[ joystickHat ]
+                                                          << " from GUID " << GUID << " now activates " << keyToMappingString( key );
+                            foundInput = true;
+                            value.first = HAT;
+                            value.second = VHat( joystickHat, gamepad.joystickHat[ joystickHat ] );
+                            break;
+                        }
+                    }
+
+                    for( int joystickAxis = 0; joystickAxis < 16; joystickAxis++ ) {
+                        if( gamepad.joystickAxis[ joystickAxis ] != 0 ) {
+                            qCDebug( phxInput ).nospace() << "Axis a" << joystickAxis
+                                                          << " from GUID " << GUID << " now activates " << keyToMappingString( key );
+                            foundInput = true;
+                            value.first = AXIS;
+                            value.second = VHat( joystickAxis, -1 );
+                            break;
+                        }
+                    }
+
+                    if( foundInput ) {
+                        // Store the new remapping internally
+                        gameControllerToJoystick[ GUID ][ remapModeKey ] = value;
+
+                        // Tell SDL2 about it
+                        QString mappingString;
+                        {
+                            QString friendlyName = QString( SDL_JoystickName( gamepad.joystickHandle ) );
+
+                            mappingString.append( GUID ).append( "," ).append( friendlyName ).append( "," );
+
+                            for( Key key : gameControllerToJoystick[ GUID ].keys() ) {
+                                if( gameControllerToJoystick[ GUID ][ key ].first != INVALID ) {
+                                    mappingString.append( keyToMappingString( key ) ).append( ':' )
+                                    .append( valToMappingString( gameControllerToJoystick[ GUID ][ key ] ) ).append( ',' );
+                                }
+                            }
+
+                            QString platform( SDL_GetPlatform() );
+
+                            mappingString.append( "platform:" ).append( platform ).append( "," );
+                            qDebug().nospace() << mappingString;
+
+                            // Give SDL the new mapping string
+                            SDL_GameControllerAddMapping( mappingString.toUtf8().constData() );
+
+                            // If this is not a game controller, reopen as one
+                            SDL_GameController *gamecontrollerHandle = nullptr;
+
+                            if( !gameControllerHandles[ instanceID ] ) {
+                                gamecontrollerHandle = SDL_GameControllerOpen( joystickID );
+                                gamepad.gamecontrollerHandle = gamecontrollerHandle;
+                                // Store internally so we can inject it into all future events from this instanceID
+                                gameControllerHandles[ instanceID ] = gamecontrollerHandle;
+                                qDebug() << "Opened newly remapped joystick as a game controller:" << gamecontrollerHandle;
+                            }
+                        }
+
+                        // Store this mapping to disk
+                        {
+                            if( !userDataPath.isEmpty() ) {
+                                QFile mappingFile( userDataPath + "/gamecontrollerdb.txt" );
+
+                                mappingFile.open( QIODevice::ReadWrite | QIODevice::Text );
+                                QByteArray mappingFileData = mappingFile.readAll();
+
+                                if( !mappingFile.isOpen() ) {
+                                    qWarning() << "Unable to open mapping file for reading" << mappingFile.errorString();
+                                }
+
+                                mappingFile.close();
+
+                                QTextStream mappingFileStreamIn( &mappingFileData );
+                                mappingFileStreamIn.setCodec( "UTF-8" );
+
+                                mappingFile.open( QIODevice::WriteOnly | QIODevice::Text );
+
+                                if( !mappingFile.isOpen() ) {
+                                    qWarning() << "Unable to open mapping file for writing" << mappingFile.errorString();
+                                }
+
+                                QTextStream mappingFileStreamOut( &mappingFile );
+                                mappingFileStreamOut.setCodec( "UTF-8" );
+
+                                QString line = "";
+
+                                while( !line.isNull() ) {
+                                    line = mappingFileStreamIn.readLine();
+
+                                    // We want to replace the line (any line) for our platform that contains our GUID
+                                    // We'll also filter out empty lines
+                                    if( line.isEmpty() || ( line.contains( GUID ) && line.contains( platform ) ) ) {
+                                        continue;
+                                    }
+
+                                    mappingFileStreamOut << line << endl;
+                                }
+
+                                mappingFileStreamOut << mappingString << endl;
+                                mappingFile.close();
+                            } else {
+                                qWarning() << "Unable to open controller mapping file, user data path not set";
+                            }
+                        }
+
+                        // End remap mode, start ignore mode
+                        {
+                            remapMode = false;
+                            ignoreMode = true;
+                            ignoreModeGUID = GUID;
+                            ignoreModeVal = value;
+                            ignoreModeInstanceID = gamepad.instanceID;
+                        }
+
+                        // Tell the model we're done
+                        {
+                            emit setMapping( GUID, keyToMappingString( key ), valToFriendlyString( value ) );
+                            emit remappingEnded();
+                        }
+                    }
+
+                    // Clear all game controller states (joystick states are untouched)
+                    for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                        gamepad.button[ i ] = 0;
+                    }
+
+                    for( int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++ ) {
+                        gamepad.axis[ i ] = 0;
+                    }
+                } else if( remapMode ) {
+                    // Clear all gamepad states
+                    for( int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++ ) {
+                        gamepad.button[ i ] = 0;
+                    }
+
+                    for( int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++ ) {
+                        gamepad.axis[ i ] = 0;
+                    }
+                }
+            }
+
+            // OR all joystick button, hat and analog states together by GUID for RemapperModel to indicate presses
+            {
+                for( int i = 0; i < 256; i++ ) {
+                    pressed[ GUID ] |= gamepad.joystickButton[ i ];
                 }
 
-                QMap<int, int> physicalToVirtual = gamepadSDLButtonToSDLButton[ GUID ];
-
-                for( int physicalButton = 0; physicalButton < SDL_CONTROLLER_BUTTON_MAX; physicalButton++ ) {
-                    // Read virtual (remapped) button id from stored remap data
-                    int virtualButton = physicalToVirtual[ physicalButton ];
-
-                    // Write the physical button's state to its corresponding virtual button (set by user)
-                    virtualGamepad.button[ virtualButton ] |= gamepad.button[ physicalButton ];
+                for( int i = 0; i < 16; i++ ) {
+                    pressed[ GUID ] |= ( gamepad.joystickHat[ i ] != SDL_HAT_CENTERED );
                 }
 
-                gamepad = virtualGamepad;
-            */}
+                for( int i = 0; i < 16; i++ ) {
+                    pressed[ GUID ] |= ( gamepad.joystickAxis[ i ] != 0 );
+                }
+            }
+
+            // Apply axis to d-pad, if enabled
+            // This will always be enabled if we're not currently playing so GlobalGamepad can use the analog stick
+            {
+                if( analogToDpad[ GUID ] || !playing ) {
+                    // TODO: Support other axes?
+                    int xAxis = SDL_CONTROLLER_AXIS_LEFTX;
+                    int yAxis = SDL_CONTROLLER_AXIS_LEFTY;
+
+                    // TODO: Let user configure these
+
+                    qreal threshold = 16384.0;
+
+                    // Size in degrees of the arc covering and centered around each cardinal direction
+                    // If <90, there will be gaps in the diagonals
+                    // If >180, this code will always produce diagonal inputs
+                    qreal rangeDegrees = 180.0 - 45.0;
+
+                    // Get axis coords in cartesian coords
+                    // Bottom right is positive -> top right is positive
+                    float xCoord = gamepad.axis[ xAxis ];
+                    float yCoord = -gamepad.axis[ yAxis ];
+
+                    // Get radius from center
+                    QVector2D position( xCoord, yCoord );
+                    qreal radius = position.length();
+
+                    // Get angle in degrees
+                    qreal angle = qRadiansToDegrees( qAtan2( yCoord, xCoord ) );
+
+                    if( angle < 0.0 ) {
+                        angle += 360.0;
+                    }
+
+                    if( radius > threshold ) {
+                        qreal halfRange = rangeDegrees / 2.0;
+
+                        if( angle > 90.0 - halfRange && angle < 90.0 + halfRange ) {
+                            gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_UP ] = true;
+                        }
+
+                        if( angle > 270.0 - halfRange && angle < 270.0 + halfRange ) {
+                            gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_DOWN ] = true;
+                        }
+
+                        if( angle > 180.0 - halfRange && angle < 180.0 + halfRange ) {
+                            gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_LEFT ] = true;
+                        }
+
+                        if( angle > 360.0 - halfRange || angle < 0.0 + halfRange ) {
+                            gamepad.button[ SDL_CONTROLLER_BUTTON_DPAD_RIGHT ] = true;
+                        }
+                    }
+                }
+            }
+
+            // Apply d-pad to axis, if enabled
+            {
+                if( dpadToAnalog[ GUID ] ) {
+                    gamepad = mapDpadToAnalog( gamepad );
+                }
+            }
 
             // Send updated data out
             {
@@ -358,9 +715,20 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 }
 
 void Remapper::beginRemapping( QString GUID, QString button ) {
+    // TODO: Let the user know about this situation
+    // FIXME: Wouldn't muting problem buttons fix this? Is this even necessary? Should we detect conflicts and offer to mute?
+    if( ignoreMode ) {
+        Key key = mappingStringToKey( button );
+        Val value = gameControllerToJoystick[ GUID ][ key ];
+        qInfo().noquote() << "Release" << valToFriendlyString( ignoreModeVal ) << "first before trying to remap" << button;
+        emit setMapping( GUID, button, valToFriendlyString( value ) );
+        emit remappingEnded();
+        return;
+    }
+
     remapMode = true;
     remapModeGUID = GUID;
-    remapModeButton = stringToButton( button );
+    remapModeKey = mappingStringToKey( button );
 }
 
 // Private
@@ -444,107 +812,106 @@ GamepadState Remapper::mapDpadToAnalog( GamepadState gamepad, bool clear ) {
     return gamepad;
 }
 
-QString buttonToString( int button ) {
-    switch( button ) {
-        case SDL_CONTROLLER_BUTTON_A: {
-            return QStringLiteral( "A" );
-        }
+// FIXME: Kinda overlaps with keyToMappingString()
+QString gameControllerIDToMappingString( int gameControllerID ) {
+    QString result = QString( SDL_GameControllerGetStringForButton( static_cast<SDL_GameControllerButton>( gameControllerID ) ) );
 
-        case SDL_CONTROLLER_BUTTON_B: {
-            return QStringLiteral( "B" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_X: {
-            return QStringLiteral( "X" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_Y: {
-            return QStringLiteral( "Y" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_BACK: {
-            return QStringLiteral( "Back" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_GUIDE: {
-            return QStringLiteral( "Guide" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_START: {
-            return QStringLiteral( "Start" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_LEFTSTICK: {
-            return QStringLiteral( "L3" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_RIGHTSTICK: {
-            return QStringLiteral( "R3" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: {
-            return QStringLiteral( "L" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: {
-            return QStringLiteral( "R" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_DPAD_UP: {
-            return QStringLiteral( "Up" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: {
-            return QStringLiteral( "Down" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: {
-            return QStringLiteral( "Left" );
-        }
-
-        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: {
-            return QStringLiteral( "Right" );
-        }
-
-        default: {
-            return QStringLiteral( "INVALID" );
-        }
+    if( !result.isEmpty() ) {
+        return result;
     }
+
+    result = QString( SDL_GameControllerGetStringForAxis( static_cast<SDL_GameControllerAxis>( gameControllerID ) ) );
+
+    // Will return either a valid label or empty string
+    return result;
 }
 
-int stringToButton( QString button ) {
-    if( button == QStringLiteral( "A" ) ) {
-        return SDL_CONTROLLER_BUTTON_A;
-    } else if( button == QStringLiteral( "B" ) ) {
-        return SDL_CONTROLLER_BUTTON_B;
-    } else if( button == QStringLiteral( "X" ) ) {
-        return SDL_CONTROLLER_BUTTON_X;
-    } else if( button == QStringLiteral( "Y" ) ) {
-        return SDL_CONTROLLER_BUTTON_Y;
-    } else if( button == QStringLiteral( "Back" ) ) {
-        return SDL_CONTROLLER_BUTTON_BACK;
-    } else if( button == QStringLiteral( "Guide" ) ) {
-        return SDL_CONTROLLER_BUTTON_GUIDE;
-    } else if( button == QStringLiteral( "Start" ) ) {
-        return SDL_CONTROLLER_BUTTON_START;
-    } else if( button == QStringLiteral( "L3" ) ) {
-        return SDL_CONTROLLER_BUTTON_LEFTSTICK;
-    } else if( button == QStringLiteral( "R3" ) ) {
-        return SDL_CONTROLLER_BUTTON_RIGHTSTICK;
-    } else if( button == QStringLiteral( "L" ) ) {
-        return SDL_CONTROLLER_BUTTON_LEFTSHOULDER;
-    } else if( button == QStringLiteral( "R" ) ) {
-        return SDL_CONTROLLER_BUTTON_RIGHTSHOULDER;
-    } else if( button == QStringLiteral( "Up" ) ) {
-        return SDL_CONTROLLER_BUTTON_DPAD_UP;
-    } else if( button == QStringLiteral( "Down" ) ) {
-        return SDL_CONTROLLER_BUTTON_DPAD_DOWN;
-    } else if( button == QStringLiteral( "Left" ) ) {
-        return SDL_CONTROLLER_BUTTON_DPAD_LEFT;
-    } else if( button == QStringLiteral( "Right" ) ) {
-        return SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
-    } else {
-        return SDL_CONTROLLER_BUTTON_INVALID;
+int mappingStringToGameControllerID( QString gameControllerString ) {
+    int result;
+    result = SDL_GameControllerGetButtonFromString( gameControllerString.toUtf8().constData() );
+
+    if( result != SDL_CONTROLLER_BUTTON_INVALID ) {
+        return result;
     }
+
+    result = SDL_GameControllerGetAxisFromString( gameControllerString.toUtf8().constData() );
+
+    // Will return either a valid axis or SDL_CONTROLLER_AXIS_INVALID
+    return result;
 }
 
+QString keyToMappingString( Remapper::Key key ) {
+    QString keyString;
+
+    if( key.first == Remapper::BUTTON ) {
+        keyString.append( SDL_GameControllerGetStringForButton( static_cast<SDL_GameControllerButton>( key.second ) ) );
+    } else if( key.first == Remapper::AXIS ) {
+        keyString.append( SDL_GameControllerGetStringForAxis( static_cast<SDL_GameControllerAxis>( key.second ) ) );
+    }
+
+    return keyString;
+}
+
+QString valToFriendlyString( Remapper::Val val ) {
+    QString valString = "(unmapped)";
+
+    if( val.first == Remapper::BUTTON ) {
+        valString.clear();
+        valString.append( "Button " ).append( QString( "%1" ).arg( val.second.first ) );
+    } else if( val.first == Remapper::AXIS ) {
+        valString.clear();
+        valString.append( "Axis " ).append( QString( "%1" ).arg( val.second.first ) );
+    } else if( val.first == Remapper::HAT ) {
+        valString.clear();
+        valString.append( "Hat " ).append( QString( "%1 direction %2" ).arg( val.second.first ).arg( val.second.second ) );
+    }
+
+    return valString;
+}
+
+Remapper::Key mappingStringToKey( QString keyString, bool *ok ) {
+    Remapper::Type keyType;
+    int keyValue;
+
+    bool okay = false;
+
+    // Try to parse the key as a button
+    keyValue = SDL_GameControllerGetButtonFromString( keyString.toLocal8Bit().constData() );
+
+    okay = true;
+    keyType = Remapper::BUTTON;
+
+    // If it's not a button then it's an axis
+    if( keyValue == SDL_CONTROLLER_BUTTON_INVALID ) {
+        keyValue = SDL_GameControllerGetAxisFromString( keyString.toLocal8Bit().constData() );
+        keyType = Remapper::AXIS;
+    }
+
+    // If it's not that then what the heck is it?
+    if( keyValue == SDL_CONTROLLER_AXIS_INVALID ) {
+        okay = false;
+    }
+
+    if( ok ) {
+        *ok = okay;
+    }
+
+    return Remapper::Key( keyType, keyValue );
+}
+
+QString valToMappingString( Remapper::Val val ) {
+    QString valString = "ERROR";
+
+    if( val.first == Remapper::BUTTON ) {
+        valString.clear();
+        valString.append( "b" ).append( QString( "%1" ).arg( val.second.first ) );
+    } else if( val.first == Remapper::AXIS ) {
+        valString.clear();
+        valString.append( "a" ).append( QString( "%1" ).arg( val.second.first ) );
+    } else if( val.first == Remapper::HAT ) {
+        valString.clear();
+        valString.append( "h" ).append( QString( "%1.%2" ).arg( val.second.first ).arg( val.second.second ) );
+    }
+
+    return valString;
+}

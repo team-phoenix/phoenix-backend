@@ -33,6 +33,9 @@ struct GamepadState {
     // Rumble effect parameters
     SDL_HapticEffect hapticEffect;
 
+    // Alternative rumble mode
+    qreal fallbackRumbleRequestedStrength { 0.0 };
+
     // Friendly name
     QString friendlyName;
 

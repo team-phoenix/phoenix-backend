@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QHash>
 #include <QMap>
+#include <QPair>
 #include <Qt>
 
 #include "SDL.h"
@@ -31,6 +32,10 @@ typedef QMap<QString, QString> QStringMap;
  * Note that L2 and R2 are not directly remappable, they're analog on the Xbox 360 controller (TODO?)
  *
  * The remapper also lets the user remap the keyboard. (TODO)
+ *
+ * One thing to note is that when we map an unmapped controller and open an SDL2 Game controller handle, it won't find
+ * its way upstream to GamepadManager's gamepad list as that's not allowed. Instead, we'll store it in this class
+ * and inject it into every GamepadState we get that we're responsible for.
  */
 
 class RemapperModel;
@@ -40,6 +45,20 @@ class Remapper : public Node {
 
     public:
         explicit Remapper( Node *parent = nullptr );
+
+        // Remap type
+        enum Type { INVALID, BUTTON, AXIS, HAT };
+        Q_ENUM( Type )
+
+        // Encapsulates the mapping part a single GUID's remapping string
+        // ex. "a:b0" becomes Mapping( Key( BUTTON, SDL_CONTROLLER_BUTTON_A ), Val( BUTTON, VHat( 0, -1 ) ) )
+        // ex. "dpup:h0.1" becomes Mapping( Key( BUTTON, SDL_CONTROLLER_BUTTON_DPAD_UP ), Val( HAT, VHat( 0, 1 ) ) )
+        // Key:   SDL2 Game controller (type, buttonID or axisID)
+        // Value: SDL2 Joystick        (type, (buttonID or axisID or hatID, hat value))
+        using Key = QPair<Type, int>;
+        using VHat = QPair<int, int>;
+        using Val = QPair<Type, VHat>;
+        using Mapping = QMap<Key, Val>;
 
     signals:
         // Signals for RemapperModel
@@ -76,28 +95,9 @@ class Remapper : public Node {
         // True iff we're playing right now
         bool playing{ false };
 
+        QString userDataPath;
+
         // Producer stuff
-
-        // If true, do not send any data to children
-        bool remapMode{ false };
-
-        // The GUID being remapped
-        QString remapModeGUID;
-
-        // The button ID of the GUID getting the remap
-        int remapModeButton{ SDL_CONTROLLER_BUTTON_INVALID };
-
-        // If set to true, remain true until ignoreModeButton is released
-        bool ignoreMode{ false };
-
-        // The button pressed to set the remapping
-        int ignoreModeButton{ SDL_CONTROLLER_BUTTON_INVALID };
-
-        // The GUID that was just remapped
-        QString ignoreModeGUID;
-
-        // The instanceID that was just remapped
-        int ignoreModeInstanceID{ -1 };
 
         // Ensure reads and writes to gamepadBuffer are atomic
         QMutex mutex;
@@ -114,10 +114,38 @@ class Remapper : public Node {
         // True if a mapped keyboard key is pressed
         bool keyboardKeyPressed { false };
 
+        // If we opened an SDL2 Game controller handle from this class, keep it and inject it into all gamepads we send out
+        // Indexed by instanceID
+        QMap<int, SDL_GameController *> gameControllerHandles;
+
         // Remapping stuff
 
+        // If true, do not send any data to children
+        bool remapMode{ false };
+
+        // The GUID being remapped
+        QString remapModeGUID;
+
+        // The Key (SDL Game controller API button/axis) of the GUID getting the remap
+        Key remapModeKey;
+        Type remapModeType;
+
+        // If set to true, remain true until ignoreModeButton is released
+        bool ignoreMode{ false };
+
+        // The Joystick button/axis/hat pressed/tilted to set the remapping
+        Val ignoreModeVal;
+
+        // The GUID that was just remapped
+        QString ignoreModeGUID;
+
+        // The instanceID that was just remapped
+        int ignoreModeInstanceID{ -1 };
+
         // Remap data
-        QMap<QString, QMap<int, int>> gamepadSDLButtonToSDLButton;
+        // Key: GUID
+        // Value: Mapping (SDL Game controller API mapping string, see Key, Val, Mapping up above)
+        QMap<QString, Mapping> gameControllerToJoystick;
 
         // Convert analog stick values to d-pad presses and vice versa
         // This is useful to both LibretroCore and the UI (GlobalGamepad)
@@ -183,6 +211,12 @@ class Remapper : public Node {
         GamepadState mapDpadToAnalog( GamepadState gamepad, bool clear = false );
 };
 
-QString buttonToString( int button );
+QString gameControllerIDToMappingString( int gameControllerID );
 
-int stringToButton( QString button );
+int mappingStringToGameControllerID( QString gameControllerString );
+
+// Game controller to Joystick mapping string helpers
+Remapper::Key mappingStringToKey( QString keyString , bool *ok = nullptr );
+QString keyToMappingString( Remapper::Key key );
+QString valToFriendlyString( Remapper::Val val );
+QString valToMappingString( Remapper::Val val );

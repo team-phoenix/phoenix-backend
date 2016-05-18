@@ -78,6 +78,7 @@
     input/mousestate.h \
     input/remapper.h \
     input/remappermodel.h \
+    input/sdlunloader.h \
     pipeline/node.h \
     pipeline/pipelinecommon.h \
     util/logging.h \
@@ -111,6 +112,7 @@
     input/mousestate.cpp \
     input/remapper.cpp \
     input/remappermodel.cpp \
+    input/sdlunloader.cpp \
     pipeline/node.cpp \
     util/logging.cpp \
     util/microtimer.cpp \
