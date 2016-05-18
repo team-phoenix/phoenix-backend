@@ -34,7 +34,7 @@ typedef QMap<QString, QString> QStringMap;
  * The remapper also lets the user remap the keyboard. (TODO)
  *
  * One thing to note is that when we map an unmapped controller and open an SDL2 Game controller handle, it won't find
- * its way upstream to GamepadManager's gamepad list as that's not allowed. Instead, we'll store it in this class
+ * its way upstream to SDLManager's gamepad list as that's not allowed. Instead, we'll store it in this class
  * and inject it into every GamepadState we get that we're responsible for.
  */
 

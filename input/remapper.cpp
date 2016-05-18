@@ -451,6 +451,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
                         // Tell SDL2 about it
                         QString mappingString;
+                        QString platform( SDL_GetPlatform() );
                         {
                             QString friendlyName = QString( SDL_JoystickName( gamepad.joystickHandle ) );
 
@@ -463,7 +464,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                                 }
                             }
 
-                            QString platform( SDL_GetPlatform() );
 
                             mappingString.append( "platform:" ).append( platform ).append( "," );
                             qDebug().nospace() << mappingString;

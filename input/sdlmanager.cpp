@@ -1,4 +1,4 @@
-#include "gamepadmanager.h"
+#include "sdlmanager.h"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -9,7 +9,7 @@
 
 #include "logging.h"
 
-GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
+SDLManager::SDLManager( Node *parent ) : Node( parent ) {
     // Load the built-in mapping file
     QFile gameControllerDBFile( ":/input/gamecontrollerdb.txt" );
     bool status = gameControllerDBFile.open( QIODevice::ReadOnly );
@@ -28,7 +28,7 @@ GamepadManager::GamepadManager( Node *parent ) : Node( parent ) {
     SDL_JoystickEventState( SDL_ENABLE );
 }
 
-void GamepadManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
+void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {
     switch( command ) {
         case Command::Heartbeat: {
             // Check input and connect/disconnect events, update accordingly

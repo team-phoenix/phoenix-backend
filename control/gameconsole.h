@@ -9,7 +9,7 @@
 
 // Nodes
 #include "audiooutput.h"
-#include "gamepadmanager.h"
+#include "sdlmanager.h"
 #include "controloutput.h"
 #include "globalgamepad.h"
 #include "keyboardmouselistener.h"
@@ -114,13 +114,13 @@ class GameConsole : public Node {
         //     - Add to deleteMembers() if adding a new one no matter what pipeline it belongs to
         //     - Move to gameThread in the constructor
         AudioOutput *audioOutput { nullptr };
-        GamepadManager *gamepadManager { nullptr };
         KeyboardManager *keyboardManager { nullptr };
         LibretroLoader *libretroLoader { nullptr };
         LibretroRunner *libretroRunner { nullptr };
         MicroTimer *microTimer { nullptr };
         MouseManager *mouseManager{ nullptr };
         Remapper *remapper { nullptr };
+        SDLManager *sdlManager { nullptr };
         SDLUnloader *sdlUnloader { nullptr };
 
         // Pipeline nodes owned by the QML engine (main thread)

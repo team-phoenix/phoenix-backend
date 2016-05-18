@@ -68,7 +68,6 @@
     core/libretrovariable.h \
     core/libretrovariablemodel.h \
     core/libretrovariableforwarder.h \
-    input/gamepadmanager.h \
     input/gamepadstate.h \
     input/globalgamepad.h \
     input/keyboardmanager.h \
@@ -78,6 +77,7 @@
     input/mousestate.h \
     input/remapper.h \
     input/remappermodel.h \
+    input/sdlmanager.h \
     input/sdlunloader.h \
     pipeline/node.h \
     pipeline/pipelinecommon.h \
@@ -102,7 +102,6 @@
     core/libretrovariable.cpp \
     core/libretrovariablemodel.cpp \
     core/libretrovariableforwarder.cpp \
-    input/gamepadmanager.cpp \
     input/gamepadstate.cpp \
     input/globalgamepad.cpp \
     input/keyboardmanager.cpp \
@@ -112,6 +111,7 @@
     input/mousestate.cpp \
     input/remapper.cpp \
     input/remappermodel.cpp \
+    input/sdlmanager.cpp \
     input/sdlunloader.cpp \
     pipeline/node.cpp \
     util/logging.cpp \

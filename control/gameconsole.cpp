@@ -11,18 +11,17 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     // Pipeline nodes owned by this class (game thread)
     audioOutput( new AudioOutput ),
-    gamepadManager( new GamepadManager ),
     keyboardManager( new KeyboardManager ),
     libretroLoader( new LibretroLoader ),
     libretroRunner( new LibretroRunner ),
     microTimer( new MicroTimer ),
     mouseManager( new MouseManager ),
     remapper( new Remapper ),
+    sdlManager( new SDLManager ),
     sdlUnloader( new SDLUnloader ) {
 
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
-    gamepadManager->moveToThread( gameThread );
     keyboardManager->moveToThread( gameThread );
     libretroLoader->moveToThread( gameThread );
     libretroRunner->moveToThread( gameThread );
@@ -30,14 +29,15 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     microTimer->moveToThread( gameThread );
     mouseManager->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
+    sdlManager->moveToThread( gameThread );
     sdlUnloader->moveToThread( gameThread );
 
     gameThread->setObjectName( "Game thread" );
     gameThread->start();
 
     // Connect global pipeline (at least the parts that can be connected at this point)
-    connectNodes( microTimer, gamepadManager );
-    connectNodes( gamepadManager, keyboardManager );
+    connectNodes( microTimer, sdlManager );
+    connectNodes( sdlManager, keyboardManager );
     connectNodes( keyboardManager, mouseManager );
     connectNodes( mouseManager, remapper );
     connectNodes( remapper, sdlUnloader );
@@ -302,13 +302,13 @@ void GameConsole::deleteMembers() {
     // Delete everything owned by this class
     // Alphabetical order because it doesn't matter
     audioOutput->deleteLater();
-    gamepadManager->deleteLater();
     keyboardManager->deleteLater();
     mouseManager->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
+    sdlManager->deleteLater();
     sdlUnloader->deleteLater();
 }
 

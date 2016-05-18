@@ -13,15 +13,15 @@
 #include "SDL_joystick.h"
 
 /*
- * GamepadManager is a Node whose job is to produce input data from physical controllers connected to the system running
+ * SDLManager is a Node whose job is to produce input data from physical controllers connected to the system running
  * Phoenix. The polling of controllers for their existence and input data is driven by heartbeats from this node's parent.
  */
 
-class GamepadManager : public Node {
+class SDLManager : public Node {
         Q_OBJECT
 
     public:
-        explicit GamepadManager( Node *parent = nullptr );
+        explicit SDLManager( Node *parent = nullptr );
 
     signals:
 
