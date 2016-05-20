@@ -49,7 +49,6 @@ void PhoenixWindowNode::checkIfCommandsShouldFire() {
         // Send everything out
         emit commandOut( Command::SetSurface, QVariant::fromValue<QOffscreenSurface *>( phoenixWindow->dynamicPipelineSurface ), nodeCurrentTime() );
         emit commandOut( Command::SetOpenGLContext, QVariant::fromValue<QOpenGLContext *>( phoenixWindow->dynamicPipelineContext ), nodeCurrentTime() );
-        emit commandOut( Command::SetOpenGLFBO, QVariant::fromValue<void *>( static_cast<void *>( phoenixWindow->dynamicPipelineFBO ) ), nodeCurrentTime() );
         emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
     }
 }

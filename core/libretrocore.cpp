@@ -894,6 +894,10 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
 // Extra callbacks
 
 uintptr_t getFramebufferCallback( void ) {
+    if( !core.fbo ) {
+        return 0;
+    }
+
     return core.fbo->handle();
 }
 

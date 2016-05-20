@@ -107,15 +107,8 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
         dynamicPipelineContext->create();
         dynamicPipelineContext->makeCurrent( dynamicPipelineSurface );
 
-        // Now that there's a valid context current, create the FBO with a default size
-        dynamicPipelineFBO = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
-
         // Set our clear color
         dynamicPipelineContext->functions()->glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-
-        // Clear the newly created FBO
-        dynamicPipelineFBO->bind();
-        dynamicPipelineContext->functions()->glClear( GL_COLOR_BUFFER_BIT );
 
         // Not really necessary but good practice
         dynamicPipelineContext->doneCurrent();

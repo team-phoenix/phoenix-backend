@@ -127,10 +127,6 @@ class Node : public QObject {
             // QOpenGLContext *
             SetOpenGLContext,
 
-            // An FBO associated with the dynamic pipeline's OpenGL context
-            // QOpenGLFramebufferObject *
-            SetOpenGLFBO,
-
             // Set the texture for rendering
             // GLuint
             SetOpenGLTexture,

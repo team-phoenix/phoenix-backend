@@ -62,7 +62,6 @@ class PhoenixWindow : public QQuickWindow {
         PhoenixWindowNode *phoenixWindowNode { nullptr };
 
         QOpenGLContext *dynamicPipelineContext { nullptr };
-        QOpenGLFramebufferObject *dynamicPipelineFBO { nullptr };
         QOffscreenSurface *dynamicPipelineSurface { nullptr };
 
     signals:

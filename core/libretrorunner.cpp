@@ -87,6 +87,8 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
                 delete core.fbo;
             }
 
+            core.fbo = nullptr;
+
             core.state = State::Stopped;
             emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
 

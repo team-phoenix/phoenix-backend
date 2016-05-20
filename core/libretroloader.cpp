@@ -162,24 +162,32 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
                 emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), nodeCurrentTime() );
 
-                // Create the FBO 3d cores will draw to
+                // Create the FBO which contains the texture 3d cores will draw to
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
                     core.context->makeCurrent( core.surface );
 
                     // If the core has made available its max width/height at this stage, recreate the FBO with those settings
-                    // Otherwise, use the default values set in PhoenixWindow
-                    if( ( avInfo->geometry.max_width != 0 && avInfo->geometry.max_height != 0 ) && core.fbo ) {
-                        delete core.fbo;
+                    // Otherwise, use a sensible default size, the core will probably set the proper size in the first frame
+                    if( avInfo->geometry.max_width != 0 && avInfo->geometry.max_height != 0 ) {
+                        if( core.fbo ) {
+                            delete core.fbo;
+                        }
 
                         core.fbo = new QOpenGLFramebufferObject( avInfo->geometry.base_width, avInfo->geometry.base_height, QOpenGLFramebufferObject::CombinedDepthStencil );
-                    } else {
-                        if( !core.fbo ) {
-                            core.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
 
-                            // Clear the newly created FBO
-                            core.fbo->bind();
-                            core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+                        // Clear the newly created FBO
+                        core.fbo->bind();
+                        core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+                    } else {
+                        if( core.fbo ) {
+                            delete core.fbo;
                         }
+
+                        core.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
+
+                        // Clear the newly created FBO
+                        core.fbo->bind();
+                        core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
 
                         avInfo->geometry.max_width = 640;
                         avInfo->geometry.max_height = 480;
@@ -269,12 +277,6 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::SetOpenGLContext: {
             emit commandOut( command, data, timeStamp );
             core.context = data.value<QOpenGLContext *>();
-            break;
-        }
-
-        case Command::SetOpenGLFBO: {
-            emit commandOut( command, data, timeStamp );
-            core.fbo = static_cast<QOpenGLFramebufferObject *>( data.value<void *>() );
             break;
         }
 
