@@ -95,23 +95,25 @@ void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestam
             return;
         }
 
-        const uchar *newFramebuffer = ( const uchar * )data;
-
         // Make sure reads and writes to this buffer are atomic
         mutex->lock();
 
-        // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-        for( int i = 0; i < this->format.videoSize.height(); i++ ) {
-            // Don't read past the end of the given buffer
-            Q_ASSERT( i * this->format.videoBytesPerLine < bytes );
+        const uchar *newFramebuffer = *( const uchar ** )data;
 
-            // Don't write past the end of our framebuffer
-            Q_ASSERT( i * this->format.videoSize.width() * this->format.videoBytesPerPixel < framebufferSize );
+        if( newFramebuffer ) {
+            // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
+            for( int i = 0; i < this->format.videoSize.height(); i++ ) {
+                // Don't read past the end of the given buffer
+                Q_ASSERT( i * this->format.videoBytesPerLine < bytes );
 
-            memcpy( framebuffer + i * this->format.videoSize.width() * this->format.videoBytesPerPixel,
-                    newFramebuffer + i * this->format.videoBytesPerLine,
-                    this->format.videoSize.width() * this->format.videoBytesPerPixel
-                  );
+                // Don't write past the end of our framebuffer
+                Q_ASSERT( i * this->format.videoSize.width() * this->format.videoBytesPerPixel < framebufferSize );
+
+                memcpy( framebuffer + i * this->format.videoSize.width() * this->format.videoBytesPerPixel,
+                        newFramebuffer + i * this->format.videoBytesPerLine,
+                        this->format.videoSize.width() * this->format.videoBytesPerPixel
+                      );
+            }
         }
 
         mutex->unlock();
@@ -184,6 +186,11 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     if( state != Node::State::Playing && state != Node::State::Paused ) {
         // Schedule a call to updatePaintNode() for this Item anyway
         update();
+
+        if( storedNode ) {
+            delete storedNode;
+        }
+
         return 0;
     }
 
@@ -203,7 +210,7 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
         }
 
         // Create new Image that holds a reference to our framebuffer
-        QImage image( ( const uchar * )framebuffer, format.videoSize.width(), format.videoSize.height(), format.videoPixelFormat );
+        QImage image( const_cast<const uchar *>( framebuffer ), format.videoSize.width(), format.videoSize.height(), format.videoPixelFormat );
         // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
         texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
     }
@@ -215,13 +222,15 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
         }
 
         if( textureID != static_cast<GLuint>( texture->textureId() ) ) {
-            delete texture;
+            texture->deleteLater();
             texture = window()->createTextureFromId( textureID, QSize( format.videoSize.width(), format.videoSize.height() ) );
         }
     }
 
     // Texture was not set yet, don't draw anything
     else {
+        // Schedule a call to updatePaintNode() for this Item anyway
+        update();
         return 0;
     }
 

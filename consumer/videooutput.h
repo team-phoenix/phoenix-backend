@@ -61,11 +61,11 @@ class VideoOutput : public QQuickItem {
         LibretroVideoFormat format;
 
         // The framebuffer that holds the latest frame from Core
-        uchar *framebuffer{ nullptr };
-        size_t framebufferSize{ 0 };
+        uchar *framebuffer { nullptr };
+        size_t framebufferSize { 0 };
 
         // Holds a pointer to the framebuffer via its underlying QImage, used by renderer to upload framebuffer to GPU
-        QSGTexture *texture{ nullptr };
+        QSGTexture *texture { nullptr };
 
         // The texture name used by 3d cores
         GLuint textureID { 0 };
@@ -83,7 +83,7 @@ class VideoOutput : public QQuickItem {
         int aspectMode { 0 };
 
         // The correct aspect ratio to display this picture in
-        qreal aspectRatio{ 1.0 };
+        qreal aspectRatio { 1.0 };
         qreal calculateAspectRatio( LibretroVideoFormat format );
 
         // Linear vs nearest-neighbor filtering

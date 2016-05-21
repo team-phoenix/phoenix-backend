@@ -8,20 +8,23 @@
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
     gameThread( new QThread ),
 
-    // Pipeline nodes owned by this class (game thread)
-    audioOutput( new AudioOutput ),
-    libretroLoader( new LibretroLoader ),
-    libretroRunner( new LibretroRunner ),
+    // Global pipeline
     microTimer( new MicroTimer ),
     remapper( new Remapper ),
     sdlManager( new SDLManager ),
-    sdlUnloader( new SDLUnloader ) {
+    sdlUnloader( new SDLUnloader ),
+
+    // Dynamic pipeline
+    audioOutput( new AudioOutput ),
+    libretroLoader( new LibretroLoader ),
+    libretroRunner( new LibretroRunner ),
+    libretroVariableForwarder( new LibretroVariableForwarder ) {
 
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
     libretroLoader->moveToThread( gameThread );
     libretroRunner->moveToThread( gameThread );
-    libretroVariableForwarder.moveToThread( gameThread );
+    libretroVariableForwarder->moveToThread( gameThread );
     microTimer->moveToThread( gameThread );
     remapper->moveToThread( gameThread );
     sdlManager->moveToThread( gameThread );
@@ -37,7 +40,8 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
 
     connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
         if( remapperModel ) {
-            QMetaObject::invokeMethod( remapperModel, "setRemapper", Q_ARG( Remapper *, remapper ) );
+            qCDebug( phxControl ) << "RemapperModel" << Q_FUNC_INFO << globalPipelineReady();
+            remapperModel->setRemapper( remapper );
             checkIfGlobalPipelineReady();
         }
     } );
@@ -46,7 +50,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connect( this, &GameConsole::variableModelChanged, this, [ & ] {
         if( variableModel ) {
             qCDebug( phxControl ) << "VariableModel" << Q_FUNC_INFO << globalPipelineReady();
-            variableModel->setForwarder( &libretroVariableForwarder );
+            variableModel->setForwarder( libretroVariableForwarder );
             checkIfGlobalPipelineReady();
         }
     } );
@@ -105,12 +109,36 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         qDebug() << "";
     } );
 
-    connect( this, &GameConsole::userDataLocationChanged, this, [this] {
-        emit commandOut( Command::SetUserDataPath, userDataLocation, -1 );
+    connect( this, &GameConsole::userDataLocationChanged, this, [ & ] {
+        emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
     } );
 }
 
 // Public slots
+
+void GameConsole::play() {
+    // Don't play until we've loaded something
+    if( !dynamicPipelineReady() ) {
+        load();
+    } else {
+        emit commandOut( Command::Play, QVariant(), nodeCurrentTime() );
+    }
+}
+
+void GameConsole::pause() {
+    emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
+}
+
+void GameConsole::stop() {
+    emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
+    emit commandOut( Command::Unload, QVariant(), nodeCurrentTime() );
+}
+
+void GameConsole::reset() {
+    emit commandOut( Command::Reset, QVariant(), nodeCurrentTime() );
+}
+
+// Private (Startup)
 
 void GameConsole::load() {
     if( !globalPipelineReady() ) {
@@ -139,40 +167,6 @@ void GameConsole::load() {
     }
 }
 
-void GameConsole::play() {
-    emit commandOut( Command::Play, QVariant(), nodeCurrentTime() );
-}
-
-void GameConsole::pause() {
-    emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
-}
-
-void GameConsole::stop() {
-    emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
-}
-
-void GameConsole::reset() {
-    emit commandOut( Command::Reset, QVariant(), nodeCurrentTime() );
-}
-
-void GameConsole::unload() {
-    if( !dynamicPipelineReady() ) {
-        qCCritical( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << ": unload() called on an unloaded core!";
-        qDebug() << "";
-    }
-
-    if( source[ "type" ] == QStringLiteral( "libretro" ) ) {
-        unloadLibretro();
-    } else if( source[ "type" ].toString().isEmpty() ) {
-        qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
-    } else {
-        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
-                                           << source[ "type" ] << QStringLiteral( " passed to unload()!" );
-    }
-}
-
-// Private (Startup)
-
 void GameConsole::loadLibretro() {
     // Ensure that the properties were set in QML
     Q_ASSERT_X( controlOutput, "libretro load", "controlOutput was not set!" );
@@ -194,13 +188,12 @@ void GameConsole::loadLibretro() {
     // Connect LibretroRunner to its children
     sessionConnections << connectNodes( libretroRunner, audioOutput );
     sessionConnections << connectNodes( libretroRunner, sdlUnloader );
-    sessionConnections << connectNodes( libretroRunner, videoOutput );
     sessionConnections << connectNodes( libretroRunner, controlOutput );
+    sessionConnections << connectNodes( libretroRunner, videoOutput );
 
     // Hook LibretroCore so we know when commands have reached it
     // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
     // We care about this happening as LibretroCore needs to save its running game before quitting
-    // We also need CoreFPS from LibretroCore so MicroTimer knows how quickly it should emit heartbeats
     sessionConnections << connect( libretroRunner, &Node::commandOut, libretroRunner, [ & ]( Command command, QVariant, qint64 ) {
         switch( command ) {
             case Command::Stop: {
@@ -260,6 +253,22 @@ void GameConsole::applyPendingPropertyChanges() {
 
 // Private (Cleanup)
 
+void GameConsole::unload() {
+    if( !dynamicPipelineReady() ) {
+        qCCritical( phxControl ) << ">>>>>>>>" << Q_FUNC_INFO << ": unload() called on an unloaded core!";
+        qDebug() << "";
+    }
+
+    if( source[ "type" ] == QStringLiteral( "libretro" ) ) {
+        unloadLibretro();
+    } else if( source[ "type" ].toString().isEmpty() ) {
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Source was not set!" );
+    } else {
+        qCCritical( phxControl ).nospace() << QStringLiteral( "Unknown type " )
+                                           << source[ "type" ] << QStringLiteral( " passed to unload()!" );
+    }
+}
+
 void GameConsole::unloadLibretro() {
     qCDebug( phxControl ) << Q_FUNC_INFO;
 
@@ -284,6 +293,7 @@ void GameConsole::deleteLibretro() {
     audioOutput->deleteLater();
     sdlUnloader->deleteLater();
     libretroLoader->deleteLater();
+    libretroVariableForwarder->deleteLater();
     libretroRunner->deleteLater();
 }
 
@@ -293,6 +303,7 @@ void GameConsole::deleteMembers() {
     audioOutput->deleteLater();
     libretroLoader->deleteLater();
     libretroRunner->deleteLater();
+    libretroVariableForwarder->deleteLater();
     microTimer->deleteLater();
     remapper->deleteLater();
     sdlManager->deleteLater();

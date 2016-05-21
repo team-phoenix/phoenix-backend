@@ -38,13 +38,12 @@ typedef QMap<QString, QString> QStringMap;
  * and inject it into every GamepadState we get that we're responsible for.
  */
 
-class RemapperModel;
-
 class Remapper : public Node {
         Q_OBJECT
 
     public:
-        explicit Remapper( Node *parent = nullptr );
+        Remapper();
+        ~Remapper();
 
         // Remap type
         enum Type { INVALID, BUTTON, AXIS, HAT };
@@ -105,7 +104,7 @@ class Remapper : public Node {
         // A circular buffer that holds gamepad state updates
         // A value of 100 should be sufficient for most purposes
         GamepadState gamepadBuffer[ 100 ];
-        int gamepadBufferIndex{ 0 };
+        int gamepadBufferIndex { 0 };
 
         // Used to track which GUIDs have a button pressed
         // Cleared on each heartbeat

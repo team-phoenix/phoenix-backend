@@ -171,7 +171,13 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
 
             // Make a copy so the data won't be changed later
             mutex->lock();
-            memcpy( inputDataShort, data, bytes );
+
+            short *inputData = *reinterpret_cast<short **>( data );
+
+            if( inputData ) {
+                memcpy( inputDataShort, inputData, bytes );
+            }
+
             mutex->unlock();
 
             // Handle the situation where there is an error opening the audio device
@@ -236,7 +242,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             // Send the converted data out
             int outputBytesWritten = static_cast<int>( outputBuffer.write( reinterpret_cast<char *>( outputDataShort ), outputBytesConverted ) );
             outputCurrentByte += outputBytesWritten;
-//#define DRC_LOGGING
+            //#define DRC_LOGGING
 #if defined( DRC_LOGGING )
             static qint64 lastMessage = 0;
 

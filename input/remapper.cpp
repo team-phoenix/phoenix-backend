@@ -11,8 +11,11 @@
 #include <QVector2D>
 #include <QtMath>
 
-Remapper::Remapper( Node *parent ) : Node( parent ) {
+Remapper::Remapper() {
     keyboardGamepad.instanceID = -1;
+}
+
+Remapper::~Remapper() {
 }
 
 // Public slots

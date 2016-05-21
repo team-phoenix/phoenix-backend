@@ -115,6 +115,9 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 qDebug() << "";
             }
 
+            // Flush stderr, some cores may still write to it despite having RETRO_LOG
+            fflush( stderr );
+
             // Load game
             {
                 qCDebug( phxCore ) << "Loading game:" << core.gameFileInfo.absoluteFilePath();
@@ -136,8 +139,10 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     qCDebug( phxCore ) << "Copying game contents to memory...";
                     core.gameFile.open( QIODevice::ReadOnly );
 
-                    // read into memory
+                    // Read into memory
                     core.gameData = core.gameFile.readAll();
+
+                    core.gameFile.close();
 
                     gameInfo.path = nullptr;
                     gameInfo.data = core.gameData.constData();
@@ -150,6 +155,9 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 qDebug() << "";
             }
 
+            // Flush stderr, some cores may still write to it despite having RETRO_LOG
+            fflush( stderr );
+
             // Load save data
             loadSaveData();
 
@@ -158,7 +166,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 // Get info from the core
                 retro_system_av_info *avInfo = new retro_system_av_info();
                 core.symbols.retro_get_system_av_info( avInfo );
-                allocateBufferPool( avInfo );
+                growBufferPool( avInfo );
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
                 emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), nodeCurrentTime() );
 
@@ -237,6 +245,9 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
             disconnect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
             connectedToCore = false;
 
+            // Flush stderr, some cores may still write to it despite having RETRO_LOG
+            fflush( stderr );
+
             core.pausable = true;
             emit commandOut( Command::SetPausable, true, nodeCurrentTime() );
 
@@ -247,13 +258,6 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
         }
 
         case Command::SetSource: {
-            // Make sure we only connect on load
-            if( !connectedToCore ) {
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
-                connectedToCore = true;
-            }
-
             qCDebug( phxCore ) << command;
             emit commandOut( command, data, timeStamp );
 

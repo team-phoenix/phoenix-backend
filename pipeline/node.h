@@ -147,12 +147,26 @@ class Node : public QObject {
         };
         Q_ENUM( Command )
 
+        // Double pointers are growable (producer can realloc to a larger size) and nullable. Be sure to check for null before
+        // dereferencing the inner pointer
         enum class DataType {
+            // uchar **
             Video,
+
+            // Render the stored textureID
+            // nullptr
             VideoGL,
+
+            // short **
             Audio,
+
+            // GamepadState *
             Input,
+
+            // MouseState *
             MouseInput,
+
+            // KeyboardState *
             KeyboardInput,
         };
         Q_ENUM( DataType )

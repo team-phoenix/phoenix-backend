@@ -119,10 +119,10 @@ class LibretroCore : public Core {
 
         // Buffer pool (aka circular buffer of buffers), ensures thread safety (via the pipeline's unload/shutdown mechanism),
         // ensures atomic reads and writes (via a mutex) and prevents per-frame heap allocations
-        // TODO: Individual mutexes for each pool?
         QMutex videoMutex;
         uint8_t *videoBufferPool[ POOL_SIZE ] { nullptr };
-        int videoPoolCurrentBuffer{ 0 };
+        int videoPoolCurrentBuffer { 0 };
+        size_t videoPoolIndividualBufferSize { 0 };
 
         // An OpenGL context for 3D cores to draw with
         QOpenGLContext *context { nullptr };
@@ -138,20 +138,20 @@ class LibretroCore : public Core {
 
         // Audio
 
-        qreal audioSampleRate{ 44100 };
+        qreal audioSampleRate { 44100 };
 
         // Buffer pool (aka circular buffer of buffers), ensures thread safety (via the pipeline's unload/shutdown mechanism),
         // ensures atomic reads and writes (via a mutex) and prevents per-frame heap allocations
-        // TODO: Individual mutexes for each pool?
         QMutex audioMutex;
         int16_t *audioBufferPool[ POOL_SIZE ] { nullptr };
-        int audioPoolCurrentBuffer{ 0 };
+        int audioPoolCurrentBuffer { 0 };
+        size_t audioPoolIndividualBufferSize { 0 };
 
         // Amount audioBufferPool[ audioBufferPoolIndex ] has been filled
         // Each frame, exactly ( sampleRate * 4 ) bytes should be copied to
         // audioBufferPool[ audioBufferPoolIndex ][ audioBufferCurrentByte ] in total
         // FIXME: In practice, that's not always the case? Some cores only hit that *on average*
-        int audioBufferCurrentByte{ 0 };
+        int audioBufferCurrentByte { 0 };
 
         // Input
 
@@ -196,7 +196,8 @@ void loadSaveData();
 void storeSaveData();
 
 // Should only be called on load time (consumers expect buffers to be valid while Core is active)
-void allocateBufferPool( retro_system_av_info *avInfo );
+void growBufferPool( retro_system_av_info *avInfo );
+void freeBufferPool();
 
 // Callbacks
 void audioSampleCallback( int16_t left, int16_t right );
@@ -204,7 +205,7 @@ size_t audioSampleBatchCallback( const int16_t *data, size_t frames );
 bool environmentCallback( unsigned cmd, void *data );
 void inputPollCallback( void );
 void logCallback( enum retro_log_level level, const char *fmt, ... );
-int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id );
+int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
 void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
 
 // Extra callbacks

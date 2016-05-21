@@ -22,7 +22,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             // emulation is active (in other words, never during loading)
             if( !connectedToCore ) {
                 connectedToCore = true;
-                qDebug() << "connection";
+                qDebug() << "LibretroRunner will now emit signals from LibretroCore";
                 connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
                 connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
@@ -36,7 +36,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::Pause: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                qDebug() << "connection";
+                qDebug() << "LibretroRunner will now emit signals from LibretroCore";
                 connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
                 connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
@@ -50,7 +50,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::Stop: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                qDebug() << "connection";
+                qDebug() << "LibretroRunner will now emit signals from LibretroCore";
                 connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
                 connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
@@ -66,16 +66,22 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             qCInfo( phxCore ) << "============================";
 
             // Unload core
+            {
+                // symbols.retro_api_version is reasonably expected to be defined if the core is loaded
+                if( core.symbols.retro_api_version ) {
+                    core.symbols.retro_unload_game();
+                    core.symbols.retro_deinit();
+                    core.symbols.clear();
+                    core.coreFile.unload();
+                    qCDebug( phxCore ) << "Unloaded core successfully";
+                } else {
+                    qCCritical( phxCore ) << "stop() called on an unloaded core!";
+                }
+            }
 
-            // symbols.retro_api_version is reasonably expected to be defined if the core is loaded
-            if( core.symbols.retro_api_version ) {
-                core.symbols.retro_unload_game();
-                core.symbols.retro_deinit();
-                core.symbols.clear();
-                core.coreFile.unload();
-                qCDebug( phxCore ) << "Unloaded core successfully";
-            } else {
-                qCCritical( phxCore ) << "stop() called on an unloaded core!";
+            // Unload game (if we've read its contents into a buffer)
+            {
+                core.gameData.clear();
             }
 
             // Disconnect LibretroCore from the rest of the pipeline
@@ -105,6 +111,10 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
 
             if( core.state == State::Playing ) {
                 // If in 3D mode, lock the mutex before emulating then activate our context and FBO
+                // This is because we're not sure exactly when the core will render to the texture. So, we'll just lock the
+                // mutex for the *entire* frame to be safe and not just from the start of the frame until the video callback
+                // In 2D mode it's simpler: We know that the data will come in a buffer which we can quickly copy within
+                // the video callback.
                 if( core.videoFormat.videoMode == HARDWARERENDER ) {
                     core.videoMutex.lock();
                     //qDebug() << "LibretroRunner lock";
@@ -153,6 +163,9 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
                     //qDebug() << "LibretroRunner unlock";
                     core.videoMutex.unlock();
                 }
+
+                // Flush stderr, some cores may still write to it despite having RETRO_LOG
+                fflush( stderr );
             }
 
             break;
@@ -182,7 +195,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::AddController: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                qDebug() << "connection";
+                qDebug() << "LibretroRunner will now emit signals from LibretroCore";
                 connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
                 connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }
@@ -197,7 +210,7 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::RemoveController: {
             if( !connectedToCore ) {
                 connectedToCore = true;
-                qDebug() << "connection";
+                qDebug() << "LibretroRunner will now emit signals from LibretroCore";
                 connect( &core, &LibretroCore::dataOut, this, &LibretroRunner::dataOut );
                 connect( &core, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             }

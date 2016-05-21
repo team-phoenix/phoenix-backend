@@ -19,10 +19,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
 }
 
 LibretroCore::~LibretroCore() {
-    for( int i = 0; i < POOL_SIZE; i++ ) {
-        delete audioBufferPool[i];
-        delete videoBufferPool[i];
-    }
+    freeBufferPool();
 
     delete systemInfo;
 }
@@ -120,14 +117,65 @@ void storeSaveData() {
     }
 }
 
-void allocateBufferPool( retro_system_av_info *avInfo ) {
-    // Allocate buffers to fit this max size
+void growBufferPool( retro_system_av_info *avInfo ) {
+    // Allocate a bit extra as some cores' numbers do not add up...
     // Assume 16-bit stereo audio, 32-bit video
-    for( int i = 0; i < POOL_SIZE; i++ ) {
-        // Allocate a bit extra as some cores' numbers do not add up...
-        core.audioBufferPool[ i ] = new int16_t[( size_t )( avInfo->timing.sample_rate * 3 ) ]();
-        core.videoBufferPool[ i ] = new quint8[( size_t )( avInfo->geometry.max_width * avInfo->geometry.max_height * 4 ) ]();
+    size_t newAudioSize = static_cast<size_t>( avInfo->timing.sample_rate * 3 );
+    size_t newVideoSize = static_cast<size_t>( avInfo->geometry.max_width * avInfo->geometry.max_height * 4 );
+
+    // Reallocate buffers if necessary
+
+    if( newAudioSize > core.audioPoolIndividualBufferSize ) {
+        core.audioMutex.lock();
+
+        qDebug() << "Growing audio buffer pool buffers from" << core.audioPoolIndividualBufferSize << "to" << newAudioSize;
+
+        core.audioPoolIndividualBufferSize = newAudioSize;
+
+        for( int i = 0; i < POOL_SIZE; i++ ) {
+            core.audioBufferPool[ i ] = new int16_t[ newAudioSize ]();
+        }
+
+        core.audioMutex.unlock();
     }
+
+    if( newVideoSize > core.videoPoolIndividualBufferSize ) {
+        core.videoMutex.lock();
+
+        qDebug() << "Growing video buffer pool buffers from" << core.videoPoolIndividualBufferSize << "to" << newVideoSize;
+
+        core.videoPoolIndividualBufferSize = newVideoSize;
+
+        for( int i = 0; i < POOL_SIZE; i++ ) {
+            core.videoBufferPool[ i ] = new quint8[ newVideoSize ]();
+        }
+
+        core.videoMutex.unlock();
+    }
+}
+
+void freeBufferPool() {
+    core.audioMutex.lock();
+
+    for( int i = 0; i < POOL_SIZE; i++ ) {
+        delete core.audioBufferPool[ i ];
+        core.audioBufferPool[ i ] = nullptr;
+    }
+
+    core.audioPoolIndividualBufferSize = 0;
+
+    core.audioMutex.unlock();
+
+    core.videoMutex.lock();
+
+    for( int i = 0; i < POOL_SIZE; i++ ) {
+        delete core.videoBufferPool[ i ];
+        core.videoBufferPool[ i ] = nullptr;
+    }
+
+    core.videoPoolIndividualBufferSize = 0;
+
+    core.videoMutex.unlock();
 }
 
 // Callbacks
@@ -148,7 +196,7 @@ void audioSampleCallback( int16_t left, int16_t right ) {
 
     // Flush if we have more than 1/2 of a frame's worth of data
     if( core.audioBufferCurrentByte > core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
-        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, core.audioBufferPool[ core.audioPoolCurrentBuffer ],
+        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, &core.audioBufferPool[ core.audioPoolCurrentBuffer ],
                           core.audioBufferCurrentByte, nodeCurrentTime() );
         core.audioBufferCurrentByte = 0;
         core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
@@ -175,7 +223,7 @@ size_t audioSampleBatchCallback( const int16_t *data, size_t frames ) {
 
     // Flush if we have 1/2 of a frame's worth of data or more
     if( core.audioBufferCurrentByte >= core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
-        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, core.audioBufferPool[ core.audioPoolCurrentBuffer ],
+        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, &core.audioBufferPool[ core.audioPoolCurrentBuffer ],
                           core.audioBufferCurrentByte, nodeCurrentTime() );
         core.audioBufferCurrentByte = 0;
         core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
@@ -877,14 +925,14 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
                 core.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
             }
         }
-        core.fireDataOut( Node::DataType::Video, &core.videoMutex, core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+        core.fireDataOut( Node::DataType::Video, &core.videoMutex, &core.videoBufferPool[ core.videoPoolCurrentBuffer ],
                           bytes, nodeCurrentTime() );
         core.videoPoolCurrentBuffer = ( core.videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 
     // Current frame is a dupe, send the last actual frame again
     else {
-        core.fireDataOut( Node::DataType::Video, &core.videoMutex, core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+        core.fireDataOut( Node::DataType::Video, &core.videoMutex, &core.videoBufferPool[ core.videoPoolCurrentBuffer ],
                           pitch * height, nodeCurrentTime() );
     }
 
