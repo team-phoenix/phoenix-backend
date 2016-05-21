@@ -1,3 +1,5 @@
+include( msvc.pri )
+
 ##
 ## Extra targets
 ##
@@ -8,8 +10,9 @@
 ## Qt settings
 ##
 
-    # Undefine this (for some reason it's on by default on Windows)
-    CONFIG -= debug_and_release debug_and_release_target
+    # Undefine this for gcc (MINGW), it's not necessary
+    gcc: CONFIG -= debug_and_release debug_and_release_target
+
     CONFIG += plugin qt
 
     TEMPLATE = lib
@@ -36,10 +39,11 @@
     macx: QMAKE_MAC_SDK = macosx10.11
 
     # Include libraries
-    win32: INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
-    macx:  INCLUDEPATH += /usr/local/include /usr/local/include/SDL2               # Homebrew
-    macx:  INCLUDEPATH += /usr/local/include /opt/local/include/SDL2               # MacPorts
-    unix:  INCLUDEPATH += /usr/include /usr/include/SDL2                           # Linux
+    win32: msvc: INCLUDEPATH += $$SAMPLERATEBASE\include                                 # See msvc.pri
+    win32: gcc:  INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
+    macx:        INCLUDEPATH += /usr/local/include /usr/local/include/SDL2               # Homebrew
+    macx:        INCLUDEPATH += /usr/local/include /opt/local/include/SDL2               # MacPorts
+    unix:        INCLUDEPATH += /usr/include /usr/include/SDL2                           # Linux
 
     # Include externals
     DEFINES += QUAZIP_STATIC
@@ -126,13 +130,23 @@
     ## Library paths
     ##
 
-    win32: LIBS += -LC:/msys64/mingw64/lib
-
     # Externals
     LIBS += -L../externals/quazip/quazip
 
     # SDL2
     macx: LIBS += -L/usr/local/lib -L/opt/local/lib # Homebrew, MacPorts
+
+    msvc: {
+        LIBS += /LIBPATH:$$SAMPLERATEBASE\lib
+
+        CONFIG( debug, debug|release ): {
+            LIBS += /LIBPATH:../externals/quazip/quazip/debug
+        }
+
+        else {
+            LIBS += /LIBPATH:../externals/quazip/quazip/release
+        }
+    }
 
     ##
     ## Libraries
@@ -141,9 +155,15 @@
     # Externals
     LIBS += -lquazip
 
-    # SDL 2
-    win32: LIBS += -lmingw32 -lSDL2main
-    LIBS += -lSDL2
+    !msvc {
+        # SDL 2
+        win32: LIBS += -lSDL2main
+        LIBS += -lSDL2
 
-    # Other libraries we use
-    LIBS += -lsamplerate -lz
+        # Other libraries we use
+        LIBS += -lsamplerate -lz
+    }
+
+    msvc: {
+        LIBS += libsamplerate-0.lib
+    }
