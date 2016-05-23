@@ -12,26 +12,14 @@ void Node::dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint6
     emit dataOut( type, mutex, data, bytes, timeStamp );
 }
 
-QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child ) {
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child, Qt::ConnectionType type ) {
     Q_ASSERT( t_parent != nullptr );
     Q_ASSERT( t_child != nullptr );
 
     return {
-        QObject::connect( t_parent, &Node::dataOut, t_child, &Node::dataIn ),
-        QObject::connect( t_parent, &Node::commandOut, t_child, &Node::commandIn )
+        QObject::connect( t_parent, &Node::dataOut, t_child, &Node::dataIn, type ),
+        QObject::connect( t_parent, &Node::commandOut, t_child, &Node::commandIn, type )
     };
-}
-
-QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child ) {
-    return connectNodes( &t_parent, &t_child );
-}
-
-QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node *t_child ) {
-    return connectNodes( &t_parent, t_child );
-}
-
-QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node &t_child ) {
-    return connectNodes( t_parent, &t_child );
 }
 
 bool disconnectNodes( Node *t_parent, Node *t_child ) {

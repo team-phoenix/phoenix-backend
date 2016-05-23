@@ -186,9 +186,15 @@ void GameConsole::loadLibretro() {
     sessionConnections << connectNodes( libretroVariableForwarder, libretroRunner );
 
     // Connect LibretroRunner to its children
+
     sessionConnections << connectNodes( libretroRunner, audioOutput );
     sessionConnections << connectNodes( libretroRunner, sdlUnloader );
-    sessionConnections << connectNodes( libretroRunner, controlOutput );
+
+    // It's very important that ControlOutput is always connected via a queued connection as things that handle
+    // state changes (things that listen to ControlOutput) should not be at the top of a stack that contains
+    // the function calls that changed the state in the first place. This only really applies when we're single-threaded.
+    sessionConnections << connectNodes( libretroRunner, controlOutput, Qt::QueuedConnection );
+
     sessionConnections << connectNodes( libretroRunner, videoOutput );
 
     // Hook LibretroCore so we know when commands have reached it

@@ -195,10 +195,7 @@ class Node : public QObject {
 
 // Convenience functions for easily connecting and disconnecting nodes
 
-QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child );
-QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node &t_child );
-QList<QMetaObject::Connection> connectNodes( Node &t_parent, Node *t_child );
-QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node &t_child );
+QList<QMetaObject::Connection> connectNodes( Node *t_parent, Node *t_child, Qt::ConnectionType type = Qt::AutoConnection );
 
 
 bool disconnectNodes( Node *t_parent, Node *t_child );
