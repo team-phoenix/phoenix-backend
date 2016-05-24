@@ -101,10 +101,12 @@ class VideoOutput : public QQuickItem {
         // Ignored if television is false
         bool widescreen{ false };
 
-        // Helper for printing aspect ratios as fractions
-        // Source: http://codereview.stackexchange.com/questions/37189/euclids-algorithm-greatest-common-divisor
-        int greatestCommonDivisor( int m, int n );
-
         // Has this mutex been locked by us?
         bool lockedByUs { false };
+
+        // Discovered from: http://stackoverflow.com/a/96035/4190028
+        // Find rational approximation to given real number
+        // By: David Eppstein / UC Irvine / 8 Aug 1993
+        // With corrections from Arno Formella, May 2008
+        QPair<int, int> doubleToFraction( double x, long maxden );
 };
