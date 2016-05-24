@@ -255,6 +255,8 @@ void GameConsole::applyPendingPropertyChanges() {
     if( pendingPropertyChanges.contains( "vsync" ) ) {
         setVsync( pendingPropertyChanges[ "vsync" ].toBool() );
     }
+
+    pendingPropertyChanges.clear();
 }
 
 // Private (Cleanup)

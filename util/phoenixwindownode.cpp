@@ -46,7 +46,8 @@ void PhoenixWindowNode::checkIfCommandsShouldFire() {
         phoenixWindow->dynamicPipelineContext->moveToThread( gameThread );
         phoenixWindow->dynamicPipelineSurface->moveToThread( gameThread );
 
-        // Send everything out
+        // Send everything from this class out
+        emit commandOut( Command::SetWindowGeometry, geometry, nodeCurrentTime() );
         emit commandOut( Command::SetSurface, QVariant::fromValue<QOffscreenSurface *>( phoenixWindow->dynamicPipelineSurface ), nodeCurrentTime() );
         emit commandOut( Command::SetOpenGLContext, QVariant::fromValue<QOpenGLContext *>( phoenixWindow->dynamicPipelineContext ), nodeCurrentTime() );
         emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
