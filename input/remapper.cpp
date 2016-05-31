@@ -446,9 +446,12 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                         }
                     }
 
+                    // Map from [-32768, 32767] to [0, 32767]
                     if( !deadzoneMode ) {
-                        gamepad.axis[ xAxis ] += 32768;
-                        gamepad.axis[ yAxis ] += 32768;
+                        gamepad.axis[ xAxis ] /= 2;
+                        gamepad.axis[ yAxis ] /= 2;
+                        gamepad.axis[ xAxis ] += 16384;
+                        gamepad.axis[ yAxis ] += 16384;
                     }
 
                     // Get axis coords in cartesian coords
