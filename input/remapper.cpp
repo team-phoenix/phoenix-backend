@@ -319,8 +319,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 if( deadzoneFlag[ GUID ] ) {
                     deadzoneFlag[ GUID ] = false;
 
-                    qDebug() << GUID << "Applying settings";
-
                     // Apply default value
                     for( int i = 0; i < gamepad.joystickNumAxes; i++ ) {
                         deadzones[ GUID ][ i ] = 10000;
@@ -328,7 +326,6 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                         // Check analog value at this moment. If its magnitude is less than 30000 then it's most likely
                         // an analog stick. Otherwise, it might be a trigger (with a centered value of -32768)
                         deadzoneModes[ GUID ][ i ] = ( qAbs( static_cast<int>( gamepad.joystickAxis[ i ] ) ) < 30000 );
-                        qDebug() << GUID << i << "Set" << gamepad.joystickAxis[ i ] << deadzoneModes[ GUID ][ i ];
                     }
 
                     // TODO: Replace with stored value from disk
@@ -450,8 +447,8 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                     }
 
                     if( !deadzoneMode ) {
-                        xAxis += 32768;
-                        yAxis += 32768;
+                        gamepad.axis[ xAxis ] += 32768;
+                        gamepad.axis[ yAxis ] += 32768;
                     }
 
                     // Get axis coords in cartesian coords
