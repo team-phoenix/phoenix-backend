@@ -194,7 +194,6 @@ void RemapperModel::controllerAdded( QString GUID, QString friendlyName, int num
     gamepads[ GUID ].joystickNumHats = numHats;
     gamepads[ GUID ].joystickNumAxes = numAxes;
     int row = GUIDToRow( GUID );
-    qDebug() << "Insert controller" << GUID << friendlyName << numButtons << numHats << numAxes;
     emit dataChanged( createIndex( row, 0 ), createIndex( row, 0 ), { AvailableRole, FriendlyNameRole, NumButtonsRole, NumHatsRole, NumAxesRole, DeadzoneRole, DeadzoneModeRole } );
 }
 
