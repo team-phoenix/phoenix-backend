@@ -769,9 +769,14 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             switch( index ) {
                 case RETRO_DEVICE_INDEX_ANALOG_LEFT:
                     value += gamepad.axis[ id == RETRO_DEVICE_ID_ANALOG_X ? SDL_CONTROLLER_AXIS_LEFTX : SDL_CONTROLLER_AXIS_LEFTY ];
+                    break;
 
                 case RETRO_DEVICE_INDEX_ANALOG_RIGHT:
                     value += gamepad.axis[ id == RETRO_DEVICE_ID_ANALOG_X ? SDL_CONTROLLER_AXIS_RIGHTX : SDL_CONTROLLER_AXIS_RIGHTY ];
+                    break;
+
+                default:
+                    break;
             }
         }
 
@@ -784,7 +789,7 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             value = 0x7FFF;
         }
 
-        return value;
+        return static_cast<int16_t>( value );
     }
 
     // Joypad input
@@ -793,10 +798,6 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         int16_t value = 0;
 
         for( GamepadState gamepad : core.gamepads ) {
-            // Analog to digital
-            // TODO: Make configurable
-            int triggerThreshold = 20000;
-
             if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
                 value |= 1;
             }
@@ -821,11 +822,11 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
                 value |= 1;
             }
 
-            else if( gamepad.axis[ SDL_CONTROLLER_AXIS_TRIGGERLEFT ] > triggerThreshold && id == RETRO_DEVICE_ID_JOYPAD_L2 ) {
+            else if( gamepad.digitalL2 && id == RETRO_DEVICE_ID_JOYPAD_L2 ) {
                 value |= 1;
             }
 
-            else if( gamepad.axis[ SDL_CONTROLLER_AXIS_TRIGGERLEFT ] > triggerThreshold && id == RETRO_DEVICE_ID_JOYPAD_R2 ) {
+            else if( gamepad.digitalR2 && id == RETRO_DEVICE_ID_JOYPAD_R2 ) {
                 value |= 1;
             }
 

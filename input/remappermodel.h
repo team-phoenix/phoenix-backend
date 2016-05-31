@@ -4,13 +4,15 @@
 #include <QAbstractListModel>
 #include <QByteArray>
 #include <QHash>
+#include <QList>
 #include <QModelIndex>
 #include <QObject>
 #include <QVariant>
 
 #include <iterator>
 
-#include "pipelinecommon.h"
+#include "gamepadstate.h"
+#include "node.h"
 
 /*
  * RemapperModel is a QML model whose job is to relay information between the QML world and Remapper, which is part
@@ -52,6 +54,52 @@ class RemapperModel : public QAbstractListModel {
             // friendlyName: String
             // Friendly name of the controller as provided by SDL
             FriendlyNameRole,
+
+            // button: Array[ Boolean ]
+            // Indexed by buttonID
+            ButtonRole,
+
+            // hat: Array[ Number ]
+            // Indexed by hatID
+            // Valid values:
+            /*
+             * #define SDL_HAT_CENTERED    0x00
+             * #define SDL_HAT_UP          0x01
+             * #define SDL_HAT_RIGHT       0x02
+             * #define SDL_HAT_DOWN        0x04
+             * #define SDL_HAT_LEFT        0x08
+             * #define SDL_HAT_RIGHTUP     (SDL_HAT_RIGHT|SDL_HAT_UP)
+             * #define SDL_HAT_RIGHTDOWN   (SDL_HAT_RIGHT|SDL_HAT_DOWN)
+             * #define SDL_HAT_LEFTUP      (SDL_HAT_LEFT|SDL_HAT_UP)
+             * #define SDL_HAT_LEFTDOWN    (SDL_HAT_LEFT|SDL_HAT_DOWN)
+             */
+            HatRole,
+
+            // axis: Array[ Number ]
+            // Indexed by axisID
+            // Range: -32768 to 32767
+            AxisRole,
+
+            // numButtons: Number
+            // Number of available buttonIDs, used to index into "button"
+            NumButtonsRole,
+
+            // numHats: Number
+            // Number of available hatIDs, used to index into "hat"
+            NumHatsRole,
+
+            // numAxes: Number
+            // Number of available axisIDs, used to index into "axis"
+            NumAxesRole,
+
+            // deadzone: Number
+            // Minimum magnitude necessary to register an analog tilt
+            DeadzoneRole,
+
+            // deadzoneMode: Boolean
+            // True: Measure magnitude relative to 0
+            // False: Measure magnitude relative to -32768
+            DeadzoneModeRole,
         };
 
         QHash<int, QByteArray> roleNames() const override;
@@ -64,10 +112,11 @@ class RemapperModel : public QAbstractListModel {
     signals:
         void remapModeChanged();
         void beginRemappingProxy( QString GUID, QString button );
+        void setDeadzoneProxy( QString GUID, int axis, int deadzone, bool deadzoneMode );
 
     public slots:
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString GUID, QString friendlyName );
+        void controllerAdded( QString GUID, QString friendlyName , int numButtons, int numHats, int numAxes );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
         void controllerRemoved( QString GUID );
@@ -86,6 +135,11 @@ class RemapperModel : public QAbstractListModel {
 
         // Call from QML
         void beginRemapping( QString GUID, QString button );
+        void setDeadzone( QString GUID, int axis, int deadzone, bool deadzoneMode );
+
+        // Used for displaying raw joystick data to the user
+        void heartbeat();
+        void rawJoystickData( QMutex *mutex, void *data );
 
     private:
         // Are we currently remapping?
@@ -104,6 +158,11 @@ class RemapperModel : public QAbstractListModel {
 
         // Friendly names for controllers as provided by SDL
         QStringMap friendlyNames;
+
+        // Our copy of all the gamepads currently available
+        // Indexed by GUID which means each entry is an OR of all connected gamepads with the same GUID
+        // GUID : gamepad
+        QMap<QString, GamepadState> gamepads;
 
         // Helpers
 

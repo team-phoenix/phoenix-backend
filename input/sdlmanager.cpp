@@ -48,6 +48,13 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                         gamepad.instanceID = instanceID;
                         gamepad.joystickHandle = joystickHandle;
                         gamepad.GUID = SDL_JoystickGetGUID( joystickHandle );
+
+                        // Stringify the GUID
+                        {
+                            QByteArray GUIDString( 33, '\0' );
+                            SDL_JoystickGetGUIDString( gamepad.GUID, GUIDString.data(), 33 );
+                            gamepad.GUIDString = GUIDString;
+                        }
                         const char *friendlyName = SDL_JoystickName( joystickHandle );
 
                         if( friendlyName ) {
@@ -57,7 +64,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                         // Sanity check on the number of available axes, buttons and joysticks
                         {
                             // TODO: Support more than 16 axes?
-                            if( SDL_JoystickNumAxes( joystickHandle ) > 16 ) {
+                            if( ( gamepad.joystickNumAxes = SDL_JoystickNumAxes( joystickHandle ) ) > 16 ) {
                                 qWarning() << "Ignoring controller with more than 16 axes, GUID ="
                                            << QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 );
                                 SDL_JoystickClose( joystickHandle );
@@ -65,7 +72,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                             }
 
                             // TODO: Support more than 16 hats?
-                            if( SDL_JoystickNumHats( joystickHandle ) > 16 ) {
+                            if( ( gamepad.joystickNumHats = SDL_JoystickNumHats( joystickHandle ) ) > 16 ) {
                                 qWarning() << "Ignoring controller with more than 16 hats, GUID ="
                                            << QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 );
                                 SDL_JoystickClose( joystickHandle );
@@ -73,7 +80,7 @@ void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeSta
                             }
 
                             // TODO: Support more than 256 buttons?
-                            if( SDL_JoystickNumButtons( joystickHandle ) > 256 ) {
+                            if( ( gamepad.joystickNumButtons = SDL_JoystickNumButtons( joystickHandle ) ) > 256 ) {
                                 qWarning() << "Ignoring controller with more than 256 buttons, GUID ="
                                            << QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 );
                                 SDL_JoystickClose( joystickHandle );

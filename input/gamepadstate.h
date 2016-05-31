@@ -39,9 +39,24 @@ struct GamepadState {
     // Friendly name
     QString friendlyName;
 
+    // Analog deadzones
+    // TODO: Retrieve from disk
+    Sint16 deadzone[ 16 ] { 0 };
+
+    // Analog threshold modes
+    // True: from 0
+    // False: from -32768
+    bool deadzoneMode[ 16 ] { false };
+
     // Button and axis states
     Sint16 axis[ SDL_CONTROLLER_AXIS_MAX ] { 0 };
     Uint8 button[ SDL_CONTROLLER_BUTTON_MAX ] { 0 };
+
+    // Extra buttons not available from the SDL game controller API
+    // TODO: Read guide button value
+    bool digitalL2 { false };
+    bool digitalR2 { false };
+    bool guideButton { false };
 
     // For internal use
 
@@ -58,5 +73,8 @@ struct GamepadState {
     Sint16 joystickAxis[ 16 ] { 0 };
     Uint8 joystickButton[ 256 ] { 0 };
     Uint8 joystickHat[ 16 ] { 0 };
+    int joystickNumAxes { 0 };
+    int joystickNumButtons { 0 };
+    int joystickNumHats { 0 };
 };
 Q_DECLARE_METATYPE( GamepadState )

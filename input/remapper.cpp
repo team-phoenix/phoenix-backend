@@ -40,7 +40,7 @@ void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
 
         case Command::HandleGlobalPipelineReady: {
             emit commandOut( command, data, timeStamp );
-            emit controllerAdded( "", "Keyboard" );
+            emit controllerAdded( "", "Keyboard", 0, 0, 0 );
 
             // TODO: Read keyboard setting from disk too
             dpadToAnalogKeyboard = true;
@@ -94,6 +94,9 @@ void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
         case Command::Heartbeat: {
             emit commandOut( command, data, timeStamp );
 
+            // Tell the model to clear its stored states
+            emit heartbeat();
+
             // Send out per-GUID OR'd states to RemapperModel then clear stored pressed states
             for( QString GUID : pressed.keys() ) {
                 emit buttonUpdate( GUID, pressed[ GUID ] );
@@ -124,7 +127,7 @@ void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
             // Otherwise, just increment the count
             if( !GUIDCount.contains( GUID ) ) {
                 GUIDCount[ GUID ] = 1;
-                emit controllerAdded( GUID, gamepad.friendlyName );
+                emit controllerAdded( GUID, gamepad.friendlyName, gamepad.joystickNumButtons, gamepad.joystickNumHats, gamepad.joystickNumAxes );
             } else {
                 GUIDCount[ GUID ]++;
             }
@@ -150,6 +153,10 @@ void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
             // TODO: Read value from disk
             analogToDpad[ GUID ] = false;
             dpadToAnalog[ GUID ] = false;
+
+            // Set calibration flag, analog values will be read and deadzone values will be calculated the first time
+            // we get data
+            deadzoneFlag[ GUID ] = true;
 
             QString mappingString = gamepad.mappingString;
 
@@ -307,37 +314,144 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             int joystickID = gamepad.joystickID;
             QString GUID( QByteArray( reinterpret_cast<const char *>( gamepad.GUID.data ), 16 ).toHex() );
 
+            // Do initial calibration if not done yet
+            {
+                if( deadzoneFlag[ GUID ] ) {
+                    deadzoneFlag[ GUID ] = false;
+
+                    qDebug() << GUID << "Applying settings";
+
+                    // Apply default value
+                    for( int i = 0; i < gamepad.joystickNumAxes; i++ ) {
+                        deadzones[ GUID ][ i ] = 10000;
+
+                        // Check analog value at this moment. If its magnitude is less than 30000 then it's most likely
+                        // an analog stick. Otherwise, it might be a trigger (with a centered value of -32768)
+                        deadzoneModes[ GUID ][ i ] = ( qAbs( static_cast<int>( gamepad.joystickAxis[ i ] ) ) < 30000 );
+                        qDebug() << GUID << i << "Set" << gamepad.joystickAxis[ i ] << deadzoneModes[ GUID ][ i ];
+                    }
+
+                    // TODO: Replace with stored value from disk
+                }
+            }
+
+            // Inject deadzone settings into gamepad
+            {
+                for( int i = 0; i < gamepad.joystickNumAxes; i++ ) {
+                    gamepad.deadzone[ i ] = deadzones[ GUID ][ i ];
+                    gamepad.deadzoneMode[ i ] = deadzoneModes[ GUID ][ i ];
+                }
+            }
+
+            // Send raw joystick data to the model
+            // Do this before we apply joystick deadzones so the user sees completely unprocessed data
+            {
+                // Copy current gamepad into buffer
+                this->mutex.lock();
+                gamepadBuffer[ gamepadBufferIndex ] = gamepad;
+                this->mutex.unlock();
+
+                // Send buffer on its way
+                emit rawJoystickData( &( this->mutex ), reinterpret_cast<void *>( &gamepadBuffer[ gamepadBufferIndex ] ) );
+
+                // Increment the index
+                gamepadBufferIndex = ( gamepadBufferIndex + 1 ) % 100;
+            }
+
             // Apply deadzones to each stick and both triggers independently
             {
-                // TODO: Per GUID deadzones
-                // TODO: Per stick/trigger deadzones
-                qreal deadzoneRadius = 10000.0;
+                qreal deadzone = 0.0;
+                bool deadzoneMode = false;
 
                 for( int i = 0; i < 4; i++ ) {
                     int xAxis;
                     int yAxis;
 
+                    // For the analog sticks, average the underlying joystick axes together to get the final deadzone value
+                    // If either axis has deadzone mode set to true, it'll apply to both
+                    // FIXME: If users complain about this, expand the code to handle this case (one axis true and one axis false) and treat axes indepenently
                     switch( i ) {
-                        case 0:
+                        case 0: {
                             xAxis = SDL_CONTROLLER_AXIS_LEFTX;
                             yAxis = SDL_CONTROLLER_AXIS_LEFTY;
-                            break;
 
-                        case 1:
+                            Val val = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_LEFTX ) ];
+                            int axisID = val.second.first;
+
+                            if( val.first == AXIS ) {
+                                deadzone = deadzones[ GUID ][ axisID ];
+                                deadzoneMode = deadzoneModes[ GUID ][ axisID ];
+                            }
+
+                            Val val2 = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_LEFTY ) ];
+                            axisID = val2.second.first;
+
+                            if( val2.first == AXIS ) {
+                                deadzone += deadzones[ GUID ][ axisID ];
+                                deadzone /= 2.0;
+                                deadzoneMode = deadzoneMode || deadzoneModes[ GUID ][ axisID ];
+                            }
+
+                            break;
+                        }
+
+                        case 1: {
                             xAxis = SDL_CONTROLLER_AXIS_RIGHTX;
                             yAxis = SDL_CONTROLLER_AXIS_RIGHTY;
+
+                            Val val = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_RIGHTX ) ];
+                            int axisID = val.second.first;
+
+                            if( val.first == AXIS ) {
+                                deadzone = deadzones[ GUID ][ axisID ];
+                                deadzoneMode = deadzoneModes[ GUID ][ axisID ];
+                            }
+
+                            Val val2 = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_RIGHTY ) ];
+                            axisID = val2.second.first;
+
+                            if( val2.first == AXIS ) {
+                                deadzone += deadzones[ GUID ][ axisID ];
+                                deadzone /= 2.0;
+                                deadzoneMode = deadzoneMode || deadzoneModes[ GUID ][ axisID ];
+                            }
+
                             break;
+                        }
 
                         // For simplicity, just map the triggers to the line y = x
-                        case 2:
+                        case 2: {
                             xAxis = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
                             yAxis = SDL_CONTROLLER_AXIS_TRIGGERLEFT;
-                            break;
+                            Val val = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_TRIGGERLEFT ) ];
+                            int axisID = val.second.first;
 
-                        case 3:
+                            if( val.first == AXIS ) {
+                                deadzone = deadzones[ GUID ][ axisID ];
+                                deadzoneMode = deadzoneModes[ GUID ][ axisID ];
+                            }
+
+                            break;
+                        }
+
+                        case 3: {
                             xAxis = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
                             yAxis = SDL_CONTROLLER_AXIS_TRIGGERRIGHT;
+                            Val val = gameControllerToJoystick[ GUID ][ Key( AXIS, SDL_CONTROLLER_AXIS_TRIGGERRIGHT ) ];
+                            int axisID = val.second.first;
+
+                            if( val.first == AXIS ) {
+                                deadzone = deadzones[ GUID ][ axisID ];
+                                deadzoneMode = deadzoneModes[ GUID ][ axisID ];
+                            }
+
                             break;
+                        }
+                    }
+
+                    if( !deadzoneMode ) {
+                        xAxis += 32768;
+                        yAxis += 32768;
                     }
 
                     // Get axis coords in cartesian coords
@@ -349,21 +463,36 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                     QVector2D position( xCoord, yCoord );
                     qreal radius = position.length();
 
-                    if( !( radius > deadzoneRadius ) ) {
+                    if( !( radius > deadzone ) ) {
                         gamepad.axis[ xAxis ] = 0;
                         gamepad.axis[ yAxis ] = 0;
+                        if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ) {
+                            gamepad.digitalL2 = false;
+                        }
+                        if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ) {
+                            gamepad.digitalR2 = false;
+                        }
+                    } else {
+                        if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ) {
+                            gamepad.digitalL2 = true;
+                        }
+                        if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ) {
+                            gamepad.digitalR2 = true;
+                        }
                     }
                 }
             }
 
             // Apply deadzones to all joystick axes
+            // Used only when detecting input for remapping
             {
-                // TODO: Per GUID deadzones
-                // TODO: Per axis deadzones
-                qreal deadzoneRadius = 10000.0;
-
                 for( int i = 0; i < 16; i++ ) {
+                    qreal deadzoneRadius = deadzones[ GUID ][ i ];
                     float coord = gamepad.joystickAxis[ i ];
+
+                    if( !deadzoneModes[ GUID ][ i ] ) {
+                        coord += 32768;
+                    }
 
                     if( !( qAbs( coord ) > deadzoneRadius ) ) {
                         gamepad.joystickAxis[ i ] = 0;
@@ -371,7 +500,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                 }
             }
 
-            // If ignoreButton is set, the user hasn't let go of the button they were remapping to
+            // If ignoreMode is set, the user hasn't let go of the button they were remapping to
             // Do not let the button go through until they let go
             {
                 if( ignoreMode && ignoreModeGUID == GUID && ignoreModeInstanceID == gamepad.instanceID ) {
@@ -655,7 +784,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
                 // Send buffer on its way
                 emit dataOut( DataType::Input, &( this->mutex ),
-                              reinterpret_cast< void * >( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
+                              reinterpret_cast<void *>( &gamepadBuffer[ gamepadBufferIndex ] ), 0,
                               nodeCurrentTime() );
 
                 // Increment the index
@@ -732,6 +861,11 @@ void Remapper::beginRemapping( QString GUID, QString button ) {
     remapMode = true;
     remapModeGUID = GUID;
     remapModeKey = mappingStringToKey( button );
+}
+
+void Remapper::setDeadzone( QString GUID, int axis, Sint16 deadzone, bool deadzoneMode ) {
+    deadzones[ GUID ][ axis ] = deadzone;
+    deadzoneModes[ GUID ][ axis ] = deadzoneMode;
 }
 
 // Private

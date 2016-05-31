@@ -63,13 +63,19 @@ class Remapper : public Node {
         // Signals for RemapperModel
 
         // A new controller GUID was seen, add to the model's list
-        void controllerAdded( QString GUID, QString friendlyName );
+        void controllerAdded( QString GUID, QString friendlyName, int numButtons, int numHats, int numAxes );
 
         // The last remaining controller with this GUID was removed, do not accept remap requests for this one
         void controllerRemoved( QString GUID );
 
         // Only fired while not in remap mode, true if any button on any controller with this GUID has been pressed
         void buttonUpdate( QString GUID, bool pressed );
+
+        // Fresh raw joystick states incoming, clear what you have
+        void heartbeat();
+
+        // Raw data meant to be displayed to the user
+        void rawJoystickData( QMutex *mutex, void *data );
 
         // Remap mode completed, update the UI
         void remappingEnded();
@@ -87,6 +93,8 @@ class Remapper : public Node {
         // Do not send input updates to this node's children, listen for a button press on this GUID and reply back
         // with a button once pressed
         void beginRemapping( QString GUID, QString button );
+
+        void setDeadzone( QString GUID, int axis, Sint16 deadzone, bool deadzoneMode );
 
     private:
         // Node stuff
@@ -153,6 +161,15 @@ class Remapper : public Node {
         QMap<QString, bool> dpadToAnalog;
 
         bool dpadToAnalogKeyboard { false };
+
+        // Deadzone data
+        // Indexed by GUID
+        // TODO: Load/store to/from disk
+        QMap<QString, QHash<int, Sint16>> deadzones;
+        QMap<QString, QHash<int, bool>> deadzoneModes;
+
+        // Have we done initial calibration yet?
+        QMap<QString, bool> deadzoneFlag;
 
         // Keyboard remapping data
         // We keep the keyboard's state here as it comes to us "raw"
