@@ -44,8 +44,8 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     // Video
 
     libretroCore.videoFormat.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
-                                        ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
-                                        avInfo->geometry.aspect_ratio;
+            ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
+            avInfo->geometry.aspect_ratio;
     libretroCore.videoFormat.videoBytesPerPixel = QImage().toPixelFormat( libretroCore.videoFormat.videoPixelFormat ).bitsPerPixel() / 8;
     libretroCore.videoFormat.videoBytesPerLine = avInfo->geometry.base_width * libretroCore.videoFormat.videoBytesPerPixel;
     libretroCore.videoFormat.videoFramerate = avInfo->timing.fps;
@@ -197,7 +197,7 @@ void LibretroCoreAudioSampleCallback( int16_t left, int16_t right ) {
     // Flush if we have more than 1/2 of a frame's worth of data
     if( libretroCore.audioBufferCurrentByte > libretroCore.audioSampleRate * 4 / libretroCore.videoFormat.videoFramerate / 2 ) {
         libretroCore.fireDataOut( Node::DataType::Audio, &libretroCore.audioMutex, &libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ],
-                          libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
+                                  libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
         libretroCore.audioBufferCurrentByte = 0;
         libretroCore.audioPoolCurrentBuffer = ( libretroCore.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
@@ -224,7 +224,7 @@ size_t LibretroCoreAudioSampleBatchCallback( const int16_t *data, size_t frames 
     // Flush if we have 1/2 of a frame's worth of data or more
     if( libretroCore.audioBufferCurrentByte >= libretroCore.audioSampleRate * 4 / libretroCore.videoFormat.videoFramerate / 2 ) {
         libretroCore.fireDataOut( Node::DataType::Audio, &libretroCore.audioMutex, &libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ],
-                          libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
+                                  libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
         libretroCore.audioBufferCurrentByte = 0;
         libretroCore.audioPoolCurrentBuffer = ( libretroCore.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
@@ -324,11 +324,11 @@ bool LibretroCoreEnvironmentCallback( unsigned cmd, void *data ) {
             break;
 
         case RETRO_ENVIRONMENT_SET_HW_RENDER: { // 14
-            qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
+            qDebug() << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
             libretroCore.videoFormat.videoMode = HARDWARERENDER;
 
-            retro_hw_render_callback *hardwareRenderData = ( retro_hw_render_callback * )data;
+            retro_hw_render_callback *hardwareRenderData = static_cast<retro_hw_render_callback *>( data );
 
             hardwareRenderData->get_current_framebuffer = LibretroCoreGetFramebufferCallback;
             hardwareRenderData->get_proc_address = LibretroCoreOpenGLProcAddressCallback;
@@ -337,20 +337,84 @@ bool LibretroCoreEnvironmentCallback( unsigned cmd, void *data ) {
 
             switch( hardwareRenderData->context_type ) {
                 case RETRO_HW_CONTEXT_NONE:
-                    qCDebug( phxCore ) << "\t\tNo hardware context was selected";
+                    qWarning() << "\t\tNo hardware context was selected";
                     break;
 
-                case RETRO_HW_CONTEXT_OPENGL:
-                    qCDebug( phxCore ) << "\t\tOpenGL 2 context was selected";
+                case RETRO_HW_CONTEXT_OPENGL: {
+                    if( libretroCore.surface->format().majorVersion() < 2 || libretroCore.surface->format().renderableType() != QSurfaceFormat::OpenGL ) {
+                        qWarning() << "\t\tOpenGL 2.x not available! Please install a driver for your GPU that supports modern OpenGL";
+                        return false;
+                    }
+
+                    qDebug() << "\t\tOpenGL 2 context was selected";
                     return true;
+                }
 
-                case RETRO_HW_CONTEXT_OPENGLES2:
-                    qCDebug( phxCore ) << "\t\tOpenGL ES 2 context was selected";
-                    break;
+                case RETRO_HW_CONTEXT_OPENGLES2: {
+                    if( libretroCore.surface->format().majorVersion() < 2 || libretroCore.surface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+                        qWarning() << "\t\tOpenGL ES 2.0 not available! Please install a driver for your GPU that supports this";
+                        return false;
+                    }
 
-                case RETRO_HW_CONTEXT_OPENGLES3:
-                    qCDebug( phxCore ) << "\t\tOpenGL 3 context was selected";
-                    break;
+                    qDebug() << "\t\tOpenGL ES 2.0 context was selected";
+                    return true;
+                }
+
+                case RETRO_HW_CONTEXT_OPENGL_CORE: {
+                    if( libretroCore.surface->format().renderableType() == QSurfaceFormat::OpenGL ) {
+                        if( libretroCore.surface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                               << "context was selected";
+                            return true;
+                        }
+
+                        if( libretroCore.surface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+                            libretroCore.surface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                               << "context was selected";
+                            return true;
+                        }
+                    }
+
+                    qWarning().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                         << "not available! Please install a driver for your GPU that supports this version or consider upgrading";
+                    return false;
+                }
+
+                case RETRO_HW_CONTEXT_OPENGLES3: {
+                    if( libretroCore.surface->format().majorVersion() < 3 || libretroCore.surface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+                        qWarning() << "\t\tOpenGL ES 3.0 not available! Please install a driver for your GPU that supports this";
+                        return false;
+                    }
+
+                    qDebug() << "\t\tOpenGL ES 3.0 context was selected";
+                    return true;
+                }
+
+                case RETRO_HW_CONTEXT_OPENGLES_VERSION: {
+                    if( libretroCore.surface->format().renderableType() != QSurfaceFormat::OpenGL ) {
+                        if( libretroCore.surface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                               << "context was selected";
+                            return true;
+                        }
+
+                        if( libretroCore.surface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+                            libretroCore.surface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                               << "context was selected";
+                            return true;
+                        }
+                    }
+
+                    qWarning().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
+                                         << "not available! Please install a driver for your GPU that supports this version or consider upgrading";
+                    return false;
+                }
+
+                case RETRO_HW_CONTEXT_VULKAN:
+                    qWarning() << "\t\tUnsupported Vulkan context selected";
+                    return false;
 
                 default:
                     qCritical() << "\t\tRETRO_HW_CONTEXT: " << hardwareRenderData->context_type << " was not handled!";
@@ -927,14 +991,14 @@ void LibretroCoreVideoRefreshCallback( const void *data, unsigned width, unsigne
             }
         }
         libretroCore.fireDataOut( Node::DataType::Video, &libretroCore.videoMutex, &libretroCore.videoBufferPool[ libretroCore.videoPoolCurrentBuffer ],
-                          bytes, nodeCurrentTime() );
+                                  bytes, nodeCurrentTime() );
         libretroCore.videoPoolCurrentBuffer = ( libretroCore.videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 
     // Current frame is a dupe, send the last actual frame again
     else {
         libretroCore.fireDataOut( Node::DataType::Video, &libretroCore.videoMutex, &libretroCore.videoBufferPool[ libretroCore.videoPoolCurrentBuffer ],
-                          pitch * height, nodeCurrentTime() );
+                                  pitch * height, nodeCurrentTime() );
     }
 
     return;
