@@ -189,29 +189,29 @@ class LibretroCore : public Core {
 };
 
 // Libretro is a C API. This limits us to one LibretroCore per process.
-extern LibretroCore core;
+extern LibretroCore libretroCore;
 
 // SRAM
-void loadSaveData();
-void storeSaveData();
+void LibretroCoreLoadSaveData();
+void LibretroCoreStoreSaveData();
 
 // Should only be called on load time (consumers expect buffers to be valid while Core is active)
-void growBufferPool( retro_system_av_info *avInfo );
-void freeBufferPool();
+void LibretroCoreGrowBufferPool( retro_system_av_info *avInfo );
+void LibretroCoreFreeBufferPool();
 
 // Callbacks
-void audioSampleCallback( int16_t left, int16_t right );
-size_t audioSampleBatchCallback( const int16_t *data, size_t frames );
-bool environmentCallback( unsigned cmd, void *data );
-void inputPollCallback( void );
-void logCallback( enum retro_log_level level, const char *fmt, ... );
-int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
-void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
+void LibretroCoreAudioSampleCallback( int16_t left, int16_t right );
+size_t LibretroCoreAudioSampleBatchCallback( const int16_t *data, size_t frames );
+bool LibretroCoreEnvironmentCallback( unsigned cmd, void *data );
+void LibretroCoreInputPollCallback( void );
+void LibretroCoreLogCallback( enum retro_log_level level, const char *fmt, ... );
+int16_t LibretroCoreInputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id );
+void LibretroCoreVideoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch );
 
 // Extra callbacks
-uintptr_t getFramebufferCallback( void );
-retro_proc_address_t procAddressCallback( const char *sym );
-bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength );
+uintptr_t LibretroCoreGetFramebufferCallback( void );
+retro_proc_address_t LibretroCoreOpenGLProcAddressCallback( const char *sym );
+bool LibretroCoreRumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength );
 
 // Helper that generates key for looking up the inputDescriptors
-QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );
+QString LibretroCoreInputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id );

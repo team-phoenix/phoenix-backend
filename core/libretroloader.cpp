@@ -16,60 +16,60 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
         case Command::Load: {
             // Make sure we only connect on load
             if( !connectedToCore ) {
-                connect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-                connect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+                connect( &libretroCore, &LibretroCore::dataOut, this, &Node::dataOut );
+                connect( &libretroCore, &LibretroCore::commandOut, this, &Node::commandOut );
                 connectedToCore = true;
             }
 
             qCDebug( phxCore ) << command;
-            core.state = State::Loading;
+            libretroCore.state = State::Loading;
             emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
 
             // Set paths (QFileInfo gives you convenience functions, for example to extract just the directory from a file path)
-            core.coreFileInfo.setFile( core.source[ "core" ] );
-            core.gameFileInfo.setFile( core.source[ "game" ] );
-            core.systemPathInfo.setFile( core.source[ "systemPath" ] );
-            core.savePathInfo.setFile( core.source[ "savePath" ] );
+            libretroCore.coreFileInfo.setFile( libretroCore.source[ "core" ] );
+            libretroCore.gameFileInfo.setFile( libretroCore.source[ "game" ] );
+            libretroCore.systemPathInfo.setFile( libretroCore.source[ "systemPath" ] );
+            libretroCore.savePathInfo.setFile( libretroCore.source[ "savePath" ] );
 
-            core.coreFile.setFileName( core.coreFileInfo.absoluteFilePath() );
-            core.gameFile.setFileName( core.gameFileInfo.absoluteFilePath() );
+            libretroCore.coreFile.setFileName( libretroCore.coreFileInfo.absoluteFilePath() );
+            libretroCore.gameFile.setFileName( libretroCore.gameFileInfo.absoluteFilePath() );
 
-            core.contentPath.setPath( core.gameFileInfo.absolutePath() );
-            core.systemPath.setPath( core.systemPathInfo.absolutePath() );
-            core.savePath.setPath( core.savePathInfo.absolutePath() );
+            libretroCore.contentPath.setPath( libretroCore.gameFileInfo.absolutePath() );
+            libretroCore.systemPath.setPath( libretroCore.systemPathInfo.absolutePath() );
+            libretroCore.savePath.setPath( libretroCore.savePathInfo.absolutePath() );
 
             // Convert to C-style ASCII strings (needed by the API)
-            core.corePathByteArray = core.coreFileInfo.absolutePath().toLocal8Bit();
-            core.gameFileByteArray = core.gameFileInfo.absoluteFilePath().toLocal8Bit();
-            core.gamePathByteArray = core.gameFileInfo.absolutePath().toLocal8Bit();
-            core.systemPathByteArray = core.systemPathInfo.absolutePath().toLocal8Bit();
-            core.savePathByteArray = core.savePathInfo.absolutePath().toLocal8Bit();
-            core.corePathCString = core.corePathByteArray.constData();
-            core.gameFileCString = core.gameFileByteArray.constData();
-            core.gamePathCString = core.gamePathByteArray.constData();
-            core.systemPathCString = core.systemPathByteArray.constData();
-            core.savePathCString = core.savePathByteArray.constData();
+            libretroCore.corePathByteArray = libretroCore.coreFileInfo.absolutePath().toLocal8Bit();
+            libretroCore.gameFileByteArray = libretroCore.gameFileInfo.absoluteFilePath().toLocal8Bit();
+            libretroCore.gamePathByteArray = libretroCore.gameFileInfo.absolutePath().toLocal8Bit();
+            libretroCore.systemPathByteArray = libretroCore.systemPathInfo.absolutePath().toLocal8Bit();
+            libretroCore.savePathByteArray = libretroCore.savePathInfo.absolutePath().toLocal8Bit();
+            libretroCore.corePathCString = libretroCore.corePathByteArray.constData();
+            libretroCore.gameFileCString = libretroCore.gameFileByteArray.constData();
+            libretroCore.gamePathCString = libretroCore.gamePathByteArray.constData();
+            libretroCore.systemPathCString = libretroCore.systemPathByteArray.constData();
+            libretroCore.savePathCString = libretroCore.savePathByteArray.constData();
 
             qDebug() << "";
             qCDebug( phxCore ) << "Now loading:";
-            qCDebug( phxCore ) << "Core        :" << core.source[ "core" ];
-            qCDebug( phxCore ) << "Game        :" << core.source[ "game" ];
-            qCDebug( phxCore ) << "System path :" << core.source[ "systemPath" ];
-            qCDebug( phxCore ) << "Save path   :" << core.source[ "savePath" ];
+            qCDebug( phxCore ) << "Core        :" << libretroCore.source[ "core" ];
+            qCDebug( phxCore ) << "Game        :" << libretroCore.source[ "game" ];
+            qCDebug( phxCore ) << "System path :" << libretroCore.source[ "systemPath" ];
+            qCDebug( phxCore ) << "Save path   :" << libretroCore.source[ "savePath" ];
             qDebug() << "";
 
             // Set defaults that'll get overwritten as the core loads if necessary
             {
                 // Pixel format is set to QImage::Format_RGB16 by default by the struct ProducerFormat constructor
                 // However, for Libretro the default is RGB1555 aka QImage::Format_RGB555
-                core.videoFormat.videoPixelFormat = QImage::Format_RGB555;
+                libretroCore.videoFormat.videoPixelFormat = QImage::Format_RGB555;
             }
 
             // Load core
             {
-                qCDebug( phxCore ) << "Loading core:" << core.coreFileInfo.absoluteFilePath();
+                qCDebug( phxCore ) << "Loading core:" << libretroCore.coreFileInfo.absoluteFilePath();
 
-                core.coreFile.load();
+                libretroCore.coreFile.load();
 
                 // Resolve symbols
                 resolved_sym( retro_set_environment );
@@ -99,18 +99,18 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 resolved_sym( retro_get_memory_size );
 
                 // Set callbacks
-                core.symbols.retro_set_environment( environmentCallback );
-                core.symbols.retro_set_audio_sample( audioSampleCallback );
-                core.symbols.retro_set_audio_sample_batch( audioSampleBatchCallback );
-                core.symbols.retro_set_input_poll( inputPollCallback );
-                core.symbols.retro_set_input_state( inputStateCallback );
-                core.symbols.retro_set_video_refresh( videoRefreshCallback );
+                libretroCore.symbols.retro_set_environment( LibretroCoreEnvironmentCallback );
+                libretroCore.symbols.retro_set_audio_sample( LibretroCoreAudioSampleCallback );
+                libretroCore.symbols.retro_set_audio_sample_batch( LibretroCoreAudioSampleBatchCallback );
+                libretroCore.symbols.retro_set_input_poll( LibretroCoreInputPollCallback );
+                libretroCore.symbols.retro_set_input_state( LibretroCoreInputStateCallback );
+                libretroCore.symbols.retro_set_video_refresh( LibretroCoreVideoRefreshCallback );
 
                 // Init the core
-                core.symbols.retro_init();
+                libretroCore.symbols.retro_init();
 
                 // Get some info about the game
-                core.symbols.retro_get_system_info( core.systemInfo );
+                libretroCore.symbols.retro_get_system_info( libretroCore.systemInfo );
 
                 qDebug() << "";
             }
@@ -120,15 +120,15 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
             // Load game
             {
-                qCDebug( phxCore ) << "Loading game:" << core.gameFileInfo.absoluteFilePath();
+                qCDebug( phxCore ) << "Loading game:" << libretroCore.gameFileInfo.absoluteFilePath();
 
                 // Argument struct for symbols.retro_load_game()
                 retro_game_info gameInfo;
 
                 // Full path needed, simply pass the game's file path to the core
-                if( core.systemInfo->need_fullpath ) {
+                if( libretroCore.systemInfo->need_fullpath ) {
                     qCDebug( phxCore ) << "Passing file path to core...";
-                    gameInfo.path = core.gameFileCString;
+                    gameInfo.path = libretroCore.gameFileCString;
                     gameInfo.data = nullptr;
                     gameInfo.size = 0;
                     gameInfo.meta = "";
@@ -137,20 +137,20 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 // Full path not needed, read the file to memory and pass that to the core
                 else {
                     qCDebug( phxCore ) << "Copying game contents to memory...";
-                    core.gameFile.open( QIODevice::ReadOnly );
+                    libretroCore.gameFile.open( QIODevice::ReadOnly );
 
                     // Read into memory
-                    core.gameData = core.gameFile.readAll();
+                    libretroCore.gameData = libretroCore.gameFile.readAll();
 
-                    core.gameFile.close();
+                    libretroCore.gameFile.close();
 
                     gameInfo.path = nullptr;
-                    gameInfo.data = core.gameData.constData();
-                    gameInfo.size = core.gameFile.size();
+                    gameInfo.data = libretroCore.gameData.constData();
+                    gameInfo.size = libretroCore.gameFile.size();
                     gameInfo.meta = "";
                 }
 
-                core.symbols.retro_load_game( &gameInfo );
+                libretroCore.symbols.retro_load_game( &gameInfo );
 
                 qDebug() << "";
             }
@@ -159,43 +159,43 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
             fflush( stderr );
 
             // Load save data
-            loadSaveData();
+            LibretroCoreLoadSaveData();
 
             // Get audio/video timing and send to consumers, allocate buffer pool
             {
                 // Get info from the core
                 retro_system_av_info *avInfo = new retro_system_av_info();
-                core.symbols.retro_get_system_av_info( avInfo );
-                growBufferPool( avInfo );
+                libretroCore.symbols.retro_get_system_av_info( avInfo );
+                LibretroCoreGrowBufferPool( avInfo );
                 qCDebug( phxCore ).nospace() << "coreFPS: " << avInfo->timing.fps;
                 emit commandOut( Command::SetCoreFPS, ( qreal )( avInfo->timing.fps ), nodeCurrentTime() );
 
                 // Create the FBO which contains the texture 3d cores will draw to
-                if( core.videoFormat.videoMode == HARDWARERENDER ) {
-                    core.context->makeCurrent( core.surface );
+                if( libretroCore.videoFormat.videoMode == HARDWARERENDER ) {
+                    libretroCore.context->makeCurrent( libretroCore.surface );
 
                     // If the core has made available its max width/height at this stage, recreate the FBO with those settings
                     // Otherwise, use a sensible default size, the core will probably set the proper size in the first frame
                     if( avInfo->geometry.max_width != 0 && avInfo->geometry.max_height != 0 ) {
-                        if( core.fbo ) {
-                            delete core.fbo;
+                        if( libretroCore.fbo ) {
+                            delete libretroCore.fbo;
                         }
 
-                        core.fbo = new QOpenGLFramebufferObject( avInfo->geometry.base_width, avInfo->geometry.base_height, QOpenGLFramebufferObject::CombinedDepthStencil );
+                        libretroCore.fbo = new QOpenGLFramebufferObject( avInfo->geometry.base_width, avInfo->geometry.base_height, QOpenGLFramebufferObject::CombinedDepthStencil );
 
                         // Clear the newly created FBO
-                        core.fbo->bind();
-                        core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+                        libretroCore.fbo->bind();
+                        libretroCore.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
                     } else {
-                        if( core.fbo ) {
-                            delete core.fbo;
+                        if( libretroCore.fbo ) {
+                            delete libretroCore.fbo;
                         }
 
-                        core.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
+                        libretroCore.fbo = new QOpenGLFramebufferObject( 640, 480, QOpenGLFramebufferObject::CombinedDepthStencil );
 
                         // Clear the newly created FBO
-                        core.fbo->bind();
-                        core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+                        libretroCore.fbo->bind();
+                        libretroCore.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
 
                         avInfo->geometry.max_width = 640;
                         avInfo->geometry.max_height = 480;
@@ -204,19 +204,19 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     }
 
                     // Tell any video output children about this texture
-                    emit commandOut( Command::SetOpenGLTexture, core.fbo->texture(), nodeCurrentTime() );
+                    emit commandOut( Command::SetOpenGLTexture, libretroCore.fbo->texture(), nodeCurrentTime() );
 
-                    core.symbols.retro_hw_context_reset();
+                    libretroCore.symbols.retro_hw_context_reset();
                 }
 
-                core.getAVInfo( avInfo );
+                libretroCore.getAVInfo( avInfo );
                 delete avInfo;
             }
 
             // Set all variables to their defaults, mark all variables as dirty
             {
-                for( const auto &key : core.variables.keys() ) {
-                    LibretroVariable &variable = core.variables[ key ];
+                for( const auto &key : libretroCore.variables.keys() ) {
+                    LibretroVariable &variable = libretroCore.variables[ key ];
 
                     if( !variable.choices().size() ) {
                         continue;
@@ -237,21 +237,21 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                     emit commandOut( Command::SetLibretroVariable, var, nodeCurrentTime() );
                 }
 
-                core.variablesAreDirty = true;
+                libretroCore.variablesAreDirty = true;
             }
 
             // Disconnect LibretroCore from the rest of the pipeline
-            disconnect( &core, &LibretroCore::dataOut, this, &Node::dataOut );
-            disconnect( &core, &LibretroCore::commandOut, this, &Node::commandOut );
+            disconnect( &libretroCore, &LibretroCore::dataOut, this, &Node::dataOut );
+            disconnect( &libretroCore, &LibretroCore::commandOut, this, &Node::commandOut );
             connectedToCore = false;
 
             // Flush stderr, some cores may still write to it despite having RETRO_LOG
             fflush( stderr );
 
-            core.pausable = true;
+            libretroCore.pausable = true;
             emit commandOut( Command::SetPausable, true, nodeCurrentTime() );
 
-            core.state = State::Paused;
+            libretroCore.state = State::Paused;
             emit commandOut( Command::Pause, QVariant(), nodeCurrentTime() );
 
             break;
@@ -268,19 +268,19 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 stringMap[ key ] = map[ key ].toString();
             }
 
-            core.source = stringMap;
+            libretroCore.source = stringMap;
             break;
         }
 
         case Command::SetSurface: {
             emit commandOut( command, data, timeStamp );
-            core.surface = data.value<QOffscreenSurface *>();
+            libretroCore.surface = data.value<QOffscreenSurface *>();
             break;
         }
 
         case Command::SetOpenGLContext: {
             emit commandOut( command, data, timeStamp );
-            core.context = data.value<QOpenGLContext *>();
+            libretroCore.context = data.value<QOpenGLContext *>();
             break;
         }
 

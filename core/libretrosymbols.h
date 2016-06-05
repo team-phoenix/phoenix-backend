@@ -3,7 +3,7 @@
 #include "libretro.h"
 
 // Helper for resolving libretro methods
-#define resolved_sym( name ) core.symbols.name = ( decltype( core.symbols.name ) )core.coreFile.resolve( #name );
+#define resolved_sym( name ) libretroCore.symbols.name = reinterpret_cast<decltype( libretroCore.symbols.name )>( libretroCore.coreFile.resolve( #name ) );
 
 class LibretroSymbols {
     public:

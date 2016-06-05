@@ -19,7 +19,7 @@ LibretroCore::LibretroCore( Core *parent ): Core( parent ),
 }
 
 LibretroCore::~LibretroCore() {
-    freeBufferPool();
+    LibretroCoreFreeBufferPool();
 
     delete systemInfo;
 }
@@ -38,49 +38,49 @@ void LibretroCore::getAVInfo( retro_system_av_info *avInfo ) {
     // Audio
 
     // The Libretro API only support 16-bit stereo PCM
-    core.audioSampleRate = avInfo->timing.sample_rate;
-    emit commandOut( Node::Command::SetSampleRate, core.audioSampleRate, nodeCurrentTime() );
+    libretroCore.audioSampleRate = avInfo->timing.sample_rate;
+    emit commandOut( Node::Command::SetSampleRate, libretroCore.audioSampleRate, nodeCurrentTime() );
 
     // Video
 
-    core.videoFormat.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
+    libretroCore.videoFormat.videoAspectRatio = avInfo->geometry.aspect_ratio <= 0.0 ?
                                         ( qreal )avInfo->geometry.base_width / avInfo->geometry.base_height :
                                         avInfo->geometry.aspect_ratio;
-    core.videoFormat.videoBytesPerPixel = QImage().toPixelFormat( core.videoFormat.videoPixelFormat ).bitsPerPixel() / 8;
-    core.videoFormat.videoBytesPerLine = avInfo->geometry.base_width * core.videoFormat.videoBytesPerPixel;
-    core.videoFormat.videoFramerate = avInfo->timing.fps;
+    libretroCore.videoFormat.videoBytesPerPixel = QImage().toPixelFormat( libretroCore.videoFormat.videoPixelFormat ).bitsPerPixel() / 8;
+    libretroCore.videoFormat.videoBytesPerLine = avInfo->geometry.base_width * libretroCore.videoFormat.videoBytesPerPixel;
+    libretroCore.videoFormat.videoFramerate = avInfo->timing.fps;
 
-    core.videoFormat.videoSize.setWidth( avInfo->geometry.base_width );
-    core.videoFormat.videoSize.setHeight( avInfo->geometry.base_height );
+    libretroCore.videoFormat.videoSize.setWidth( avInfo->geometry.base_width );
+    libretroCore.videoFormat.videoSize.setHeight( avInfo->geometry.base_height );
 
     qCDebug( phxCore ) << "Core claims an aspect ratio of:" << avInfo->geometry.aspect_ratio;
-    qCDebug( phxCore ) << "Using aspect ratio:" << core.videoFormat.videoAspectRatio;
+    qCDebug( phxCore ) << "Using aspect ratio:" << libretroCore.videoFormat.videoAspectRatio;
     qCDebug( phxCore ) << "Base video size:" << QSize( avInfo->geometry.base_width, avInfo->geometry.base_height );
     qCDebug( phxCore ) << "Maximum video size:" << QSize( avInfo->geometry.max_width, avInfo->geometry.max_height );
 
     QVariant variant;
-    variant.setValue( core.videoFormat );
+    variant.setValue( libretroCore.videoFormat );
     emit commandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
 }
 
 // Global
 
-LibretroCore core;
+LibretroCore libretroCore;
 
-void loadSaveData() {
-    core.saveDataBuf = ( core.symbols.retro_get_memory_data )( RETRO_MEMORY_SAVE_RAM );
+void LibretroCoreLoadSaveData() {
+    libretroCore.saveDataBuf = ( libretroCore.symbols.retro_get_memory_data )( RETRO_MEMORY_SAVE_RAM );
 
-    if( !core.saveDataBuf ) {
+    if( !libretroCore.saveDataBuf ) {
         qCInfo( phxCore ) << "The core will handle saving (passed a null pointer when asked for save buffer)";
         return;
     }
 
-    QFile file( core.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
-                core.gameFileInfo.baseName() % QStringLiteral( ".sav" ) );
+    QFile file( libretroCore.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
+                libretroCore.gameFileInfo.baseName() % QStringLiteral( ".sav" ) );
 
     if( file.open( QIODevice::ReadOnly ) ) {
         QByteArray data = file.readAll();
-        memcpy( core.saveDataBuf, data.data(), data.size() );
+        memcpy( libretroCore.saveDataBuf, data.data(), data.size() );
 
         qCDebug( phxCore ) << Q_FUNC_INFO << file.fileName() << "(true)";
         file.close();
@@ -91,13 +91,13 @@ void loadSaveData() {
     }
 }
 
-void storeSaveData() {
-    QString localFile = core.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
-                        core.gameFileInfo.baseName() % QStringLiteral( ".sav" );
+void LibretroCoreStoreSaveData() {
+    QString localFile = libretroCore.savePathInfo.absolutePath() % QStringLiteral( "/" ) %
+                        libretroCore.gameFileInfo.baseName() % QStringLiteral( ".sav" );
 
     qCDebug( phxCore ).nospace() << "Saving: " << localFile;
 
-    if( core.saveDataBuf == nullptr ) {
+    if( libretroCore.saveDataBuf == nullptr ) {
         qCDebug( phxCore ).nospace() << "Skipping, the core has done the save by itself";
         return;
     }
@@ -105,8 +105,8 @@ void storeSaveData() {
     QFile file( localFile );
 
     if( file.open( QIODevice::WriteOnly ) ) {
-        char *data = static_cast<char *>( core.saveDataBuf );
-        size_t size = core.symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
+        char *data = static_cast<char *>( libretroCore.saveDataBuf );
+        size_t size = libretroCore.symbols.retro_get_memory_size( RETRO_MEMORY_SAVE_RAM );
         file.write( data, size );
         file.close();
         qCDebug( phxCore ) << "Save successful";
@@ -117,7 +117,7 @@ void storeSaveData() {
     }
 }
 
-void growBufferPool( retro_system_av_info *avInfo ) {
+void LibretroCoreGrowBufferPool( retro_system_av_info *avInfo ) {
     // Allocate a bit extra as some cores' numbers do not add up...
     // Assume 16-bit stereo audio, 32-bit video
     size_t newAudioSize = static_cast<size_t>( avInfo->timing.sample_rate * 3 );
@@ -125,114 +125,114 @@ void growBufferPool( retro_system_av_info *avInfo ) {
 
     // Reallocate buffers if necessary
 
-    if( newAudioSize > core.audioPoolIndividualBufferSize ) {
-        core.audioMutex.lock();
+    if( newAudioSize > libretroCore.audioPoolIndividualBufferSize ) {
+        libretroCore.audioMutex.lock();
 
-        qDebug() << "Growing audio buffer pool buffers from" << core.audioPoolIndividualBufferSize << "to" << newAudioSize;
+        qDebug() << "Growing audio buffer pool buffers from" << libretroCore.audioPoolIndividualBufferSize << "to" << newAudioSize;
 
-        core.audioPoolIndividualBufferSize = newAudioSize;
+        libretroCore.audioPoolIndividualBufferSize = newAudioSize;
 
         for( int i = 0; i < POOL_SIZE; i++ ) {
-            core.audioBufferPool[ i ] = new int16_t[ newAudioSize ]();
+            libretroCore.audioBufferPool[ i ] = new int16_t[ newAudioSize ]();
         }
 
-        core.audioMutex.unlock();
+        libretroCore.audioMutex.unlock();
     }
 
-    if( newVideoSize > core.videoPoolIndividualBufferSize ) {
-        core.videoMutex.lock();
+    if( newVideoSize > libretroCore.videoPoolIndividualBufferSize ) {
+        libretroCore.videoMutex.lock();
 
-        qDebug() << "Growing video buffer pool buffers from" << core.videoPoolIndividualBufferSize << "to" << newVideoSize;
+        qDebug() << "Growing video buffer pool buffers from" << libretroCore.videoPoolIndividualBufferSize << "to" << newVideoSize;
 
-        core.videoPoolIndividualBufferSize = newVideoSize;
+        libretroCore.videoPoolIndividualBufferSize = newVideoSize;
 
         for( int i = 0; i < POOL_SIZE; i++ ) {
-            core.videoBufferPool[ i ] = new quint8[ newVideoSize ]();
+            libretroCore.videoBufferPool[ i ] = new quint8[ newVideoSize ]();
         }
 
-        core.videoMutex.unlock();
+        libretroCore.videoMutex.unlock();
     }
 }
 
-void freeBufferPool() {
-    core.audioMutex.lock();
+void LibretroCoreFreeBufferPool() {
+    libretroCore.audioMutex.lock();
 
     for( int i = 0; i < POOL_SIZE; i++ ) {
-        delete core.audioBufferPool[ i ];
-        core.audioBufferPool[ i ] = nullptr;
+        delete libretroCore.audioBufferPool[ i ];
+        libretroCore.audioBufferPool[ i ] = nullptr;
     }
 
-    core.audioPoolIndividualBufferSize = 0;
+    libretroCore.audioPoolIndividualBufferSize = 0;
 
-    core.audioMutex.unlock();
+    libretroCore.audioMutex.unlock();
 
-    core.videoMutex.lock();
+    libretroCore.videoMutex.lock();
 
     for( int i = 0; i < POOL_SIZE; i++ ) {
-        delete core.videoBufferPool[ i ];
-        core.videoBufferPool[ i ] = nullptr;
+        delete libretroCore.videoBufferPool[ i ];
+        libretroCore.videoBufferPool[ i ] = nullptr;
     }
 
-    core.videoPoolIndividualBufferSize = 0;
+    libretroCore.videoPoolIndividualBufferSize = 0;
 
-    core.videoMutex.unlock();
+    libretroCore.videoMutex.unlock();
 }
 
 // Callbacks
 
-void audioSampleCallback( int16_t left, int16_t right ) {
+void LibretroCoreAudioSampleCallback( int16_t left, int16_t right ) {
     // Sanity check
-    Q_ASSERT_X( core.audioBufferCurrentByte < core.audioSampleRate * 5,
-                "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( core.audioBufferCurrentByte ).toLocal8Bit() );
+    Q_ASSERT_X( libretroCore.audioBufferCurrentByte < libretroCore.audioSampleRate * 5,
+                "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( libretroCore.audioBufferCurrentByte ).toLocal8Bit() );
 
     // Stereo audio is interleaved, left then right
-    core.audioMutex.lock();
-    core.audioBufferPool[ core.audioPoolCurrentBuffer ][ core.audioBufferCurrentByte / 2 ] = left;
-    core.audioBufferPool[ core.audioPoolCurrentBuffer ][ core.audioBufferCurrentByte / 2 + 1 ] = right;
-    core.audioMutex.unlock();
+    libretroCore.audioMutex.lock();
+    libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ][ libretroCore.audioBufferCurrentByte / 2 ] = left;
+    libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ][ libretroCore.audioBufferCurrentByte / 2 + 1 ] = right;
+    libretroCore.audioMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
-    core.audioBufferCurrentByte += 4;
+    libretroCore.audioBufferCurrentByte += 4;
 
     // Flush if we have more than 1/2 of a frame's worth of data
-    if( core.audioBufferCurrentByte > core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
-        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, &core.audioBufferPool[ core.audioPoolCurrentBuffer ],
-                          core.audioBufferCurrentByte, nodeCurrentTime() );
-        core.audioBufferCurrentByte = 0;
-        core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
+    if( libretroCore.audioBufferCurrentByte > libretroCore.audioSampleRate * 4 / libretroCore.videoFormat.videoFramerate / 2 ) {
+        libretroCore.fireDataOut( Node::DataType::Audio, &libretroCore.audioMutex, &libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ],
+                          libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
+        libretroCore.audioBufferCurrentByte = 0;
+        libretroCore.audioPoolCurrentBuffer = ( libretroCore.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 }
 
-size_t audioSampleBatchCallback( const int16_t *data, size_t frames ) {
+size_t LibretroCoreAudioSampleBatchCallback( const int16_t *data, size_t frames ) {
     // Sanity check
-    Q_ASSERT_X( core.audioBufferCurrentByte < core.audioSampleRate * 5,
+    Q_ASSERT_X( libretroCore.audioBufferCurrentByte < libretroCore.audioSampleRate * 5,
                 "audio batch callback",
-                QString( "Buffer pool overflow (%1)" ).arg( core.audioBufferCurrentByte ).toLocal8Bit() );
+                QString( "Buffer pool overflow (%1)" ).arg( libretroCore.audioBufferCurrentByte ).toLocal8Bit() );
 
     // Need to do a bit of pointer arithmetic to get the right offset (the buffer is indexed in increments of shorts -- 2 bytes)
-    int16_t *dst_init = core.audioBufferPool[ core.audioPoolCurrentBuffer ];
-    int16_t *dst = dst_init + ( core.audioBufferCurrentByte / 2 );
+    int16_t *dst_init = libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ];
+    int16_t *dst = dst_init + ( libretroCore.audioBufferCurrentByte / 2 );
 
     // Copy the incoming data
-    core.audioMutex.lock();
+    libretroCore.audioMutex.lock();
     memcpy( dst, data, frames * 4 );
-    core.audioMutex.unlock();
+    libretroCore.audioMutex.unlock();
 
     // Each frame is 4 bytes (16-bit stereo)
-    core.audioBufferCurrentByte += frames * 4;
+    libretroCore.audioBufferCurrentByte += frames * 4;
 
     // Flush if we have 1/2 of a frame's worth of data or more
-    if( core.audioBufferCurrentByte >= core.audioSampleRate * 4 / core.videoFormat.videoFramerate / 2 ) {
-        core.fireDataOut( Node::DataType::Audio, &core.audioMutex, &core.audioBufferPool[ core.audioPoolCurrentBuffer ],
-                          core.audioBufferCurrentByte, nodeCurrentTime() );
-        core.audioBufferCurrentByte = 0;
-        core.audioPoolCurrentBuffer = ( core.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
+    if( libretroCore.audioBufferCurrentByte >= libretroCore.audioSampleRate * 4 / libretroCore.videoFormat.videoFramerate / 2 ) {
+        libretroCore.fireDataOut( Node::DataType::Audio, &libretroCore.audioMutex, &libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ],
+                          libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
+        libretroCore.audioBufferCurrentByte = 0;
+        libretroCore.audioPoolCurrentBuffer = ( libretroCore.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 
     return frames;
 }
 
-bool environmentCallback( unsigned cmd, void *data ) {
+bool LibretroCoreEnvironmentCallback( unsigned cmd, void *data ) {
 
     switch( cmd ) {
         case RETRO_ENVIRONMENT_SET_ROTATION: // 1
@@ -267,7 +267,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: { // 9
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY (9) (handled)";
-            *( const char ** )data = core.systemPathCString;
+            *( const char ** )data = libretroCore.systemPathCString;
             return true;
         }
 
@@ -278,17 +278,17 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    core.videoFormat.videoPixelFormat = QImage::Format_RGB555;
+                    libretroCore.videoFormat.videoPixelFormat = QImage::Format_RGB555;
                     qCDebug( phxCore ) << "\t\tPixel format: 0RGB1555 aka QImage::Format_RGB555";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    core.videoFormat.videoPixelFormat = QImage::Format_RGB16;
+                    libretroCore.videoFormat.videoPixelFormat = QImage::Format_RGB16;
                     qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    core.videoFormat.videoPixelFormat = QImage::Format_RGB32;
+                    libretroCore.videoFormat.videoPixelFormat = QImage::Format_RGB32;
                     qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
 
@@ -305,8 +305,8 @@ bool environmentCallback( unsigned cmd, void *data ) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS (11) (handled)";
 
             for( retro_input_descriptor *descriptor = ( retro_input_descriptor * )data; descriptor->description; descriptor++ ) {
-                QString key = inputTupleToString( descriptor->port, descriptor->device, descriptor->index, descriptor->id );
-                core.inputDescriptors[ key ] = QString( descriptor->description );
+                QString key = LibretroCoreInputTupleToString( descriptor->port, descriptor->device, descriptor->index, descriptor->id );
+                libretroCore.inputDescriptors[ key ] = QString( descriptor->description );
                 //qCDebug( phxCore ) << "\t\t" << key << descriptor->description;
             }
 
@@ -315,7 +315,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: { // 12
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK (12) (handled)";
-            core.symbols.retro_keyboard_event = ( decltype( LibretroSymbols::retro_keyboard_event ) )data;
+            libretroCore.symbols.retro_keyboard_event = ( decltype( LibretroSymbols::retro_keyboard_event ) )data;
             break;
         }
 
@@ -326,14 +326,14 @@ bool environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_SET_HW_RENDER: { // 14
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_HW_RENDER (14) (handled)";
 
-            core.videoFormat.videoMode = HARDWARERENDER;
+            libretroCore.videoFormat.videoMode = HARDWARERENDER;
 
             retro_hw_render_callback *hardwareRenderData = ( retro_hw_render_callback * )data;
 
-            hardwareRenderData->get_current_framebuffer = getFramebufferCallback;
-            hardwareRenderData->get_proc_address = procAddressCallback;
+            hardwareRenderData->get_current_framebuffer = LibretroCoreGetFramebufferCallback;
+            hardwareRenderData->get_proc_address = LibretroCoreOpenGLProcAddressCallback;
 
-            core.symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
+            libretroCore.symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
 
             switch( hardwareRenderData->context_type ) {
                 case RETRO_HW_CONTEXT_NONE:
@@ -364,8 +364,8 @@ bool environmentCallback( unsigned cmd, void *data ) {
             // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
             auto *retroVariable = static_cast<struct retro_variable *>( data );
 
-            if( core.variables.contains( retroVariable->key ) ) {
-                const auto &var = core.variables[ retroVariable->key ];
+            if( libretroCore.variables.contains( retroVariable->key ) ) {
+                const auto &var = libretroCore.variables[ retroVariable->key ];
 
                 if( var.isValid() ) {
                     retroVariable->value = var.value().data();
@@ -388,8 +388,8 @@ bool environmentCallback( unsigned cmd, void *data ) {
             for( ; rv->key != NULL; rv++ ) {
                 LibretroVariable v( rv );
 
-                if( !( core.variables.contains( v.key() ) ) ) {
-                    core.variables.insert( v.key(), v );
+                if( !( libretroCore.variables.contains( v.key() ) ) ) {
+                    libretroCore.variables.insert( v.key(), v );
                 }
 
             }
@@ -401,13 +401,13 @@ bool environmentCallback( unsigned cmd, void *data ) {
             // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
             // Let the core know we have some variable changes if we set our internal flag (clear it so the change only happens once)
             // TODO: Protect all variable-touching code with mutexes?
-            if( core.variablesAreDirty ) {
+            if( libretroCore.variablesAreDirty ) {
                 // Special case: Force DeSmuME's pointer type variable to "touch" in order to work with our touch code
-                if( core.variables.contains( "desmume_pointer_type" ) ) {
-                    core.variables[ "desmume_pointer_type" ].setValue( QByteArrayLiteral( "touch" ) );
+                if( libretroCore.variables.contains( "desmume_pointer_type" ) ) {
+                    libretroCore.variables[ "desmume_pointer_type" ].setValue( QByteArrayLiteral( "touch" ) );
                 }
 
-                core.variablesAreDirty = false;
+                libretroCore.variablesAreDirty = false;
                 *static_cast<bool *>( data ) = true;
                 return true;
             } else {
@@ -429,7 +429,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_GET_LIBRETRO_PATH: { // 19
             // This is done with the assumption that the core file path from setSource() will always be an absolute path
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LIBRETRO_PATH (19) (handled)";
-            *( const char ** )data = core.corePathCString;
+            *( const char ** )data = libretroCore.corePathCString;
             return true;
         }
 
@@ -437,7 +437,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: { // 21
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
-            core.symbols.retro_frame_time = ( decltype( LibretroSymbols::retro_frame_time ) )data;
+            libretroCore.symbols.retro_frame_time = ( decltype( LibretroSymbols::retro_frame_time ) )data;
             return true;
         }
 
@@ -447,7 +447,7 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: { // 23
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE (23) (handled)";
-            static_cast<struct retro_rumble_interface *>( data )->set_rumble_state = &rumbleCallback;
+            static_cast<struct retro_rumble_interface *>( data )->set_rumble_state = &LibretroCoreRumbleCallback;
             return true;
         }
 
@@ -469,20 +469,20 @@ bool environmentCallback( unsigned cmd, void *data ) {
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LOG_INTERFACE (27) (handled)";
             struct retro_log_callback *logcb = ( struct retro_log_callback * )data;
-            logcb->log = logCallback;
+            logcb->log = LibretroCoreLogCallback;
             return true;
         }
 
         case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: { // 28
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_PERF_INTERFACE (28) (handled)";
-            core.performanceCallback.get_cpu_features = 0;
-            core.performanceCallback.get_perf_counter = 0;
-            core.performanceCallback.get_time_usec = 0;
-            core.performanceCallback.perf_log = 0;
-            core.performanceCallback.perf_register = 0;
-            core.performanceCallback.perf_start = 0;
-            core.performanceCallback.perf_stop = 0;
-            *( retro_perf_callback * )data = core.performanceCallback;
+            libretroCore.performanceCallback.get_cpu_features = 0;
+            libretroCore.performanceCallback.get_perf_counter = 0;
+            libretroCore.performanceCallback.get_time_usec = 0;
+            libretroCore.performanceCallback.perf_log = 0;
+            libretroCore.performanceCallback.perf_register = 0;
+            libretroCore.performanceCallback.perf_start = 0;
+            libretroCore.performanceCallback.perf_stop = 0;
+            *( retro_perf_callback * )data = libretroCore.performanceCallback;
             return true;
         }
 
@@ -492,13 +492,13 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
         case RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY: { // 30
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY (30) (handled)";
-            *( const char ** )data = core.systemPathCString;
+            *( const char ** )data = libretroCore.systemPathCString;
             return true;
         }
 
         case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY: { // 31
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_SAVE_DIRECTORY (31) (handled)";
-            *( const char ** )data = core.savePathCString;
+            *( const char ** )data = libretroCore.savePathCString;
             return true;
         }
 
@@ -539,11 +539,11 @@ bool environmentCallback( unsigned cmd, void *data ) {
 
             // Get info from the core
             retro_system_av_info *avInfo = new retro_system_av_info();
-            core.symbols.retro_get_system_av_info( avInfo );
+            libretroCore.symbols.retro_get_system_av_info( avInfo );
             // Although we hope the core would have updated its internal av_info struct by now, we'll play it safe and
             // use the given geometry
             memcpy( &( avInfo->geometry ), data, sizeof( struct retro_game_geometry ) );
-            core.getAVInfo( avInfo );
+            libretroCore.getAVInfo( avInfo );
             delete avInfo;
 
             return true;
@@ -571,12 +571,12 @@ bool environmentCallback( unsigned cmd, void *data ) {
     return false;
 }
 
-void inputPollCallback( void ) {
+void LibretroCoreInputPollCallback( void ) {
     // Do nothing, this is handled before retro_run() is called
     return;
 }
 
-void logCallback( enum retro_log_level level, const char *fmt, ... ) {
+void LibretroCoreLogCallback( enum retro_log_level level, const char *fmt, ... ) {
     QVarLengthArray<char, 1024> outbuf( 1024 );
     va_list args;
     va_start( args, fmt );
@@ -629,7 +629,7 @@ void logCallback( enum retro_log_level level, const char *fmt, ... ) {
     }
 }
 
-int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
+int16_t LibretroCoreInputStateCallback( unsigned port, unsigned device, unsigned index, unsigned id ) {
     Q_UNUSED( port );
 
 
@@ -640,9 +640,9 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         // FIXME: Don't assume VideoOutput fills entire window
         // TODO: Do all this upstream? Maybe in PhoenixWindow?
 
-        qreal windowWidth = core.windowGeometry.width();
-        qreal windowHeight = core.windowGeometry.height();
-        qreal aspectRatio = core.videoFormat.videoAspectRatio;
+        qreal windowWidth = libretroCore.windowGeometry.width();
+        qreal windowHeight = libretroCore.windowGeometry.height();
+        qreal aspectRatio = libretroCore.videoFormat.videoAspectRatio;
 
         qreal letterBoxHeight = windowWidth / aspectRatio;
         qreal letterBoxWidth = windowWidth;
@@ -671,17 +671,17 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
         switch( id ) {
             // 0 or 1
             case RETRO_DEVICE_ID_POINTER_PRESSED: {
-                return ( core.mouse.buttons & Qt::LeftButton ) ? 1 : 0;
+                return ( libretroCore.mouse.buttons & Qt::LeftButton ) ? 1 : 0;
             }
 
             case RETRO_DEVICE_ID_POINTER_X: {
-                qreal windowX = core.mouse.position.x();
-                qreal x = windowX / core.windowGeometry.width();
+                qreal windowX = libretroCore.mouse.position.x();
+                qreal x = windowX / libretroCore.windowGeometry.width();
 
                 // Aspect ratio corrections
                 // Mode 1 requires no correction
                 // TODO: 2 and 3
-                if( core.aspectMode == 0 ) {
+                if( libretroCore.aspectMode == 0 ) {
                     // Change x so that 0.0 is the left edge of the game instead of the left edge of the window
                     qreal leftEdgeX = ( windowWidth / 2 ) - ( fitModeWidth / 2 );
                     qreal leftEdge = leftEdgeX / windowWidth;
@@ -715,13 +715,13 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
             }
 
             case RETRO_DEVICE_ID_POINTER_Y: {
-                qreal windowY = core.mouse.position.y();
-                qreal y = windowY / core.windowGeometry.height();
+                qreal windowY = libretroCore.mouse.position.y();
+                qreal y = windowY / libretroCore.windowGeometry.height();
 
                 // Aspect ratio corrections
                 // Mode 1 requires no correction
                 // TODO: 2 and 3
-                if( core.aspectMode == 0 ) {
+                if( libretroCore.aspectMode == 0 ) {
                     // Change y so that 0.0 is the top edge of the game instead of the top edge of the window
                     qreal topEdgeY = ( windowHeight / 2 ) - ( fitModeHeight / 2 );
                     qreal topEdge = topEdgeY / windowHeight;
@@ -765,7 +765,7 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
     if( device == RETRO_DEVICE_ANALOG ) {
         int64_t value = 0;
 
-        for( GamepadState gamepad : core.gamepads ) {
+        for( GamepadState gamepad : libretroCore.gamepads ) {
             switch( index ) {
                 case RETRO_DEVICE_INDEX_ANALOG_LEFT:
                     value += gamepad.axis[ id == RETRO_DEVICE_ID_ANALOG_X ? SDL_CONTROLLER_AXIS_LEFTX : SDL_CONTROLLER_AXIS_LEFTY ];
@@ -797,7 +797,7 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
     if( device == RETRO_DEVICE_JOYPAD ) {
         int16_t value = 0;
 
-        for( GamepadState gamepad : core.gamepads ) {
+        for( GamepadState gamepad : libretroCore.gamepads ) {
             if( gamepad.button[ SDL_CONTROLLER_BUTTON_A ] && id == RETRO_DEVICE_ID_JOYPAD_A ) {
                 value |= 1;
             }
@@ -869,71 +869,71 @@ int16_t inputStateCallback( unsigned port, unsigned device, unsigned index, unsi
     return 0;
 }
 
-void videoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
+void LibretroCoreVideoRefreshCallback( const void *data, unsigned width, unsigned height, size_t pitch ) {
     Q_UNUSED( width );
 
     // Send out blank data if this session is hardware-accelerated
-    if( data == RETRO_HW_FRAME_BUFFER_VALID || core.videoFormat.videoMode == HARDWARERENDER ) {
+    if( data == RETRO_HW_FRAME_BUFFER_VALID || libretroCore.videoFormat.videoMode == HARDWARERENDER ) {
         // Cores can change the size of the video they output (within the bounds they set on load) at any time
-        if( core.videoFormat.videoSize != QSize( width, height ) ) {
+        if( libretroCore.videoFormat.videoSize != QSize( width, height ) ) {
             qCDebug( phxCore ) << "Video resized!";
-            qCDebug( phxCore ) << "Old video size:" << core.videoFormat.videoSize;
+            qCDebug( phxCore ) << "Old video size:" << libretroCore.videoFormat.videoSize;
             qCDebug( phxCore ) << "New video size:" << QSize( width, height );
 
-            core.videoFormat.videoBytesPerLine = pitch;
-            core.videoFormat.videoSize.setWidth( width );
-            core.videoFormat.videoSize.setHeight( height );
+            libretroCore.videoFormat.videoBytesPerLine = pitch;
+            libretroCore.videoFormat.videoSize.setWidth( width );
+            libretroCore.videoFormat.videoSize.setHeight( height );
 
             QVariant variant;
-            variant.setValue( core.videoFormat );
-            core.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
+            variant.setValue( libretroCore.videoFormat );
+            libretroCore.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
 
             // Recreate the FBO, send out the new FBO and texture ID
-            delete core.fbo;
-            core.fbo = new QOpenGLFramebufferObject( core.videoFormat.videoSize, QOpenGLFramebufferObject::CombinedDepthStencil );
+            delete libretroCore.fbo;
+            libretroCore.fbo = new QOpenGLFramebufferObject( libretroCore.videoFormat.videoSize, QOpenGLFramebufferObject::CombinedDepthStencil );
 
             // Clear the newly created FBO
-            core.fbo->bind();
-            core.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
+            libretroCore.fbo->bind();
+            libretroCore.context->functions()->glClear( GL_COLOR_BUFFER_BIT );
 
-            core.fireCommandOut( Node::Command::SetOpenGLTexture, core.fbo->texture(), nodeCurrentTime() );
+            libretroCore.fireCommandOut( Node::Command::SetOpenGLTexture, libretroCore.fbo->texture(), nodeCurrentTime() );
         }
 
-        core.fireDataOut( Node::DataType::VideoGL, &core.videoMutex, nullptr, 0, nodeCurrentTime() );
+        libretroCore.fireDataOut( Node::DataType::VideoGL, &libretroCore.videoMutex, nullptr, 0, nodeCurrentTime() );
         return;
     }
 
     // Current frame exists, send it on its way
     if( data ) {
-        core.videoMutex.lock();
-        memcpy( core.videoBufferPool[ core.videoPoolCurrentBuffer ], data, height * pitch );
-        core.videoMutex.unlock();
+        libretroCore.videoMutex.lock();
+        memcpy( libretroCore.videoBufferPool[ libretroCore.videoPoolCurrentBuffer ], data, height * pitch );
+        libretroCore.videoMutex.unlock();
 
         size_t bytes = pitch * height;
         {
             // Cores can change the size of the video they output (within the bounds they set on load) at any time
-            if( core.videoFormat.videoSize != QSize( width, height ) || core.videoFormat.videoBytesPerLine != pitch ) {
+            if( libretroCore.videoFormat.videoSize != QSize( width, height ) || libretroCore.videoFormat.videoBytesPerLine != pitch ) {
                 qCDebug( phxCore ) << "Video resized!";
-                qCDebug( phxCore ) << "Old video size:" << core.videoFormat.videoSize;
+                qCDebug( phxCore ) << "Old video size:" << libretroCore.videoFormat.videoSize;
                 qCDebug( phxCore ) << "New video size:" << QSize( width, height );
 
-                core.videoFormat.videoBytesPerLine = pitch;
-                core.videoFormat.videoSize.setWidth( width );
-                core.videoFormat.videoSize.setHeight( height );
+                libretroCore.videoFormat.videoBytesPerLine = pitch;
+                libretroCore.videoFormat.videoSize.setWidth( width );
+                libretroCore.videoFormat.videoSize.setHeight( height );
 
                 QVariant variant;
-                variant.setValue( core.videoFormat );
-                core.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
+                variant.setValue( libretroCore.videoFormat );
+                libretroCore.fireCommandOut( Node::Command::SetLibretroVideoFormat, variant, nodeCurrentTime() );
             }
         }
-        core.fireDataOut( Node::DataType::Video, &core.videoMutex, &core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+        libretroCore.fireDataOut( Node::DataType::Video, &libretroCore.videoMutex, &libretroCore.videoBufferPool[ libretroCore.videoPoolCurrentBuffer ],
                           bytes, nodeCurrentTime() );
-        core.videoPoolCurrentBuffer = ( core.videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
+        libretroCore.videoPoolCurrentBuffer = ( libretroCore.videoPoolCurrentBuffer + 1 ) % POOL_SIZE;
     }
 
     // Current frame is a dupe, send the last actual frame again
     else {
-        core.fireDataOut( Node::DataType::Video, &core.videoMutex, &core.videoBufferPool[ core.videoPoolCurrentBuffer ],
+        libretroCore.fireDataOut( Node::DataType::Video, &libretroCore.videoMutex, &libretroCore.videoBufferPool[ libretroCore.videoPoolCurrentBuffer ],
                           pitch * height, nodeCurrentTime() );
     }
 
@@ -942,24 +942,24 @@ void videoRefreshCallback( const void *data, unsigned width, unsigned height, si
 
 // Extra callbacks
 
-uintptr_t getFramebufferCallback( void ) {
-    if( !core.fbo ) {
+uintptr_t LibretroCoreGetFramebufferCallback( void ) {
+    if( !libretroCore.fbo ) {
         return 0;
     }
 
-    return core.fbo->handle();
+    return libretroCore.fbo->handle();
 }
 
-retro_proc_address_t procAddressCallback( const char *sym ) {
+retro_proc_address_t LibretroCoreOpenGLProcAddressCallback( const char *sym ) {
     QFunctionPointer ptr;
-    ptr = core.context->getProcAddress( sym );
+    ptr = libretroCore.context->getProcAddress( sym );
     return ptr;
 }
 
-bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength ) {
+bool LibretroCoreRumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t strength ) {
     Q_UNUSED( port );
 
-    for( GamepadState &gamepad : core.gamepads ) {
+    for( GamepadState &gamepad : libretroCore.gamepads ) {
         if( gamepad.instanceID == -1 || !gamepad.haptic ) {
             continue;
         }
@@ -985,7 +985,7 @@ bool rumbleCallback( unsigned port, enum retro_rumble_effect effect, uint16_t st
 
 // Helpers
 
-QString inputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
+QString LibretroCoreInputTupleToString( unsigned port, unsigned device, unsigned index, unsigned id ) {
     return QString::number( port, 16 ) % ',' % QString::number( device, 16 ) % ','
            % QString::number( index, 16 ) % ',' % QString::number( id, 16 );
 }
