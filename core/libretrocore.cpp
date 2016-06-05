@@ -392,7 +392,7 @@ bool LibretroCoreEnvironmentCallback( unsigned cmd, void *data ) {
                 }
 
                 case RETRO_HW_CONTEXT_OPENGLES_VERSION: {
-                    if( libretroCore.surface->format().renderableType() != QSurfaceFormat::OpenGL ) {
+                    if( libretroCore.surface->format().renderableType() == QSurfaceFormat::OpenGLES ) {
                         if( libretroCore.surface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
                             qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
                                                << "context was selected";
