@@ -1,21 +1,15 @@
 #pragma once
 
-#include "backendcommon.h"
-
 #include "logging.h"
 
-#include "controllable.h"
-#include "producer.h"
-#include "consumer.h"
+#include "node.h"
+
+using QStringMap = QMap<QString, QString>;
 
 /*
- * Superclass for all core plugins used by Phoenix. Defines a state machine similar to how a real game console operates
- * and presents an interface to manipulate this state machine. Games are generally loaded by calling setSource() then load().
- *
- * Minimal error checking is done in this class and in subclasses. It's expected that state changers such as pause() are
- * only called if Core is pausable. If not, the behavior is undefined and will probably cause crashes.
- *
- * Constructors of subclasses must set state to STOPPED and call allPropertiesChanged() once finished.
+ * Superclass for all core plugins used by Phoenix. Core subclasses are not expected to have extensive
+ * error checking or validation of the commands given to them. For example, they should not have to expect Command::Pause
+ * when pausable is false.
  *
  * Core is a producer of both audio and video data. At regular intervals, Core will send out signals containing pointers
  * to buffers. These pointers will internally be part of a circular buffer that will remain valid for the lifetime of Core.
@@ -24,77 +18,44 @@
  * Core is also a consumer of input data.
  */
 
-class Core : public QObject, public Producer, public Consumer, public Controllable {
+class Core : public QObject {
         Q_OBJECT
 
     public:
-        explicit Core( QObject *parent = 0 );
-        virtual ~Core();
+        explicit Core( QObject *parent = nullptr );
+        virtual ~Core() = default;
 
-    signals:
-        PRODUCER_SIGNALS
-
-        // Notifiers
-        void pausableChanged( bool pausable );
-        void playbackSpeedChanged( qreal playbackSpeed );
-        void resettableChanged( bool resettable );
-        void rewindableChanged( bool rewindable );
-        void sourceChanged( QStringMap source );
-        void stateChanged( Control::State currentState );
-        void volumeChanged( qreal volume );
-
-    public slots:
-        CONSUMER_SLOTS_ABSTRACT
-        virtual void setState( Control::State state ) override;
-
-        // Setters
-        virtual void setPlaybackSpeed( qreal playbackSpeed );
-        virtual void setVolume( qreal volume );
-        virtual void setSource( QStringMap source );
-
-        // State changers
-        virtual void load();
-        virtual void play();
-        virtual void pause();
-        virtual void reset();
-        virtual void stop();
-
-    protected:
-        // Property notifier helper
-        void allPropertiesChanged();
-
+    public:
         // Properties
 
         // Is this Core instance pausable? NOTE: "pausable" means whether or not you can *enter* State::PAUSED, not leave.
         // Core will ALWAYS enter State::PAUSED after State::LOADING regardless of this setting
         // Read-only
-        bool pausable;
+        bool pausable{ false };
 
         // Multiplier of the system's native framerate, if any. If rewindable, it can be any real number. Otherwise, it must
         // be positive and nonzero
         // Read-write
-        qreal playbackSpeed;
+        qreal playbackSpeed{ 1.0 };
 
         // Is this Core instance resettable? If true, this usually means you can "soft reset" instead of fully resetting
         // the state machine by cycling through the deinit then init states
         // Read-only
-        bool resettable;
+        bool resettable{ true };
 
         // Is this Core instance rewindable? If true, playbackSpeed may go to and below 0 to make the game move backwards
         // Read-only
-        bool rewindable;
+        bool rewindable{ false };
 
         // Subclass-defined info specific to this session (ex. Libretro: core, game, system and save paths)
         // Read-write
         QStringMap source;
 
+        // Current state
+        // Read-write
+        Node::State state{ Node::State::Stopped };
+
         // Range: [0.0, 1.0]
         // Read-write
-        qreal volume;
-
-        // Setters
-        virtual void setPausable( bool pausable );
-        virtual void setResettable( bool resettable );
-        virtual void setRewindable( bool rewindable );
-        
+        qreal volume{ 1.0 };
 };

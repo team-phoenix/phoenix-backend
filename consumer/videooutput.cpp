@@ -1,28 +1,26 @@
 #include "videooutput.h"
+#include "logging.h"
 
-VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ), Consumer(), Controllable(),
-    framebuffer( nullptr ),
-    framebufferSize( 0 ),
-    texture( nullptr ),
-    aspectRatio( 1.0 ),
-    linearFiltering( false ),
-    television( false ),
-    ntsc( true ),
-    widescreen( false ) {
+#include <QMutex>
+#include <QOpenGLContext>
+#include <QSGSimpleTextureNode>
+#include <QThread>
+#include <QQuickWindow>
 
+VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     // Mandatory for our own drawing code to do anything
     setFlag( QQuickItem::ItemHasContents, true );
 
-    emit aspectRatioChanged( aspectRatio );
-    emit linearFilteringChanged( linearFiltering );
-    emit televisionChanged( television );
-    emit ntscChanged( ntsc );
-    emit widescreenChanged( widescreen );
+    emit aspectModeChanged();
+    emit aspectRatioChanged();
+    emit linearFilteringChanged();
+    emit televisionChanged();
+    emit ntscChanged();
+    emit widescreenChanged();
 
-    size_t newSize = consumerFmt.videoSize.width() * consumerFmt.videoSize.height() * consumerFmt.videoBytesPerPixel;
+    size_t newSize = this->format.videoSize.width() * this->format.videoSize.height() * this->format.videoBytesPerPixel;
     framebuffer = new uchar[ newSize ]();
     framebufferSize = newSize;
-
 }
 
 VideoOutput::~VideoOutput() {
@@ -31,27 +29,24 @@ VideoOutput::~VideoOutput() {
     }
 }
 
-void VideoOutput::consumerFormat( ProducerFormat format ) {
+// Public
+
+void VideoOutput::setState( Node::State state ) {
+    this->state = state;
+}
+
+void VideoOutput::setFormat( LibretroVideoFormat format ) {
     // Update the property if the incoming format and related properties define a different aspect ratio than the one stored
     qreal newRatio = calculateAspectRatio( format );
 
-    if( aspectRatio != newRatio || format.videoSize.width() != consumerFmt.videoSize.width() || format.videoSize.height() != consumerFmt.videoSize.height() ) {
-        // Pretty-print the old and new aspect ratio (ex. "4:3")
-        int oldAspectRatioX = consumerFmt.videoSize.height() * aspectRatio;
-        int oldAspectRatioY = consumerFmt.videoSize.width() / aspectRatio;
-        int newAspectRatioX = format.videoSize.height() * newRatio;
-        int newAspectRatioY = format.videoSize.width() / newRatio;
-        int oldGCD = greatestCommonDivisor( oldAspectRatioX, oldAspectRatioY );
-        int newGCD = greatestCommonDivisor( newAspectRatioX, newAspectRatioY );
-        int oldAspectRatioXInt = oldAspectRatioX / oldGCD;
-        int oldAspectRatioYInt = oldAspectRatioY / oldGCD;
-        int newAspectRatioXInt = newAspectRatioX / newGCD;
-        int newAspectRatioYInt = newAspectRatioY / newGCD;
-        qCDebug( phxVideo ).nospace() << "Aspect ratio changed to " << newAspectRatioXInt << ":" << newAspectRatioYInt
-                                      << " (was " << oldAspectRatioXInt << ":" << oldAspectRatioYInt << ")" ;
+    if( aspectRatio != newRatio || format.videoSize.width() != this->format.videoSize.width() || format.videoSize.height() != this->format.videoSize.height() ) {
+        QPair<int, int> aspectRatioFraction = doubleToFraction( aspectRatio, 10000 );
+        QPair<int, int> newRatioFraction = doubleToFraction( newRatio, 10000 );
+        qDebug().nospace() << "Aspect ratio changed to " << newRatioFraction.first << ":" << newRatioFraction.second
+                           << " (was " << aspectRatioFraction.first << ":" << aspectRatioFraction.second << ")";
 
         aspectRatio = newRatio;
-        emit aspectRatioChanged( aspectRatio );
+        emit aspectRatioChanged();
     }
 
     // Allocate a new framebuffer if the incoming format defines a larger one than we already have room for
@@ -68,19 +63,14 @@ void VideoOutput::consumerFormat( ProducerFormat format ) {
         framebufferSize = newSize;
     }
 
-    consumerFmt = format;
+    this->format = format;
 }
 
-void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
-    Q_UNUSED( mutex )
-    Q_UNUSED( bytes )
-    Q_UNUSED( timestamp )
+void VideoOutput::data( QMutex *mutex, void *data, size_t bytes, qint64 timestamp ) {
+    this->mutex = mutex;
 
     // Copy framebuffer to our own buffer for later drawing
-    if( type == QStringLiteral( "video" ) && currentState == Control::PLAYING ) {
-        // Having this mutex active could mean a slow producer that holds onto the mutex for too long can block the UI
-        // QMutexLocker locker( mutex );
-
+    if( state == Node::State::Playing ) {
         qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
         // Discard data that's too far from the past to matter anymore
@@ -96,36 +86,102 @@ void VideoOutput::consumerData( QString type, QMutex *mutex, void *data, size_t 
             return;
         }
 
-        const uchar *newFramebuffer = ( const uchar * )data;
+        // Make sure reads and writes to this buffer are atomic
+        mutex->lock();
 
-        // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
-        for( int i = 0; i < consumerFmt.videoSize.height(); i++ ) {
-            // Don't read past the end of the given buffer
-            Q_ASSERT( i * consumerFmt.videoBytesPerLine < bytes );
+        const uchar *newFramebuffer = *( const uchar ** )data;
 
-            // Don't write past the end of our framebuffer
-            Q_ASSERT( i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel < framebufferSize );
+        if( newFramebuffer ) {
+            // Copy framebuffer line by line as the consumer may pack the image with arbitrary garbage data at the end of each line
+            for( int i = 0; i < this->format.videoSize.height(); i++ ) {
+                // Don't read past the end of the given buffer
+                Q_ASSERT( i * this->format.videoBytesPerLine < bytes );
 
-            memcpy( framebuffer + i * consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel,
-                    newFramebuffer + i * consumerFmt.videoBytesPerLine,
-                    consumerFmt.videoSize.width() * consumerFmt.videoBytesPerPixel
-                  );
+                // Don't write past the end of our framebuffer
+                Q_ASSERT( i * this->format.videoSize.width() * this->format.videoBytesPerPixel < framebufferSize );
+
+                memcpy( framebuffer + i * this->format.videoSize.width() * this->format.videoBytesPerPixel,
+                        newFramebuffer + i * this->format.videoBytesPerLine,
+                        this->format.videoSize.width() * this->format.videoBytesPerPixel
+                      );
+            }
         }
 
-        // Schedule a call to updatePaintNode() for this Item
+        mutex->unlock();
+
+        // Schedule a call to updatePaintNode()
         update();
     }
 }
 
-QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData *paintData ) {
-    Q_UNUSED( paintData );
+void VideoOutput::setTextureID( GLuint textureID ) {
+    this->textureID = textureID;
+}
 
-    // Let anyone who cares know that we've been asked for an update
-    // FIXME: Remove this, hook custom render loop instead or some other vsync'd source
-    emit windowUpdate( QDateTime::currentMSecsSinceEpoch() );
+void VideoOutput::setAspectMode( int aspectMode ) {
+    if( this->aspectMode != aspectMode ) {
+        this->aspectMode = aspectMode;
+        setFormat( this->format );
+    }
+}
 
+void VideoOutput::setTelevision( bool television ) {
+    if( this->television != television ) {
+        this->television = television;
+        setFormat( this->format );
+    }
+}
+
+void VideoOutput::setNtsc( bool ntsc ) {
+    if( this->ntsc != ntsc ) {
+        this->ntsc = ntsc;
+        setFormat( this->format );
+    }
+}
+
+void VideoOutput::setWidescreen( bool widescreen ) {
+    if( this->widescreen != widescreen ) {
+        this->widescreen = widescreen;
+        setFormat( this->format );
+    }
+}
+
+void VideoOutput::classBegin() {
+    QQuickItem::classBegin();
+}
+
+void VideoOutput::componentComplete() {
+    QQuickItem::componentComplete();
+    // Lock the mutex before we start drawing if in 3D mode
+    connect( window(), &QQuickWindow::beforeRendering, this, [ & ]() {
+        if( mutex && format.videoMode == HARDWARERENDER ) {
+            lockedByUs = true;
+            mutex->lock();
+            //qDebug() << "VideoOutput lock";
+        }
+    }, Qt::DirectConnection );
+
+    connect( window(), &QQuickWindow::afterRendering, this, [ & ]() {
+        if( mutex && format.videoMode == HARDWARERENDER && lockedByUs ) {
+            lockedByUs = false;
+            mutex->unlock();
+            //qDebug() << "VideoOutput unlock";
+        }
+    }, Qt::DirectConnection );
+}
+
+// Private
+
+QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePaintNodeData * ) {
     // Don't draw unless emulation is active
-    if( currentState != Control::PLAYING && currentState != Control::PAUSED ) {
+    if( state != Node::State::Playing && state != Node::State::Paused ) {
+        // Schedule a call to updatePaintNode() for this Item anyway
+        update();
+
+        if( storedNode ) {
+            delete storedNode;
+        }
+
         return 0;
     }
 
@@ -136,18 +192,38 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
         storedTextureNode = new QSGSimpleTextureNode();
     }
 
-    // Schedule old texture for deletion
-    if( texture ) {
-        texture->deleteLater();
-        texture = nullptr;
+    // 2D rendering, create a texture from the stored buffer
+    if( format.videoMode == SOFTWARERENDER ) {
+        // Schedule old texture for deletion
+        if( texture ) {
+            texture->deleteLater();
+            texture = nullptr;
+        }
+
+        // Create new Image that holds a reference to our framebuffer
+        QImage image( const_cast<const uchar *>( framebuffer ), format.videoSize.width(), format.videoSize.height(), format.videoPixelFormat );
+        // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
+        texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
     }
 
-    // Create new Image that holds a reference to our framebuffer
-    QImage image( ( const uchar * )framebuffer, consumerFmt.videoSize.width(), consumerFmt.videoSize.height(),
-                  consumerFmt.videoPixelFormat );
+    // 3D rendering, use the stored texture name to render
+    else if( textureID != 0 ) {
+        if( !texture ) {
+            texture = window()->createTextureFromId( textureID, QSize( format.videoSize.width(), format.videoSize.height() ) );
+        }
 
-    // Create a texture via a factory function (framebuffer contents are uploaded to GPU once QSG reads texture node)
-    texture = window()->createTextureFromImage( image, QQuickWindow::TextureOwnsGLTexture );
+        if( textureID != static_cast<GLuint>( texture->textureId() ) ) {
+            texture->deleteLater();
+            texture = window()->createTextureFromId( textureID, QSize( format.videoSize.width(), format.videoSize.height() ) );
+        }
+    }
+
+    // Texture was not set yet, don't draw anything
+    else {
+        // Schedule a call to updatePaintNode() for this Item anyway
+        update();
+        return 0;
+    }
 
     // Ensure texture lives in rendering thread so it will be deleted only once it's no longer associated with
     // the texture node
@@ -157,13 +233,21 @@ QSGNode *VideoOutput::updatePaintNode( QSGNode *storedNode, QQuickItem::UpdatePa
     storedTextureNode->setTexture( texture );
     storedTextureNode->setRect( boundingRect() );
     storedTextureNode->setFiltering( linearFiltering ? QSGTexture::Linear : QSGTexture::Nearest );
+    storedTextureNode->setTextureCoordinatesTransform(
+        format.videoMode == SOFTWARERENDER ?
+        QSGSimpleTextureNode::NoTransform :
+        QSGSimpleTextureNode::MirrorVertically
+    );
 
     storedTextureNode->markDirty( QSGNode::DirtyMaterial );
+
+    // Schedule a call to updatePaintNode() for this Item for the next frame
+    update();
 
     return storedTextureNode;
 }
 
-qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
+qreal VideoOutput::calculateAspectRatio( LibretroVideoFormat format ) {
     qreal newRatio = format.videoAspectRatio;
 
     if( widescreen ) {
@@ -173,48 +257,70 @@ qreal VideoOutput::calculateAspectRatio( ProducerFormat format ) {
     return newRatio;
 }
 
-void VideoOutput::setTelevision( bool television ) {
-    if( this->television != television ) {
-        this->television = television;
-        consumerFormat( consumerFmt );
-    }
-}
+/*
+** find rational approximation to given real number
+** David Eppstein / UC Irvine / 8 Aug 1993
+**
+** With corrections from Arno Formella, May 2008
+**
+** usage: a.out r d
+**   r is real number to approx
+**   d is the maximum denominator allowed
+**
+** based on the theory of continued fractions
+** if x = a1 + 1/(a2 + 1/(a3 + 1/(a4 + ...)))
+** then best approximation is found by truncating this series
+** (with some adjustments in the last term).
+**
+** Note the fraction can be recovered as the first column of the matrix
+**  ( a1 1 ) ( a2 1 ) ( a3 1 ) ...
+**  ( 1  0 ) ( 1  0 ) ( 1  0 )
+** Instead of keeping the sequence of continued fraction terms,
+** we just keep the last partial product of these matrices.
+*/
+QPair<int, int> VideoOutput::doubleToFraction( double x, long maxden ) {
+    long m[ 2 ][ 2 ];
+    long ai;
 
-void VideoOutput::setNtsc( bool ntsc ) {
-    if( this->ntsc != ntsc ) {
-        this->ntsc = ntsc;
-        consumerFormat( consumerFmt );
-    }
-}
+    /* initialize matrix */
+    m[ 0 ][ 0 ] = m[ 1 ][ 1 ] = 1;
+    m[ 0 ][ 1 ] = m[ 1 ][ 0 ] = 0;
 
-void VideoOutput::setWidescreen( bool widescreen ) {
-    if( this->widescreen != widescreen ) {
-        this->widescreen = widescreen;
-        consumerFormat( consumerFmt );
-    }
-}
+    /* loop finding terms until denom gets too big */
+    while( m[ 1 ][ 0 ] * ( ai = ( long )x ) + m[ 1 ][ 1 ] <= maxden ) {
+        long t;
+        t = m[ 0 ][ 0 ] * ai + m[ 0 ][ 1 ];
+        m[ 0 ][ 1 ] = m[ 0 ][ 0 ];
+        m[ 0 ][ 0 ] = t;
+        t = m[ 1 ][ 0 ] * ai + m[ 1 ][ 1 ];
+        m[ 1 ][ 1 ] = m[ 1 ][ 0 ];
+        m[ 1 ][ 0 ] = t;
 
-int VideoOutput::greatestCommonDivisor( int m, int n ) {
-    int r;
-
-    /* Check For Proper Input */
-    if( ( m == 0 ) || ( n == 0 ) ) {
-        return 0;
-    } else if( ( m < 0 ) || ( n < 0 ) ) {
-        return -1;
-    }
-
-    do {
-        r = m % n;
-
-        if( r == 0 ) {
-            break;
+        if( x == ( double )ai ) {
+            break;    // AF: division by zero
         }
 
-        m = n;
-        n = r;
-    } while( true );
+        x = 1 / ( x - ( double ) ai );
 
-    return n;
+        if( x > ( double )0x7FFFFFFF ) {
+            break;    // AF: representation failure
+        }
+    }
+
+    /* now remaining x is between 0 and 1/ai */
+    /* approx as either 0 or 1/m where m is max that will fit in maxden */
+    /* first try zero */
+    // printf( "%ld/%ld, error = %e\n", m[ 0 ][ 0 ], m[ 1 ][ 0 ],
+    //         x - ( ( double ) m[ 0 ][ 0 ] / ( double ) m[ 1 ][ 0 ] ) );
+
+    /* now try other possibility */
+    // ai = ( maxden - m[ 1 ][ 1 ] ) / m[ 1 ][ 0 ];
+    // m[ 0 ][ 0 ] = m[ 0 ][ 0 ] * ai + m[ 0 ][ 1 ];
+    // m[ 1 ][ 0 ] = m[ 1 ][ 0 ] * ai + m[ 1 ][ 1 ];
+    // printf( "%ld/%ld, error = %e\n", m[ 0 ][ 0 ], m[ 1 ][ 0 ],
+    //         x - ( ( double ) m[ 0 ][ 0 ] / ( double ) m[ 1 ][ 0 ] ) );
+
+    // fflush( stdout );
+
+    return QPair<int, int>( m[ 0 ][ 0 ], m[ 1 ][ 0 ] );
 }
-
