@@ -98,6 +98,9 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
                 resolved_sym( retro_get_memory_data );
                 resolved_sym( retro_get_memory_size );
 
+                qDebug() << "Core loaded:" << libretroCore.coreFile.isLoaded();
+                qDebug() << "retro_api_version =" << reinterpret_cast<void*>( libretroCore.symbols.retro_api_version );
+
                 // Set callbacks
                 libretroCore.symbols.retro_set_environment( LibretroCoreEnvironmentCallback );
                 libretroCore.symbols.retro_set_audio_sample( LibretroCoreAudioSampleCallback );
@@ -111,6 +114,7 @@ void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp
 
                 // Get some info about the game
                 libretroCore.symbols.retro_get_system_info( libretroCore.systemInfo );
+
 
                 qDebug() << "";
             }

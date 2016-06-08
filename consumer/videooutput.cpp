@@ -152,9 +152,9 @@ void VideoOutput::classBegin() {
 
 void VideoOutput::componentComplete() {
     QQuickItem::componentComplete();
-    // Lock the mutex before we start drawing if in 3D mode
+    // Lock the mutex before we start drawing
     connect( window(), &QQuickWindow::beforeRendering, this, [ & ]() {
-        if( mutex && format.videoMode == HARDWARERENDER ) {
+        if( mutex ) {
             lockedByUs = true;
             mutex->lock();
             //qDebug() << "VideoOutput lock";
@@ -162,7 +162,7 @@ void VideoOutput::componentComplete() {
     }, Qt::DirectConnection );
 
     connect( window(), &QQuickWindow::afterRendering, this, [ & ]() {
-        if( mutex && format.videoMode == HARDWARERENDER && lockedByUs ) {
+        if( mutex && lockedByUs ) {
             lockedByUs = false;
             mutex->unlock();
             //qDebug() << "VideoOutput unlock";

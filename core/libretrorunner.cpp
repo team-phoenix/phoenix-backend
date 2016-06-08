@@ -89,11 +89,17 @@ void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp
             disconnect( &libretroCore, &LibretroCore::commandOut, this, &LibretroRunner::commandOut );
             connectedToCore = false;
 
-            if( libretroCore.fbo ) {
-                delete libretroCore.fbo;
+            // Delete the FBO
+            {
+                if( libretroCore.fbo ) {
+                    delete libretroCore.fbo;
+                }
+
+                libretroCore.fbo = nullptr;
             }
 
-            libretroCore.fbo = nullptr;
+            // Reset video mode to 2D (will be set to 3D if the next core asks for it)
+            libretroCore.videoFormat.videoMode = SOFTWARERENDER;
 
             libretroCore.state = State::Stopped;
             emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
