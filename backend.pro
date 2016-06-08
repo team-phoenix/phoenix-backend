@@ -35,9 +35,6 @@ include( msvc.pri )
     RCC_DIR     = rcc
     UI_DIR      = gui
 
-    # FIXME: Remove once newer Qt versions make this unnecessary
-    macx: QMAKE_MAC_SDK = macosx10.11
-
     # Include libraries
     win32: msvc: INCLUDEPATH += $$SAMPLERATEBASE\include                                 # See msvc.pri
     win32: gcc:  INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
