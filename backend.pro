@@ -38,6 +38,7 @@ include( msvc.pri )
     # Include libraries
     win32: msvc: INCLUDEPATH += $$SAMPLERATEBASE\include                                 # See msvc.pri
     win32: gcc:  INCLUDEPATH += C:/msys64/mingw64/include C:/msys64/mingw64/include/SDL2 # MSYS2
+    win32: gcc:  INCLUDEPATH += /usr/lib/mxe/usr/x86_64-w64-mingw32.static/include/SDL2  # MXE (MinGW)
     macx:        INCLUDEPATH += /usr/local/include /usr/local/include/SDL2               # Homebrew
     macx:        INCLUDEPATH += /usr/local/include /opt/local/include/SDL2               # MacPorts
     unix:        INCLUDEPATH += /usr/include/SDL2                                        # Linux
