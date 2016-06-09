@@ -466,9 +466,11 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                     if( !( radius > deadzone ) ) {
                         gamepad.axis[ xAxis ] = 0;
                         gamepad.axis[ yAxis ] = 0;
+
                         if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ) {
                             gamepad.digitalL2 = false;
                         }
+
                         if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ) {
                             gamepad.digitalR2 = false;
                         }
@@ -476,6 +478,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
                         if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ) {
                             gamepad.digitalL2 = true;
                         }
+
                         if( xAxis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ) {
                             gamepad.digitalR2 = true;
                         }

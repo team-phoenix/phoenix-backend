@@ -72,6 +72,7 @@ bool MicroTimer::event( QEvent *e ) {
                 emit commandOut( Command::SetVsync, false, nodeCurrentTime() );
             }
         }
+
         return true;
     }
 

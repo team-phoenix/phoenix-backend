@@ -11,8 +11,8 @@ class LibretroVariable {
     public:
         LibretroVariable() = default;
         LibretroVariable( const retro_variable *var );
-        LibretroVariable( const QByteArray& key );
-        LibretroVariable( const QByteArray&& key );
+        LibretroVariable( const QByteArray &key );
+        LibretroVariable( const QByteArray &&key );
 
         virtual ~LibretroVariable() = default;
 

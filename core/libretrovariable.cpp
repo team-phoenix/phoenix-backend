@@ -38,12 +38,12 @@ LibretroVariable::LibretroVariable( const retro_variable *var ) {
     }
 }
 
-LibretroVariable::LibretroVariable(const QByteArray &key)
+LibretroVariable::LibretroVariable( const QByteArray &key )
     : m_key( key )  {
 
 }
 
-LibretroVariable::LibretroVariable(const QByteArray &&key )
+LibretroVariable::LibretroVariable( const QByteArray &&key )
     : LibretroVariable( key ) {
 }
 
@@ -80,6 +80,6 @@ bool LibretroVariable::isValid() const {
     return !m_key.isEmpty();
 }
 
-bool LibretroVariable::operator ==(const LibretroVariable &t_var1 ) {
+bool LibretroVariable::operator ==( const LibretroVariable &t_var1 ) {
     return ( m_key == t_var1.m_key );
 }
