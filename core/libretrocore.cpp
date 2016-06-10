@@ -648,6 +648,7 @@ void LibretroCoreLogCallback( enum retro_log_level level, const char *fmt, ... )
 
     if( ret < 0 ) {
         qCDebug( phxCore ) << "logCallback: could not format string";
+        va_end( args );
         return;
     } else if( ( ret + 1 ) > outbuf.size() ) {
         outbuf.resize( ret + 1 );
@@ -655,6 +656,7 @@ void LibretroCoreLogCallback( enum retro_log_level level, const char *fmt, ... )
 
         if( ret < 0 ) {
             qCDebug( phxCore ) << "logCallback: could not format string";
+            va_end( args );
             return;
         }
     }
