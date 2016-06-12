@@ -15,9 +15,6 @@ Remapper::Remapper() {
     keyboardGamepad.instanceID = -1;
 }
 
-Remapper::~Remapper() {
-}
-
 // Public slots
 
 void Remapper::commandIn( Command command, QVariant data, qint64 timeStamp ) {
@@ -456,12 +453,12 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
                     // Get axis coords in cartesian coords
                     // Bottom right is positive -> top right is positive
-                    float xCoord = gamepad.axis[ xAxis ];
-                    float yCoord = -gamepad.axis[ yAxis ];
+                    qreal xCoord = gamepad.axis[ xAxis ];
+                    qreal yCoord = -gamepad.axis[ yAxis ];
 
                     // Get radius from center
-                    QVector2D position( xCoord, yCoord );
-                    qreal radius = position.length();
+                    QVector2D position( static_cast<float>( xCoord ), static_cast<float>( yCoord ) );
+                    qreal radius = static_cast<qreal>( position.length() );
 
                     if( !( radius > deadzone ) ) {
                         gamepad.axis[ xAxis ] = 0;
@@ -491,7 +488,7 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
             {
                 for( int i = 0; i < 16; i++ ) {
                     qreal deadzoneRadius = deadzones[ GUID ][ i ];
-                    float coord = gamepad.joystickAxis[ i ];
+                    qreal coord = gamepad.joystickAxis[ i ];
 
                     if( !deadzoneModes[ GUID ][ i ] ) {
                         coord += 32768;
@@ -735,12 +732,12 @@ void Remapper::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t by
 
                     // Get axis coords in cartesian coords
                     // Bottom right is positive -> top right is positive
-                    float xCoord = gamepad.axis[ xAxis ];
-                    float yCoord = -gamepad.axis[ yAxis ];
+                    qreal xCoord = gamepad.axis[ xAxis ];
+                    qreal yCoord = -gamepad.axis[ yAxis ];
 
                     // Get radius from center
-                    QVector2D position( xCoord, yCoord );
-                    qreal radius = position.length();
+                    QVector2D position( static_cast<float>( xCoord ), static_cast<float>( yCoord ) );
+                    qreal radius = static_cast<qreal>( position.length() );
 
                     // Get angle in degrees
                     qreal angle = qRadiansToDegrees( qAtan2( yCoord, xCoord ) );

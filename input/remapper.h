@@ -43,7 +43,6 @@ class Remapper : public Node {
 
     public:
         Remapper();
-        ~Remapper();
 
         // Remap type
         enum Type { INVALID, BUTTON, AXIS, HAT };
