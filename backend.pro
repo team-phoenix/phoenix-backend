@@ -28,7 +28,7 @@ include( msvc.pri )
 ## Compiler settings
 ##
 
-    CONFIG += c++14
+    CONFIG += c++11
 
     OBJECTS_DIR = obj
     MOC_DIR     = moc
