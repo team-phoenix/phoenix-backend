@@ -151,7 +151,15 @@ void GameConsole::load() {
     Q_ASSERT( phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow );
     Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-    emit commandOut( Command::SetHostFPS, phoenixWindow->phoenixWindow->screen()->refreshRate(), nodeCurrentTime() );
+
+    // Assume hostFPS is 60Hz if the OS reports 59Hz
+    int hostFPS = phoenixWindow->phoenixWindow->screen()->refreshRate();
+
+    if( hostFPS == 59 ) {
+        hostFPS = 60;
+    }
+
+    emit commandOut( Command::SetHostFPS, hostFPS, nodeCurrentTime() );
 
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {

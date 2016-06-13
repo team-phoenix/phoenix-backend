@@ -205,7 +205,7 @@ void AudioOutput::dataIn( Node::DataType type, QMutex *mutex, void *data, size_t
             int outputEstimatedBytes = outputAudioFormat.bytesForDuration( inputAudioFormat.durationForBytes( inputBytes ) );
             int outputVectorTargetToCurrent = outputTargetByte - outputCurrentByte + outputEstimatedBytes;
             // double unclampedDRCScale = ( double )outputVectorTargetToCurrent / outputTargetByte;
-            double unclampedDRCScale = static_cast<double>( outputVectorTargetToCurrent ) + outputEstimatedBytes / outputEstimatedBytes;
+            double unclampedDRCScale = ( static_cast<double>( outputVectorTargetToCurrent ) + outputEstimatedBytes ) / outputEstimatedBytes;
 
             // Calculate the final DRC ratio
             double DRCScale = qMax( -maxDeviation, qMin( unclampedDRCScale, maxDeviation ) );
