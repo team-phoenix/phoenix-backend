@@ -4,7 +4,6 @@
 #include <QMetaObject>
 #include <QScreen>
 
-
 GameConsole::GameConsole( Node *parent ) : Node( parent ),
     gameThread( new QThread ),
 
