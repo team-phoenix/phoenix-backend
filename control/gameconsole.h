@@ -62,6 +62,46 @@ class GameConsole : public Node {
         explicit GameConsole( Node *parent = nullptr );
         ~GameConsole() = default;
 
+    public: // Node API
+        enum class Thread {
+            Main= 0,
+            Game,
+        };
+        Q_ENUM( Thread )
+
+        enum class Pipeline {
+            Default= 0,
+            Libretro,
+        };
+        Q_ENUM( Pipeline )
+
+        // Register your Node subclass with GameConsole
+        static void nodeRegister( Node *node, Thread nodeThread = Thread::Game, QStringList nodeDependencies = {} );
+        static void nodeRegister( Node *node, QStringList nodeDependencies = {} );
+
+    private: // Node API internals
+        static GameConsole *self;
+        static Pipeline nodeCurrentPipeline;
+        static bool nodeCurrentlyAssembling;
+        static QMap<QString, QStringList> nodeDependencies;
+        static QMap<QString, Node *> nodes;
+        static QMap<QString, Thread> nodeThreads;
+
+        // Check if the current pipeline is ready, assemble if it is
+        static void nodeCheck();
+
+        // Check if a particular pipeline is ready
+        static bool nodeCheckDefaultPipeline();
+        static bool nodeCheckLibretroPipeline();
+
+        // Connect a particular pipeline
+        static void nodeConnectDefaultPipeline();
+        static void nodeConnectLibretroPipeline();
+
+        // Disconnect a particular pipeline
+        static void nodeDisconnectDefaultPipeline();
+        static void nodeDisconnectLibretroPipeline();
+
     public slots:
         // These are not the same as their Node counterparts
         // Call play() to load a game, call play() again once paused to begin playing it

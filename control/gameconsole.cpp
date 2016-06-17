@@ -19,6 +19,13 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     libretroRunner( new LibretroRunner ),
     libretroVariableForwarder( new LibretroVariableForwarder ) {
 
+    // Make sure that GameConsole is only created once
+    if( self != nullptr ) {
+        qCritical( "GameConsole may only be instantiated once." );
+    }
+
+    self = this;
+
     // Move all our stuff to the game thread
     audioOutput->moveToThread( gameThread );
     libretroLoader->moveToThread( gameThread );
@@ -111,6 +118,86 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     connect( this, &GameConsole::userDataLocationChanged, this, [ & ] {
         emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
     } );
+
+    nodeCheck();
+}
+
+// Public (Node API)
+
+void GameConsole::nodeRegister( Node *node, GameConsole::Thread nodeThread, QStringList nodeDependencies ) {
+    QString className = node->metaObject()->className();
+    nodes[ className ] = node;
+    nodeThreads[ className ] = nodeThread;
+    GameConsole::nodeDependencies[ className ] = nodeDependencies;
+    qDebug() << node << nodeThread << nodeDependencies;
+    qDebug() << nodes << nodeThreads << GameConsole::nodeDependencies;
+
+    nodeCheck();
+}
+
+void GameConsole::nodeRegister( Node *node, QStringList nodeDependencies ) {
+    nodeRegister( node, Thread::Main, nodeDependencies );
+}
+
+// Private (Node API internals)
+
+GameConsole *GameConsole::self = nullptr;
+GameConsole::Pipeline GameConsole::nodeCurrentPipeline = GameConsole::Pipeline::Default;
+bool GameConsole::nodeCurrentlyAssembling = true;
+QMap<QString, QStringList> GameConsole::nodeDependencies;
+QMap<QString, Node *> GameConsole::nodes;
+QMap<QString, GameConsole::Thread> GameConsole::nodeThreads;
+
+void GameConsole::nodeCheck() {
+    if( nodeCurrentlyAssembling ) {
+        if( self ) {
+            switch( nodeCurrentPipeline ) {
+                case Pipeline::Default: {
+                    if( nodeCheckDefaultPipeline() ) {
+                        nodeConnectDefaultPipeline();
+                        nodeCurrentlyAssembling = false;
+                    }
+
+                    break;
+                }
+
+                case Pipeline::Libretro: {
+                    break;
+                }
+
+                default:
+                    break;
+            }
+        } else {
+            qDebug() << "nodeCheck() called, GameConsole not instantiated yet";
+        }
+    } else {
+        qDebug() << "nodeCheck() called, not currently assembling a pipeline";
+    }
+}
+
+bool GameConsole::nodeCheckDefaultPipeline() {
+    return false;
+}
+
+bool GameConsole::nodeCheckLibretroPipeline() {
+    return false;
+}
+
+void GameConsole::nodeConnectDefaultPipeline() {
+
+}
+
+void GameConsole::nodeConnectLibretroPipeline() {
+
+}
+
+void GameConsole::nodeDisconnectDefaultPipeline() {
+
+}
+
+void GameConsole::nodeDisconnectLibretroPipeline() {
+
 }
 
 // Public slots
