@@ -9,6 +9,10 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
+LibretroLoader::LibretroLoader() {
+    NodeAPI::registerNode( this );
+}
+
 void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
 

@@ -28,6 +28,7 @@ MicroTimer::MicroTimer( Node *parent ) : Node( parent ) {
     timer.invalidate();
     startFreq( 60.0 );
     qCDebug( phxTimer ) << "Beginning timer at a default frequency of 60Hz";
+    NodeAPI::registerNode( this );
 }
 
 MicroTimer::~MicroTimer() {

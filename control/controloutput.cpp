@@ -2,7 +2,7 @@
 #include "logging.h"
 
 ControlOutput::ControlOutput( Node *parent ) : Node( parent ) {
-
+    NodeAPI::registerNode( this, NodeAPI::Thread::Main, {} );
 }
 
 void ControlOutput::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {

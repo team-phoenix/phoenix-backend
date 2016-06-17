@@ -84,6 +84,7 @@ include( msvc.pri )
     util/microtimer.h \
     util/phoenixwindow.h \
     util/phoenixwindownode.h \
+    pipeline/nodeapi.h
 
     SOURCES += \
     backendplugin.cpp \
@@ -114,6 +115,7 @@ include( msvc.pri )
     util/microtimer.cpp \
     util/phoenixwindow.cpp \
     util/phoenixwindownode.cpp \
+    pipeline/nodeapi.cpp
 
     OBJECTIVE_SOURCES += \
     util/osxhelper.mm

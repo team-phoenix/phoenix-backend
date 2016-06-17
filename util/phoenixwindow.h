@@ -30,6 +30,8 @@
 #include <QObject>
 #include <QQuickWindow>
 
+#include "nodeapi.h"
+
 class QOpenGLContext;
 class QOpenGLFramebufferObject;
 class QOffscreenSurface;

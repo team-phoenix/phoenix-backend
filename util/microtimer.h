@@ -40,7 +40,7 @@
 #include <QtGlobal>
 
 #include "logging.h"
-#include "node.h"
+#include "nodeapi.h"
 
 class QEvent;
 

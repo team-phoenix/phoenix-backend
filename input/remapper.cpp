@@ -13,6 +13,37 @@
 
 Remapper::Remapper() {
     keyboardGamepad.instanceID = -1;
+    NodeAPI::registerNode( this, NodeAPI::Thread::Game, { QT_STRINGIFY( RemapperModel ) } );
+}
+
+void Remapper::connectDependencies( QMap<QString, QObject *> objects ) {
+    RemapperModel *remapperModel = dynamic_cast<RemapperModel *>( objects[ QT_STRINGIFY( RemapperModel ) ] );
+    qDebug() << "Connect dependencies" << remapperModel;
+    connect( this, &Remapper::controllerAdded, remapperModel, &RemapperModel::controllerAdded );
+    connect( this, &Remapper::controllerRemoved, remapperModel, &RemapperModel::controllerRemoved );
+    connect( this, &Remapper::buttonUpdate, remapperModel, &RemapperModel::buttonUpdate );
+    connect( this, &Remapper::remappingEnded, remapperModel, &RemapperModel::remappingEnded );
+    connect( this, &Remapper::setMapping, remapperModel, &RemapperModel::setMapping );
+    connect( this, &Remapper::rawJoystickData, remapperModel, &RemapperModel::rawJoystickData );
+    connect( this, &Remapper::heartbeat, remapperModel, &RemapperModel::heartbeat );
+
+    connect( remapperModel, &RemapperModel::beginRemappingProxy, this, &Remapper::beginRemapping );
+    connect( remapperModel, &RemapperModel::setDeadzoneProxy, this, &Remapper::setDeadzone );
+
+}
+
+void Remapper::disconnectDependencies( QMap<QString, QObject *> objects ) {
+    RemapperModel *remapperModel = dynamic_cast<RemapperModel *>( objects[ QT_STRINGIFY( RemapperModel ) ] );
+    disconnect( this, &Remapper::controllerAdded, remapperModel, &RemapperModel::controllerAdded );
+    disconnect( this, &Remapper::controllerRemoved, remapperModel, &RemapperModel::controllerRemoved );
+    disconnect( this, &Remapper::buttonUpdate, remapperModel, &RemapperModel::buttonUpdate );
+    disconnect( this, &Remapper::remappingEnded, remapperModel, &RemapperModel::remappingEnded );
+    disconnect( this, &Remapper::setMapping, remapperModel, &RemapperModel::setMapping );
+    disconnect( this, &Remapper::rawJoystickData, remapperModel, &RemapperModel::rawJoystickData );
+    disconnect( this, &Remapper::heartbeat, remapperModel, &RemapperModel::heartbeat );
+
+    disconnect( remapperModel, &RemapperModel::beginRemappingProxy, this, &Remapper::beginRemapping );
+    disconnect( remapperModel, &RemapperModel::setDeadzoneProxy, this, &Remapper::setDeadzone );
 }
 
 // Public slots

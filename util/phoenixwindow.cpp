@@ -150,7 +150,8 @@ PhoenixWindow::PhoenixWindow( QQuickWindow *parent ) : QQuickWindow( parent ),
 
     //    qDebug() << format();
     update();
-    qDebug() << Q_FUNC_INFO;
+
+    NodeAPI::registerNonNode( this );
 }
 
 PhoenixWindow::~PhoenixWindow() {

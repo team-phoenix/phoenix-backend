@@ -1,6 +1,24 @@
 #include "gameconsole.h"
 #include "logging.h"
 
+// Nodes
+#include "audiooutput.h"
+#include "sdlmanager.h"
+#include "controloutput.h"
+#include "globalgamepad.h"
+#include "libretroloader.h"
+#include "libretrorunner.h"
+#include "libretrovariablemodel.h"
+#include "libretrovariableforwarder.h"
+#include "microtimer.h"
+#include "phoenixwindow.h"
+#include "phoenixwindownode.h"
+#include "remapper.h"
+#include "remappermodel.h"
+#include "sdlunloader.h"
+#include "videooutput.h"
+#include "videooutputnode.h"
+
 #include <QMetaObject>
 #include <QScreen>
 
@@ -19,63 +37,11 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     libretroRunner( new LibretroRunner ),
     libretroVariableForwarder( new LibretroVariableForwarder ) {
 
-    // Make sure that GameConsole is only created once
-    if( self != nullptr ) {
-        qCritical( "GameConsole may only be instantiated once." );
-    }
-
-    self = this;
-
-    // Move all our stuff to the game thread
-    audioOutput->moveToThread( gameThread );
-    libretroLoader->moveToThread( gameThread );
-    libretroRunner->moveToThread( gameThread );
-    libretroVariableForwarder->moveToThread( gameThread );
-    microTimer->moveToThread( gameThread );
-    remapper->moveToThread( gameThread );
-    sdlManager->moveToThread( gameThread );
-    sdlUnloader->moveToThread( gameThread );
-
-    gameThread->setObjectName( "Game thread" );
-    gameThread->start();
-
-    // Connect global pipeline (at least the parts that can be connected at this point)
-    connectNodes( microTimer, sdlManager );
-    connectNodes( sdlManager, remapper );
-    connectNodes( remapper, sdlUnloader );
-
-    connect( this, &GameConsole::remapperModelChanged, this, [ & ] {
-        if( remapperModel ) {
-            qCDebug( phxControl ) << "RemapperModel" << Q_FUNC_INFO << globalPipelineReady();
-            remapperModel->setRemapper( remapper );
-            checkIfGlobalPipelineReady();
-        }
-    } );
-
     // Connect VariableModel (which lives in QML) to LibretroVariableForwarder as soon as it's set
     connect( this, &GameConsole::variableModelChanged, this, [ & ] {
         if( variableModel ) {
             qCDebug( phxControl ) << "VariableModel" << Q_FUNC_INFO << globalPipelineReady();
             variableModel->setForwarder( libretroVariableForwarder );
-            checkIfGlobalPipelineReady();
-        }
-    } );
-
-    // Connect GlobalGamepad (which lives in QML) to the global pipeline as soon as it's set
-    connect( this, &GameConsole::globalGamepadChanged, this, [ & ]() {
-        if( globalGamepad ) {
-            qCDebug( phxControl ) << "GlobalGamepad" << Q_FUNC_INFO << globalPipelineReady();
-            connectNodes( remapper, globalGamepad );
-            checkIfGlobalPipelineReady();
-        }
-    } );
-
-    // Connect PhoenixWindow (which lives in QML) to the global pipeline as soon as it's set
-    connect( this, &GameConsole::phoenixWindowChanged, this, [ & ]() {
-        if( phoenixWindow ) {
-            qCDebug( phxControl ) << "PhoenixWindow" << Q_FUNC_INFO << globalPipelineReady();
-            connectNodes( this, phoenixWindow );
-            connectNodes( phoenixWindow, microTimer );
             checkIfGlobalPipelineReady();
         }
     } );
@@ -119,85 +85,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
     } );
 
-    nodeCheck();
-}
-
-// Public (Node API)
-
-void GameConsole::nodeRegister( Node *node, GameConsole::Thread nodeThread, QStringList nodeDependencies ) {
-    QString className = node->metaObject()->className();
-    nodes[ className ] = node;
-    nodeThreads[ className ] = nodeThread;
-    GameConsole::nodeDependencies[ className ] = nodeDependencies;
-    qDebug() << node << nodeThread << nodeDependencies;
-    qDebug() << nodes << nodeThreads << GameConsole::nodeDependencies;
-
-    nodeCheck();
-}
-
-void GameConsole::nodeRegister( Node *node, QStringList nodeDependencies ) {
-    nodeRegister( node, Thread::Main, nodeDependencies );
-}
-
-// Private (Node API internals)
-
-GameConsole *GameConsole::self = nullptr;
-GameConsole::Pipeline GameConsole::nodeCurrentPipeline = GameConsole::Pipeline::Default;
-bool GameConsole::nodeCurrentlyAssembling = true;
-QMap<QString, QStringList> GameConsole::nodeDependencies;
-QMap<QString, Node *> GameConsole::nodes;
-QMap<QString, GameConsole::Thread> GameConsole::nodeThreads;
-
-void GameConsole::nodeCheck() {
-    if( nodeCurrentlyAssembling ) {
-        if( self ) {
-            switch( nodeCurrentPipeline ) {
-                case Pipeline::Default: {
-                    if( nodeCheckDefaultPipeline() ) {
-                        nodeConnectDefaultPipeline();
-                        nodeCurrentlyAssembling = false;
-                    }
-
-                    break;
-                }
-
-                case Pipeline::Libretro: {
-                    break;
-                }
-
-                default:
-                    break;
-            }
-        } else {
-            qDebug() << "nodeCheck() called, GameConsole not instantiated yet";
-        }
-    } else {
-        qDebug() << "nodeCheck() called, not currently assembling a pipeline";
-    }
-}
-
-bool GameConsole::nodeCheckDefaultPipeline() {
-    return false;
-}
-
-bool GameConsole::nodeCheckLibretroPipeline() {
-    return false;
-}
-
-void GameConsole::nodeConnectDefaultPipeline() {
-
-}
-
-void GameConsole::nodeConnectLibretroPipeline() {
-
-}
-
-void GameConsole::nodeDisconnectDefaultPipeline() {
-
-}
-
-void GameConsole::nodeDisconnectLibretroPipeline() {
-
+    NodeAPI::registerNode( this, NodeAPI::Thread::Main, {} );
 }
 
 // Public slots
@@ -379,10 +267,6 @@ void GameConsole::unloadLibretro() {
     }
 
     sessionConnections.clear();
-
-    // Restore global pipeline connections severed by the Libretro pipeline
-    connectNodes( phoenixWindow, microTimer );
-    connectNodes( remapper, sdlUnloader );
 
     if( quitFlag ) {
         gameThread->quit();

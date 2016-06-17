@@ -10,7 +10,7 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-#include "node.h"
+#include "nodeapi.h"
 #include "gamepadstate.h"
 #include "keyboardstate.h"
 #include "logging.h"
@@ -57,6 +57,9 @@ class Remapper : public Node {
         using VHat = QPair<int, int>;
         using Val = QPair<Type, VHat>;
         using Mapping = QMap<Key, Val>;
+
+        void connectDependencies(QMap<QString, QObject *> objects ) override;
+        void disconnectDependencies( QMap<QString, QObject *> objects ) override;
 
     signals:
         // Signals for RemapperModel

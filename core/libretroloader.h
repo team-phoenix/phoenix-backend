@@ -2,14 +2,15 @@
 
 #include <QObject>
 
+#include "nodeapi.h"
+
 #include "libretrocore.h"
-#include "node.h"
 
 class LibretroLoader : public Node {
         Q_OBJECT
 
     public:
-        LibretroLoader() = default;
+        LibretroLoader();
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QMap>
 #include <QMutex>
 #include <QObject>
 #include <QVariant>
@@ -20,6 +21,10 @@ class Node : public QObject {
 
     public:
         explicit Node( QObject *parent = nullptr );
+
+        // Connect all non-node dependencies needed by this Node
+        virtual void connectDependencies(QMap<QString, QObject *> objects );
+        virtual void disconnectDependencies( QMap<QString, QObject *> objects );
 
         enum class Command {
             // State setters

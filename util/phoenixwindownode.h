@@ -4,9 +4,10 @@
 #include <QObject>
 #include <QRect>
 
+#include "nodeapi.h"
+
 #include "keyboardstate.h"
 #include "mousestate.h"
-#include "node.h"
 #include "phoenixwindow.h"
 
 class QOpenGLContext;
@@ -35,6 +36,9 @@ class PhoenixWindowNode : public Node {
 
         // Sends the context out iff not done this session, dynamic pipeline and OpenGL context is ready
         void checkIfCommandsShouldFire();
+
+        virtual void connectDependencies(QMap<QString, QObject *> objects ) override;
+        virtual void disconnectDependencies( QMap<QString, QObject *> objects ) override;
 
     signals:
         void phoenixWindowChanged( PhoenixWindow *phoenixWindow );

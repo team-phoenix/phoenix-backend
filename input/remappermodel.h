@@ -12,7 +12,7 @@
 #include <iterator>
 
 #include "gamepadstate.h"
-#include "node.h"
+#include "nodeapi.h"
 
 /*
  * RemapperModel is a QML model whose job is to relay information between the QML world and Remapper, which is part

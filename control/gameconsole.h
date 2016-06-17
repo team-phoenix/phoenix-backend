@@ -4,27 +4,27 @@
 #include <QQmlParserStatus>
 #include <QThread>
 #include <QVariant>
+#include <QtGlobal>
 
-#include "node.h"
+#include "nodeapi.h"
 
 // Nodes
-#include "audiooutput.h"
-#include "sdlmanager.h"
-#include "controloutput.h"
-#include "globalgamepad.h"
-#include "libretroloader.h"
-#include "libretrorunner.h"
-#include "microtimer.h"
-#include "phoenixwindow.h"
-#include "phoenixwindownode.h"
-#include "remapper.h"
-#include "remappermodel.h"
-#include "sdlunloader.h"
-#include "videooutput.h"
-#include "videooutputnode.h"
-
-#include "libretrovariablemodel.h"
-#include "libretrovariableforwarder.h"
+class AudioOutput;
+class SDLManager;
+class ControlOutput;
+class GlobalGamepad;
+class LibretroLoader;
+class LibretroRunner;
+class LibretroVariableForwarder;
+class LibretroVariableModel;
+class MicroTimer;
+class PhoenixWindow;
+class PhoenixWindowNode;
+class Remapper;
+class RemapperModel;
+class SDLUnloader;
+class VideoOutput;
+class VideoOutputNode;
 
 /*
  * GameConsole's role is twofold:
@@ -61,46 +61,6 @@ class GameConsole : public Node {
     public:
         explicit GameConsole( Node *parent = nullptr );
         ~GameConsole() = default;
-
-    public: // Node API
-        enum class Thread {
-            Main= 0,
-            Game,
-        };
-        Q_ENUM( Thread )
-
-        enum class Pipeline {
-            Default= 0,
-            Libretro,
-        };
-        Q_ENUM( Pipeline )
-
-        // Register your Node subclass with GameConsole
-        static void nodeRegister( Node *node, Thread nodeThread = Thread::Game, QStringList nodeDependencies = {} );
-        static void nodeRegister( Node *node, QStringList nodeDependencies = {} );
-
-    private: // Node API internals
-        static GameConsole *self;
-        static Pipeline nodeCurrentPipeline;
-        static bool nodeCurrentlyAssembling;
-        static QMap<QString, QStringList> nodeDependencies;
-        static QMap<QString, Node *> nodes;
-        static QMap<QString, Thread> nodeThreads;
-
-        // Check if the current pipeline is ready, assemble if it is
-        static void nodeCheck();
-
-        // Check if a particular pipeline is ready
-        static bool nodeCheckDefaultPipeline();
-        static bool nodeCheckLibretroPipeline();
-
-        // Connect a particular pipeline
-        static void nodeConnectDefaultPipeline();
-        static void nodeConnectLibretroPipeline();
-
-        // Disconnect a particular pipeline
-        static void nodeDisconnectDefaultPipeline();
-        static void nodeDisconnectLibretroPipeline();
 
     public slots:
         // These are not the same as their Node counterparts

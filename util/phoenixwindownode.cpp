@@ -28,6 +28,8 @@ PhoenixWindowNode::PhoenixWindowNode( Node *parent ) : Node( parent ) {
             connect( phoenixWindow, &PhoenixWindow::mouseMoved, this, &PhoenixWindowNode::mouseMoved );
         }
     } );
+
+    NodeAPI::registerNode( this, NodeAPI::Thread::Main, { QT_STRINGIFY( PhoenixWindow ) } );
 }
 
 PhoenixWindowNode::~PhoenixWindowNode() {
@@ -51,6 +53,47 @@ void PhoenixWindowNode::checkIfCommandsShouldFire() {
         emit commandOut( Command::SetSurface, QVariant::fromValue<QOffscreenSurface *>( phoenixWindow->dynamicPipelineSurface ), nodeCurrentTime() );
         emit commandOut( Command::SetOpenGLContext, QVariant::fromValue<QOpenGLContext *>( phoenixWindow->dynamicPipelineContext ), nodeCurrentTime() );
         emit commandOut( Command::Load, QVariant(), nodeCurrentTime() );
+    }
+}
+
+void PhoenixWindowNode::connectDependencies( QMap<QString, QObject *> objects ) {
+    PhoenixWindow *phoenixWindow = dynamic_cast<PhoenixWindow *>( objects[ QT_STRINGIFY( PhoenixWindow ) ] );
+    qDebug() << "Connect dependencies" << phoenixWindow;
+
+    if( phoenixWindow ) {
+        this->phoenixWindow = phoenixWindow;
+        phoenixWindow->phoenixWindowNode = this;
+        connect( phoenixWindow, &QQuickWindow::frameSwapped, this, &PhoenixWindowNode::frameSwapped );
+        connect( phoenixWindow, &QQuickWindow::xChanged, this, &PhoenixWindowNode::geometryChanged );
+        connect( phoenixWindow, &QQuickWindow::yChanged, this, &PhoenixWindowNode::geometryChanged );
+        connect( phoenixWindow, &QQuickWindow::widthChanged, this, &PhoenixWindowNode::geometryChanged );
+        connect( phoenixWindow, &QQuickWindow::heightChanged, this, &PhoenixWindowNode::geometryChanged );
+
+        // Keyboard/mouse input
+        connect( phoenixWindow, &PhoenixWindow::keyPressed, this, &PhoenixWindowNode::keyPressed );
+        connect( phoenixWindow, &PhoenixWindow::keyReleased, this, &PhoenixWindowNode::keyReleased );
+        connect( phoenixWindow, &PhoenixWindow::mousePressed, this, &PhoenixWindowNode::mousePressd );
+        connect( phoenixWindow, &PhoenixWindow::mouseReleased, this, &PhoenixWindowNode::mouseReleased );
+        connect( phoenixWindow, &PhoenixWindow::mouseMoved, this, &PhoenixWindowNode::mouseMoved );
+    }
+}
+
+void PhoenixWindowNode::disconnectDependencies( QMap<QString, QObject *> objects ) {
+    PhoenixWindow *phoenixWindow = dynamic_cast<PhoenixWindow *>( objects[ QT_STRINGIFY( PhoenixWindow ) ] );
+
+    if( phoenixWindow ) {
+        disconnect( phoenixWindow, &QQuickWindow::frameSwapped, this, &PhoenixWindowNode::frameSwapped );
+        disconnect( phoenixWindow, &QQuickWindow::xChanged, this, &PhoenixWindowNode::geometryChanged );
+        disconnect( phoenixWindow, &QQuickWindow::yChanged, this, &PhoenixWindowNode::geometryChanged );
+        disconnect( phoenixWindow, &QQuickWindow::widthChanged, this, &PhoenixWindowNode::geometryChanged );
+        disconnect( phoenixWindow, &QQuickWindow::heightChanged, this, &PhoenixWindowNode::geometryChanged );
+
+        // Keyboard/mouse input
+        disconnect( phoenixWindow, &PhoenixWindow::keyPressed, this, &PhoenixWindowNode::keyPressed );
+        disconnect( phoenixWindow, &PhoenixWindow::keyReleased, this, &PhoenixWindowNode::keyReleased );
+        disconnect( phoenixWindow, &PhoenixWindow::mousePressed, this, &PhoenixWindowNode::mousePressd );
+        disconnect( phoenixWindow, &PhoenixWindow::mouseReleased, this, &PhoenixWindowNode::mouseReleased );
+        disconnect( phoenixWindow, &PhoenixWindow::mouseMoved, this, &PhoenixWindowNode::mouseMoved );
     }
 }
 

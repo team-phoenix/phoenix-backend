@@ -2,7 +2,7 @@
 #include "remapper.h"
 
 RemapperModel::RemapperModel( QAbstractListModel *parent ) : QAbstractListModel( parent ) {
-
+    NodeAPI::registerNonNode( this );
 }
 
 // Public

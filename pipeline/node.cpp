@@ -1,7 +1,12 @@
 #include "node.h"
 
 Node::Node( QObject *parent ) : QObject( parent ) {
+}
 
+void Node::connectDependencies( QMap<QString, QObject *> objects ) {
+}
+
+void Node::disconnectDependencies(QMap<QString, QObject *> objects ) {
 }
 
 void Node::commandIn( Command command, QVariant data, qint64 timeStamp ) {
