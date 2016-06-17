@@ -44,6 +44,14 @@ class NodeAPI : public QObject {
         };
         Q_ENUM( Pipeline )
 
+        enum class State {
+            Inactive = 0,
+            Assembling,
+            Active,
+            Disassembling
+        };
+        Q_ENUM( State )
+
         // Register your Node subclass so it can be used with pipelines
         static void registerNode( Node *node, Thread nodeThread = Thread::Game, QStringList nodeDependencies = {} );
 
@@ -51,19 +59,17 @@ class NodeAPI : public QObject {
         static void registerNonNode( QObject *object, Thread objThread = Thread::Main );
 
     private: // Pipelines
-        static QStringMap defaultPipeline;
-        static bool checkDefaultPipeline();
-        static void connectDefaultPipeline();
-        static void disconnectDefaultPipeline();
+        static QMap<QString, QStringList> defaultPipeline;
+        static QMap<QString, QStringList> libretroPipeline;
+        static bool requiredNodesAvailable( QMap<QString, QStringList> pipeline );
+        static void connectPipeline( QMap<QString, QStringList> pipeline );
+        static void disconnectPipeline( QMap<QString, QStringList> pipeline );
 
-        static QStringMap libretroPipeline;
-        static bool checkLibretroPipeline();
-        static void connectLibretroPipeline();
-        static void disconnectLibretroPipeline();
 
     private: // Node API internals
         static Pipeline currentPipeline;
         static bool currentlyAssembling;
+        static State state;
         static QMap<QString, QStringList> nonNodeDependencies;
         static QMap<QString, Node *> nodes;
         static QMap<QString, QObject *> nonNodes;
@@ -72,6 +78,6 @@ class NodeAPI : public QObject {
         // Used with Nodes and non-Nodes alike
         static QMap<QString, Thread> threads;
 
-        // Check if the current pipeline is ready, assemble if it is
-        static void nodeCheck();
+        // Preform actions based on the current state
+        static void pipelineHeartbeat();
 };
