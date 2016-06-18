@@ -134,7 +134,7 @@ QThread *NodeAPI::gameThread;
 
 // Initial state is to immediately assemble the default pipeline
 NodeAPI::Pipeline NodeAPI::currentPipeline = NodeAPI::Pipeline::Default;
-NodeAPI::State state = NodeAPI::State::Assembling;
+NodeAPI::State NodeAPI::state = NodeAPI::State::Assembling;
 
 void NodeAPI::pipelineHeartbeat() {
     qDebug() << state;
