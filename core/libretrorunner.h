@@ -3,13 +3,13 @@
 #include <QObject>
 
 #include "libretrocore.h"
-#include "node.h"
+#include "nodeapi.h"
 
 class LibretroRunner : public Node {
         Q_OBJECT
 
     public:
-        LibretroRunner() = default;
+        LibretroRunner();
 
     public slots:
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;

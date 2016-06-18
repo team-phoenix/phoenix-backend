@@ -21,6 +21,8 @@ VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     size_t newSize = this->format.videoSize.width() * this->format.videoSize.height() * this->format.videoBytesPerPixel;
     framebuffer = new uchar[ newSize ]();
     framebufferSize = newSize;
+
+    NodeAPI::registerNonNode( this );
 }
 
 VideoOutput::~VideoOutput() {

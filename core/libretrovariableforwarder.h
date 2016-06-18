@@ -1,6 +1,6 @@
 #pragma once
 
-#include "node.h"
+#include "nodeapi.h"
 #include "libretrovariable.h"
 
 class LibretroVariableForwarder : public Node {
@@ -10,6 +10,9 @@ class LibretroVariableForwarder : public Node {
         explicit LibretroVariableForwarder( QObject *parent = nullptr );
 
         void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
+
+        void connectDependencies(QMap<QString, QObject *> objects ) override;
+        void disconnectDependencies( QMap<QString, QObject *> objects ) override;
 
     signals:
         void insertVariable( QString key, QStringList values, QString currentValue, QString description );

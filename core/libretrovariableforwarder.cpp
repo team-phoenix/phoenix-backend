@@ -1,9 +1,10 @@
 #include "libretrovariableforwarder.h"
+#include "libretrovariablemodel.h"
 
 #include <QDebug>
 
 LibretroVariableForwarder::LibretroVariableForwarder( QObject *parent ) : Node( parent ) {
-
+    NodeAPI::registerNode( this, NodeAPI::Thread::Game, { QT_STRINGIFY( LibretroVariableModel ) } );
 }
 
 void LibretroVariableForwarder::commandIn( Command command, QVariant data, qint64 timeStamp ) {
@@ -34,6 +35,21 @@ void LibretroVariableForwarder::commandIn( Command command, QVariant data, qint6
             break;
         }
     }
+}
+
+void LibretroVariableForwarder::connectDependencies( QMap<QString, QObject *> objects ) {
+    LibretroVariableModel *model = dynamic_cast<LibretroVariableModel *>( objects[ QT_STRINGIFY( LibretroVariableModel ) ] );
+    model->setForwarder( this );
+    connect( model, &LibretroVariableModel::setVariable, this, &LibretroVariableForwarder::setVariable );
+    connect( this, &LibretroVariableForwarder::insertVariable, model, &LibretroVariableModel::insertVariable );
+    connect( this, &LibretroVariableForwarder::clearVariables, model, &LibretroVariableModel::clearVariables );
+}
+
+void LibretroVariableForwarder::disconnectDependencies( QMap<QString, QObject *> objects ) {
+    LibretroVariableModel *model = dynamic_cast<LibretroVariableModel *>( objects[ QT_STRINGIFY( LibretroVariableModel ) ] );
+    disconnect( model, &LibretroVariableModel::setVariable, this, &LibretroVariableForwarder::setVariable );
+    disconnect( this, &LibretroVariableForwarder::insertVariable, model, &LibretroVariableModel::insertVariable );
+    disconnect( this, &LibretroVariableForwarder::clearVariables, model, &LibretroVariableModel::clearVariables );
 }
 
 void LibretroVariableForwarder::setVariable( QString key, QString value ) {

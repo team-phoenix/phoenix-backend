@@ -13,6 +13,10 @@
 #include "SDL_gamecontroller.h"
 #include "SDL_haptic.h"
 
+LibretroRunner::LibretroRunner() {
+    NodeAPI::registerNode( this );
+}
+
 void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp ) {
     // Command is not relayed to children automatically
 

@@ -12,6 +12,7 @@ AudioOutput::AudioOutput( Node *parent ): Node( parent ),
     outputBuffer( this ) {
 
     outputBuffer.start();
+    NodeAPI::registerNode( this );
 }
 
 AudioOutput::~AudioOutput() {

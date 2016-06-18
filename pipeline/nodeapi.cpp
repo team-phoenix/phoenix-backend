@@ -31,7 +31,11 @@ QMap<QString, QStringList> NodeAPI::defaultPipeline = {
     { QT_STRINGIFY( PhoenixWindowNode ), { QT_STRINGIFY( MicroTimer ) } },
     { QT_STRINGIFY( MicroTimer ), { QT_STRINGIFY( SDLManager ) } },
     { QT_STRINGIFY( SDLManager ), { QT_STRINGIFY( Remapper ) } },
-    { QT_STRINGIFY( Remapper ), { QT_STRINGIFY( GlobalGamepad ), QT_STRINGIFY( ControlOutput ), QT_STRINGIFY( SDLUnloader ) } },
+    {
+        QT_STRINGIFY( Remapper ), {
+            QT_STRINGIFY( GlobalGamepad ), QT_STRINGIFY( ControlOutput ), QT_STRINGIFY( SDLUnloader )
+        }
+    },
 };
 
 QMap<QString, QStringList> NodeAPI::libretroPipeline = {
@@ -40,7 +44,11 @@ QMap<QString, QStringList> NodeAPI::libretroPipeline = {
     { QT_STRINGIFY( LibretroLoader ), { QT_STRINGIFY( MicroTimer ) } },
     { QT_STRINGIFY( MicroTimer ), { QT_STRINGIFY( SDLManager ) } },
     { QT_STRINGIFY( SDLManager ), { QT_STRINGIFY( Remapper ) } },
-    { QT_STRINGIFY( Remapper ), { QT_STRINGIFY( GlobalGamepad ), QT_STRINGIFY( LibretroVariableForwarder ) } },
+    {
+        QT_STRINGIFY( Remapper ), {
+            QT_STRINGIFY( GlobalGamepad ), QT_STRINGIFY( LibretroVariableForwarder )
+        }
+    },
     { QT_STRINGIFY( LibretroVariableForwarder ), { QT_STRINGIFY( LibretroRunner ) } },
     {
         QT_STRINGIFY( LibretroRunner ), {

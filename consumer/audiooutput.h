@@ -1,6 +1,6 @@
 #pragma once
 
-#include "node.h"
+#include "nodeapi.h"
 #include "audiobuffer.h"
 #include "samplerate.h"
 

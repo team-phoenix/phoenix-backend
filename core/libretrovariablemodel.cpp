@@ -1,6 +1,6 @@
 #include "libretrovariablemodel.h"
 #include "libretrovariableforwarder.h"
-#include "node.h"
+#include "nodeapi.h"
 
 #include <QDebug>
 
@@ -11,7 +11,7 @@ LibretroVariableModel::LibretroVariableModel( QObject *parent )
     { Role::Choices, QByteArrayLiteral( "choices" ) },
     { Role::Description, QByteArrayLiteral( "description" ) },
 } {
-
+    NodeAPI::registerNonNode( this );
 }
 
 // Public
@@ -56,9 +56,6 @@ QVariant LibretroVariableModel::data( const QModelIndex &index, int role ) const
 
 void LibretroVariableModel::setForwarder( LibretroVariableForwarder *forwarder ) {
     this->forwarder = forwarder;
-    connect( this, &LibretroVariableModel::setVariable, forwarder, &LibretroVariableForwarder::setVariable );
-    connect( forwarder, &LibretroVariableForwarder::insertVariable, this, &LibretroVariableModel::insertVariable );
-    connect( forwarder, &LibretroVariableForwarder::clearVariables, this, &LibretroVariableModel::clearVariables );
 }
 
 void LibretroVariableModel::clearVariables() {

@@ -3,6 +3,14 @@
 #include "logging.h"
 
 VideoOutputNode::VideoOutputNode( Node *parent ) : Node( parent ) {
+    NodeAPI::registerNode( this, NodeAPI::Thread::Main, { QT_STRINGIFY( VideoOutput ) } );
+}
+
+void VideoOutputNode::connectDependencies( QMap<QString, QObject *> objects ) {
+    videoOutput = dynamic_cast<VideoOutput *>( objects[ QT_STRINGIFY( VideoOutput ) ] );
+}
+
+void VideoOutputNode::disconnectDependencies( QMap<QString, QObject *> ) {
 }
 
 void VideoOutputNode::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {

@@ -37,49 +37,40 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
     libretroRunner( new LibretroRunner ),
     libretroVariableForwarder( new LibretroVariableForwarder ) {
 
-    // Connect VariableModel (which lives in QML) to LibretroVariableForwarder as soon as it's set
-    connect( this, &GameConsole::variableModelChanged, this, [ & ] {
-        if( variableModel ) {
-            qCDebug( phxControl ) << "VariableModel" << Q_FUNC_INFO << globalPipelineReady();
-            variableModel->setForwarder( libretroVariableForwarder );
-            checkIfGlobalPipelineReady();
-        }
-    } );
-
     // Handle app quitting
-    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
-        qDebug() << "";
-        qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
-        qDebug() << "";
+//    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
+//        qDebug() << "";
+//        qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
+//        qDebug() << "";
 
-        // Tell the pipeline to stop if loaded
-        if( dynamicPipelineReady() ) {
-            quitFlag = true;
-            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
-        } else {
-            qCInfo( phxControl ) << "No core loaded";
-            gameThread->quit();
-        }
+//        // Tell the pipeline to stop if loaded
+//        if( dynamicPipelineReady() ) {
+//            quitFlag = true;
+//            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
+//        } else {
+//            qCInfo( phxControl ) << "No core loaded";
+//            gameThread->quit();
+//        }
 
-        // Wait up to 30 seconds to let the pipeline finish its events
-        if( gameThread != QThread::currentThread() ) {
-            gameThread->wait( 30 * 1000 );
-            gameThread->deleteLater();
-        }
+//        // Wait up to 30 seconds to let the pipeline finish its events
+//        if( gameThread != QThread::currentThread() ) {
+//            gameThread->wait( 30 * 1000 );
+//            gameThread->deleteLater();
+//        }
 
-        // Destroy our global pipeline objects *from the bottom up* (depending on core type)
-        if( source[ "type" ] == QStringLiteral( "libretro" ) ||
-            pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
-            deleteLibretro();
-        }
+//        // Destroy our global pipeline objects *from the bottom up* (depending on core type)
+//        if( source[ "type" ] == QStringLiteral( "libretro" ) ||
+//            pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
+//            deleteLibretro();
+//        }
 
-        // Send a second set of delete calls for all other objects (redundant calls will be ignored)
-        deleteMembers();
+//        // Send a second set of delete calls for all other objects (redundant calls will be ignored)
+//        deleteMembers();
 
-        qDebug() << "";
-        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
-        qDebug() << "";
-    } );
+//        qDebug() << "";
+//        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
+//        qDebug() << "";
+//    } );
 
     connect( this, &GameConsole::userDataLocationChanged, this, [ & ] {
         emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
