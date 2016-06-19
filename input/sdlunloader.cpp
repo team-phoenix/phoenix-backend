@@ -1,7 +1,7 @@
 #include "sdlunloader.h"
 
 SDLUnloader::SDLUnloader() {
-    NodeAPI::registerNode( this );
+    Pipeline::registerNode( this );
 }
 
 void SDLUnloader::commandIn( Command command, QVariant data, qint64 timeStamp ) {

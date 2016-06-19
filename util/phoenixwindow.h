@@ -30,7 +30,7 @@
 #include <QObject>
 #include <QQuickWindow>
 
-#include "nodeapi.h"
+#include "pipeline.h"
 
 class QOpenGLContext;
 class QOpenGLFramebufferObject;

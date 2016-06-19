@@ -10,7 +10,7 @@
 #include "SDL_gamecontroller.h"
 
 LibretroLoader::LibretroLoader() {
-    NodeAPI::registerNode( this );
+    Pipeline::registerNode( this );
 }
 
 void LibretroLoader::commandIn( Command command, QVariant data, qint64 timeStamp ) {

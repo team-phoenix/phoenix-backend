@@ -2,7 +2,7 @@
 
 #include <QObject>
 
-#include "nodeapi.h"
+#include "pipeline.h"
 
 #include "libretrocore.h"
 

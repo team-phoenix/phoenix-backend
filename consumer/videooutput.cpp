@@ -22,7 +22,7 @@ VideoOutput::VideoOutput( QQuickItem *parent ) : QQuickItem( parent ) {
     framebuffer = new uchar[ newSize ]();
     framebufferSize = newSize;
 
-    NodeAPI::registerNonNode( this );
+    Pipeline::registerNonNode( this );
 }
 
 VideoOutput::~VideoOutput() {

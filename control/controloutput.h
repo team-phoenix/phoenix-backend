@@ -2,7 +2,7 @@
 
 #include <QObject>
 
-#include "nodeapi.h"
+#include "pipeline.h"
 
 /*
  * ControlOutput is a Node that acknowledges state changes from its parent (a subclass of Core). In addition, it (TODO) exposes

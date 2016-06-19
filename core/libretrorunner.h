@@ -3,7 +3,7 @@
 #include <QObject>
 
 #include "libretrocore.h"
-#include "nodeapi.h"
+#include "pipeline.h"
 
 class LibretroRunner : public Node {
         Q_OBJECT

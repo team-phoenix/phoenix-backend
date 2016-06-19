@@ -5,7 +5,7 @@
 #include <QHash>
 
 #include "gamepadstate.h"
-#include "nodeapi.h"
+#include "pipeline.h"
 
 #include "SDL.h"
 #include "SDL_gamecontroller.h"

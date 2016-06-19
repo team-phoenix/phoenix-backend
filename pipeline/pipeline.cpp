@@ -1,13 +1,13 @@
-#include "nodeapi.h"
+#include "pipeline.h"
 
-NodeAPI::NodeAPI() {
+Pipeline::Pipeline() {
     gameThread = new QThread();
     gameThread->setObjectName( "Game thread" );
     gameThread->start();
 }
 
 // Public
-void NodeAPI::registerNode( Node *node, NodeAPI::Thread nodeThread, QStringList nodeDependencies ) {
+void Pipeline::registerNode( Node *node, Pipeline::Thread nodeThread, QStringList nodeDependencies ) {
     QString className = node->metaObject()->className();
     nodes[ className ] = node;
     threads[ className ] = nodeThread;
@@ -17,7 +17,7 @@ void NodeAPI::registerNode( Node *node, NodeAPI::Thread nodeThread, QStringList 
     pipelineHeartbeat();
 }
 
-void NodeAPI::registerNonNode( QObject *object, NodeAPI::Thread objThread ) {
+void Pipeline::registerNonNode( QObject *object, Pipeline::Thread objThread ) {
     QString className = object->metaObject()->className();
     nonNodes[ className ] = object;
     threads[ className ] = objThread;
@@ -26,7 +26,7 @@ void NodeAPI::registerNonNode( QObject *object, NodeAPI::Thread objThread ) {
     pipelineHeartbeat();
 }
 
-QMap<QString, QStringList> NodeAPI::defaultPipeline = {
+QMap<QString, QStringList> Pipeline::defaultPipeline = {
     { QT_STRINGIFY( GameConsole ), { QT_STRINGIFY( PhoenixWindowNode ) } },
     { QT_STRINGIFY( PhoenixWindowNode ), { QT_STRINGIFY( MicroTimer ) } },
     { QT_STRINGIFY( MicroTimer ), { QT_STRINGIFY( SDLManager ) } },
@@ -38,7 +38,7 @@ QMap<QString, QStringList> NodeAPI::defaultPipeline = {
     },
 };
 
-QMap<QString, QStringList> NodeAPI::libretroPipeline = {
+QMap<QString, QStringList> Pipeline::libretroPipeline = {
     { QT_STRINGIFY( GameConsole ), { QT_STRINGIFY( PhoenixWindowNode ) } },
     { QT_STRINGIFY( PhoenixWindowNode ), { QT_STRINGIFY( LibretroLoader ) } },
     { QT_STRINGIFY( LibretroLoader ), { QT_STRINGIFY( MicroTimer ) } },
@@ -57,7 +57,7 @@ QMap<QString, QStringList> NodeAPI::libretroPipeline = {
     },
 };
 
-bool NodeAPI::requiredNodesAvailable( QMap<QString, QStringList> pipeline ) {
+bool Pipeline::requiredNodesAvailable( QMap<QString, QStringList> pipeline ) {
     QSet<QString> neededNodes;
     QSet<QString> availableNodes = nodes.keys().toSet();
 
@@ -84,7 +84,7 @@ bool NodeAPI::requiredNodesAvailable( QMap<QString, QStringList> pipeline ) {
     return neededNodes.isEmpty() && neededNonNodes.isEmpty();
 }
 
-void NodeAPI::connectPipeline( QMap<QString, QStringList> pipeline ) {
+void Pipeline::connectPipeline( QMap<QString, QStringList> pipeline ) {
     for( QString parentString : pipeline.keys() ) {
         for( QString childString : pipeline[ parentString ] ) {
             qDebug().noquote() << "Connect" << parentString << "->" << childString;
@@ -114,7 +114,7 @@ void NodeAPI::connectPipeline( QMap<QString, QStringList> pipeline ) {
     }
 }
 
-void NodeAPI::disconnectPipeline( QMap<QString, QStringList> pipeline ) {
+void Pipeline::disconnectPipeline( QMap<QString, QStringList> pipeline ) {
     for( QString parentString : pipeline.keys() ) {
         for( QString childString : pipeline[ parentString ] ) {
             qDebug().noquote() << "Connect" << parentString << "->" << childString;
@@ -133,18 +133,18 @@ void NodeAPI::disconnectPipeline( QMap<QString, QStringList> pipeline ) {
 
 // Private (Node API internals)
 
-bool NodeAPI::currentlyAssembling = true;
-QMap<QString, QStringList> NodeAPI::nonNodeDependencies;
-QMap<QString, Node *> NodeAPI::nodes;
-QMap<QString, QObject *> NodeAPI::nonNodes;
-QMap<QString, NodeAPI::Thread> NodeAPI::threads;
-QThread *NodeAPI::gameThread;
+bool Pipeline::currentlyAssembling = true;
+QMap<QString, QStringList> Pipeline::nonNodeDependencies;
+QMap<QString, Node *> Pipeline::nodes;
+QMap<QString, QObject *> Pipeline::nonNodes;
+QMap<QString, Pipeline::Thread> Pipeline::threads;
+QThread *Pipeline::gameThread;
 
 // Initial state is to immediately assemble the default pipeline
-NodeAPI::Pipeline NodeAPI::currentPipeline = NodeAPI::Pipeline::Default;
-NodeAPI::State NodeAPI::state = NodeAPI::State::Assembling;
+Pipeline::PipelineType Pipeline::currentPipeline = Pipeline::Default;
+Pipeline::State Pipeline::state = Pipeline::State::Assembling;
 
-void NodeAPI::pipelineHeartbeat() {
+void Pipeline::pipelineHeartbeat() {
     qDebug() << state;
 
     switch( state ) {

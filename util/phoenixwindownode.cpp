@@ -29,7 +29,7 @@ PhoenixWindowNode::PhoenixWindowNode( Node *parent ) : Node( parent ) {
         }
     } );
 
-    NodeAPI::registerNode( this, NodeAPI::Thread::Main, { QT_STRINGIFY( PhoenixWindow ) } );
+    Pipeline::registerNode( this, Pipeline::Thread::Main, { QT_STRINGIFY( PhoenixWindow ) } );
 }
 
 PhoenixWindowNode::~PhoenixWindowNode() {

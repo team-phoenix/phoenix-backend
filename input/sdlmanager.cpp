@@ -26,7 +26,7 @@ SDLManager::SDLManager( Node *parent ) : Node( parent ) {
     // Allow game controller and joystick event states to be included in SDL_PollEvent
     SDL_GameControllerEventState( SDL_ENABLE );
     SDL_JoystickEventState( SDL_ENABLE );
-    NodeAPI::registerNode( this );
+    Pipeline::registerNode( this );
 }
 
 void SDLManager::commandIn( Node::Command command, QVariant data, qint64 timeStamp ) {

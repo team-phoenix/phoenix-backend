@@ -3,7 +3,7 @@
 #include "logging.h"
 
 VideoOutputNode::VideoOutputNode( Node *parent ) : Node( parent ) {
-    NodeAPI::registerNode( this, NodeAPI::Thread::Main, { QT_STRINGIFY( VideoOutput ) } );
+    Pipeline::registerNode( this, Pipeline::Thread::Main, { QT_STRINGIFY( VideoOutput ) } );
 }
 
 void VideoOutputNode::connectDependencies( QMap<QString, QObject *> objects ) {

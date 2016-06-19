@@ -10,7 +10,7 @@
 #include "SDL.h"
 #include "SDL_gamecontroller.h"
 
-#include "nodeapi.h"
+#include "pipeline.h"
 #include "gamepadstate.h"
 #include "keyboardstate.h"
 #include "logging.h"

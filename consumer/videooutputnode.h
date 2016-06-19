@@ -3,7 +3,7 @@
 #include <QObject>
 
 #include "videooutput.h"
-#include "nodeapi.h"
+#include "pipeline.h"
 
 // A wrapper for VideoOutput that enables it to exist as a node
 // Necessary as VideoOutput, being a QQuickItem, cannot inherrit Node (not allowed in Qt)

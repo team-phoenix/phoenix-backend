@@ -6,7 +6,7 @@
 #include <QVariant>
 #include <QtGlobal>
 
-#include "nodeapi.h"
+#include "pipeline.h"
 
 // Nodes
 class AudioOutput;

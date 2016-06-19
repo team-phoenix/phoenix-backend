@@ -14,7 +14,7 @@
 #include "SDL_haptic.h"
 
 LibretroRunner::LibretroRunner() {
-    NodeAPI::registerNode( this );
+    Pipeline::registerNode( this );
 }
 
 void LibretroRunner::commandIn( Command command, QVariant data, qint64 timeStamp ) {

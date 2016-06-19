@@ -4,7 +4,7 @@
 #include <QDebug>
 
 LibretroVariableForwarder::LibretroVariableForwarder( QObject *parent ) : Node( parent ) {
-    NodeAPI::registerNode( this, NodeAPI::Thread::Game, { QT_STRINGIFY( LibretroVariableModel ) } );
+    Pipeline::registerNode( this, Pipeline::Thread::Game, { QT_STRINGIFY( LibretroVariableModel ) } );
 }
 
 void LibretroVariableForwarder::commandIn( Command command, QVariant data, qint64 timeStamp ) {

@@ -40,7 +40,7 @@
 #include <QtGlobal>
 
 #include "logging.h"
-#include "nodeapi.h"
+#include "pipeline.h"
 
 class QEvent;
 

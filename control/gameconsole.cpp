@@ -76,7 +76,7 @@ GameConsole::GameConsole( Node *parent ) : Node( parent ),
         emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
     } );
 
-    NodeAPI::registerNode( this, NodeAPI::Thread::Main, {} );
+    Pipeline::registerNode( this, Pipeline::Thread::Main, {} );
 }
 
 // Public slots

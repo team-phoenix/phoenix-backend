@@ -1,6 +1,6 @@
 #include "libretrovariablemodel.h"
 #include "libretrovariableforwarder.h"
-#include "nodeapi.h"
+#include "pipeline.h"
 
 #include <QDebug>
 
@@ -11,7 +11,7 @@ LibretroVariableModel::LibretroVariableModel( QObject *parent )
     { Role::Choices, QByteArrayLiteral( "choices" ) },
     { Role::Description, QByteArrayLiteral( "description" ) },
 } {
-    NodeAPI::registerNonNode( this );
+    Pipeline::registerNonNode( this );
 }
 
 // Public

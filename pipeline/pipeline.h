@@ -26,11 +26,11 @@
 #include "videooutput.h"
 #include "videooutputnode.h"
 
-class NodeAPI : public QObject {
+class Pipeline : public QObject {
         Q_OBJECT
 
     public:
-        NodeAPI();
+        Pipeline();
 
         enum class Thread {
             Main = 0,
@@ -38,11 +38,11 @@ class NodeAPI : public QObject {
         };
         Q_ENUM( Thread )
 
-        enum class Pipeline {
+        enum PipelineType {
             Default = 0,
             Libretro,
         };
-        Q_ENUM( Pipeline )
+        Q_ENUM( PipelineType )
 
         enum class State {
             Inactive = 0,
@@ -65,9 +65,8 @@ class NodeAPI : public QObject {
         static void connectPipeline( QMap<QString, QStringList> pipeline );
         static void disconnectPipeline( QMap<QString, QStringList> pipeline );
 
-
     private: // Node API internals
-        static Pipeline currentPipeline;
+        static PipelineType currentPipeline;
         static bool currentlyAssembling;
         static State state;
         static QMap<QString, QStringList> nonNodeDependencies;

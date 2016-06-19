@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QRect>
 
-#include "nodeapi.h"
+#include "pipeline.h"
 
 #include "keyboardstate.h"
 #include "mousestate.h"

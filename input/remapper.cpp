@@ -13,7 +13,7 @@
 
 Remapper::Remapper() {
     keyboardGamepad.instanceID = -1;
-    NodeAPI::registerNode( this, NodeAPI::Thread::Game, { QT_STRINGIFY( RemapperModel ) } );
+    Pipeline::registerNode( this, Pipeline::Thread::Game, { QT_STRINGIFY( RemapperModel ) } );
 }
 
 void Remapper::connectDependencies( QMap<QString, QObject *> objects ) {
