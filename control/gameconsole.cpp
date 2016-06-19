@@ -22,56 +22,57 @@
 #include <QMetaObject>
 #include <QScreen>
 
-GameConsole::GameConsole( Node *parent ) : Node( parent ),
-    gameThread( new QThread ),
+GameConsole::GameConsole( Node *parent ) : Node( parent )
+    //,
+    //    // Global pipeline
+    //    microTimer( new MicroTimer ),
+    //    remapper( new Remapper ),
+    //    sdlManager( new SDLManager ),
+    //    sdlUnloader( new SDLUnloader ),
 
-    // Global pipeline
-    microTimer( new MicroTimer ),
-    remapper( new Remapper ),
-    sdlManager( new SDLManager ),
-    sdlUnloader( new SDLUnloader ),
-
-    // Dynamic pipeline
-    audioOutput( new AudioOutput ),
-    libretroLoader( new LibretroLoader ),
-    libretroRunner( new LibretroRunner ),
-    libretroVariableForwarder( new LibretroVariableForwarder ) {
+    //    // Dynamic pipeline
+    //    audioOutput( new AudioOutput ),
+    //    libretroLoader( new LibretroLoader ),
+    //    libretroRunner( new LibretroRunner ),
+    //    libretroVariableForwarder( new LibretroVariableForwarder )
+{
 
     // Handle app quitting
-//    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
-//        qDebug() << "";
-//        qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
-//        qDebug() << "";
+    //    connect( QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ = ]() {
+    //        qDebug() << "";
+    //        qCInfo( phxControl ) << ">>>>>>>> User requested app to close, shutting down (waiting up to 30 seconds)...";
+    //        qDebug() << "";
 
-//        // Tell the pipeline to stop if loaded
-//        if( dynamicPipelineReady() ) {
-//            quitFlag = true;
-//            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
-//        } else {
-//            qCInfo( phxControl ) << "No core loaded";
-//            gameThread->quit();
-//        }
+    //        // Tell the pipeline to stop if loaded
+    //        if( dynamicPipelineReady() ) {
+    //            quitFlag = true;
+    //            emit commandOut( Command::Stop, QVariant(), nodeCurrentTime() );
+    //        } else {
+    //            qCInfo( phxControl ) << "No core loaded";
+    //            gameThread->quit();
+    //        }
 
-//        // Wait up to 30 seconds to let the pipeline finish its events
-//        if( gameThread != QThread::currentThread() ) {
-//            gameThread->wait( 30 * 1000 );
-//            gameThread->deleteLater();
-//        }
+    //        // Wait up to 30 seconds to let the pipeline finish its events
+    //        if( gameThread != QThread::currentThread() ) {
+    //            gameThread->wait( 30 * 1000 );
+    //            gameThread->deleteLater();
+    //        }
 
-//        // Destroy our global pipeline objects *from the bottom up* (depending on core type)
-//        if( source[ "type" ] == QStringLiteral( "libretro" ) ||
-//            pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
-//            deleteLibretro();
-//        }
+    //        // Destroy our global pipeline objects *from the bottom up* (depending on core type)
+    //        if( source[ "type" ] == QStringLiteral( "libretro" ) ||
+    //            pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
+    //            deleteLibretro();
+    //        }
 
-//        // Send a second set of delete calls for all other objects (redundant calls will be ignored)
-//        deleteMembers();
+    //        // Send a second set of delete calls for all other objects (redundant calls will be ignored)
+    //        deleteMembers();
 
-//        qDebug() << "";
-//        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
-//        qDebug() << "";
-//    } );
+    //        qDebug() << "";
+    //        qCInfo( phxControl ) << ">>>>>>>> Fully unloaded!";
+    //        qDebug() << "";
+    //    } );
 
+    // FIXME: Do this like the other properties
     connect( this, &GameConsole::userDataLocationChanged, this, [ & ] {
         emit commandOut( Command::SetUserDataPath, userDataLocation, nodeCurrentTime() );
     } );
@@ -110,22 +111,6 @@ void GameConsole::load() {
         qCCritical( phxControl ).nospace() << QStringLiteral( "load() called before global pipeline has been set up!" );
     }
 
-    // TODO: Hook QWindow::screenChanged()
-    // TODO: Find a better place for this than load()... somewhere where the QScreen is guarantied to be valid
-    // FIXME: Don't assume PhoenixWindowNode::phoenixWindow or GameConsole::phoenixWindow set at this point?
-    Q_ASSERT( phoenixWindow );
-    Q_ASSERT( phoenixWindow->phoenixWindow );
-    Q_ASSERT( phoenixWindow->phoenixWindow->screen() );
-
-    // Assume hostFPS is 60Hz if the OS reports 59Hz
-    int hostFPS = phoenixWindow->phoenixWindow->screen()->refreshRate();
-
-    if( hostFPS == 59 ) {
-        hostFPS = 60;
-    }
-
-    emit commandOut( Command::SetHostFPS, hostFPS, nodeCurrentTime() );
-
     if( source[ "type" ] == QStringLiteral( "libretro" ) ||
         pendingPropertyChanges[ "source" ].toMap()[ "type" ] == QStringLiteral( "libretro" ) ) {
         loadLibretro();
@@ -141,61 +126,19 @@ void GameConsole::load() {
 }
 
 void GameConsole::loadLibretro() {
-    // Ensure that the properties were set in QML
-    Q_ASSERT_X( controlOutput, "libretro load", "controlOutput was not set!" );
-    Q_ASSERT_X( videoOutput, "libretro load", "videoOutput was not set!" );
-    Q_ASSERT_X( variableModel, "libretro load", "variableModel was not set!" );
-
-    // Disconnect PhoenixWindow from MicroTimer, insert libretroLoader in between
-    disconnectNodes( phoenixWindow, microTimer );
-    sessionConnections << connectNodes( phoenixWindow, libretroLoader );
-    sessionConnections << connectNodes( libretroLoader, microTimer );
-
-    // Disconnect SDLRunner from Remapper, it'll get inserted after LibretroRunner
-    disconnectNodes( remapper, sdlUnloader );
-
-    // Connect LibretroVariableForwarder to the global pipeline
-    sessionConnections << connectNodes( remapper, libretroVariableForwarder );
-    sessionConnections << connectNodes( libretroVariableForwarder, libretroRunner );
-
-    // Connect LibretroRunner to its children
-
-    sessionConnections << connectNodes( libretroRunner, audioOutput );
-    sessionConnections << connectNodes( libretroRunner, sdlUnloader );
-
-    // It's very important that ControlOutput is always connected via a queued connection as things that handle
-    // state changes (things that listen to ControlOutput) should not be at the top of a stack that contains
-    // the function calls that changed the state in the first place. This only really applies when we're single-threaded.
-    sessionConnections << connectNodes( libretroRunner, controlOutput, Qt::QueuedConnection );
-
-    sessionConnections << connectNodes( libretroRunner, videoOutput );
-
-    // Hook LibretroCore so we know when commands have reached it
-    // We can't hook ControlOutput as it lives on the main thread and if it's time to quit the main thread's event loop is dead
-    // We care about this happening as LibretroCore needs to save its running game before quitting
-    sessionConnections << connect( libretroRunner, &Node::commandOut, libretroRunner, [ & ]( Command command, QVariant, qint64 ) {
-        switch( command ) {
-            case Command::Stop: {
-                unloadLibretro();
-                break;
-            }
-
-            default: {
-                break;
-            }
-        }
-    } );
+    Pipeline::changePipeline( Pipeline::Libretro );
 }
 
 bool GameConsole::globalPipelineReady() {
-    return ( globalGamepad && phoenixWindow && phoenixWindow->phoenixWindow && phoenixWindow->phoenixWindow->screen() );
+    return ( Pipeline::getCurrentPipeline() == Pipeline::Default )
+           && ( Pipeline::getCurrentState() == Pipeline::State::Active );
 }
 
 void GameConsole::checkIfGlobalPipelineReady() {
     if( globalPipelineReady() ) {
         qCDebug( phxControl ) << "Global pipeline ready";
         emit commandOut( Command::HandleGlobalPipelineReady, QVariant(), nodeCurrentTime() );
-        emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), nodeCurrentTime() );
+        //emit commandOut( Command::SetGameThread, QVariant::fromValue<QThread *>( gameThread ), nodeCurrentTime() );
     }
 }
 
@@ -260,7 +203,7 @@ void GameConsole::unloadLibretro() {
     sessionConnections.clear();
 
     if( quitFlag ) {
-        gameThread->quit();
+        //gameThread->quit();
     }
 }
 

@@ -44,13 +44,6 @@ class VideoOutputNode;
 class GameConsole : public Node {
         Q_OBJECT
 
-        Q_PROPERTY( ControlOutput *controlOutput MEMBER controlOutput NOTIFY controlOutputChanged )
-        Q_PROPERTY( GlobalGamepad *globalGamepad MEMBER globalGamepad NOTIFY globalGamepadChanged )
-        Q_PROPERTY( PhoenixWindowNode *phoenixWindow MEMBER phoenixWindow NOTIFY phoenixWindowChanged )
-        Q_PROPERTY( RemapperModel *remapperModel MEMBER remapperModel NOTIFY remapperModelChanged )
-        Q_PROPERTY( LibretroVariableModel *variableModel MEMBER variableModel NOTIFY variableModelChanged )
-        Q_PROPERTY( VideoOutputNode *videoOutput MEMBER videoOutput NOTIFY videoOutputChanged )
-
         Q_PROPERTY( int aspectRatioMode READ getAspectRatioMode WRITE setAspectRatioMode NOTIFY aspectRatioModeChanged )
         Q_PROPERTY( qreal playbackSpeed READ getPlaybackSpeed WRITE setPlaybackSpeed NOTIFY playbackSpeedChanged )
         Q_PROPERTY( QVariantMap source READ getSource WRITE setSource NOTIFY sourceChanged )
@@ -110,9 +103,6 @@ class GameConsole : public Node {
         void deleteMembers();
 
     private: // Members
-        // Emulation thread
-        QThread *gameThread;
-
         // Global pipeline Nodes owned by this class (game thread)
         // When adding a new one, remember to:
         //     - Add to deleteMembers()
@@ -130,16 +120,6 @@ class GameConsole : public Node {
         LibretroLoader *libretroLoader { nullptr };
         LibretroRunner *libretroRunner { nullptr };
         LibretroVariableForwarder *libretroVariableForwarder { nullptr };
-
-        // Pipeline Nodes owned by the QML engine (main thread) for the global pipeline
-        ControlOutput *controlOutput { nullptr };
-        GlobalGamepad *globalGamepad { nullptr };
-        PhoenixWindowNode *phoenixWindow { nullptr };
-        VideoOutputNode *videoOutput { nullptr };
-
-        // Non-Nodes (owned by QML)
-        RemapperModel *remapperModel { nullptr };
-        LibretroVariableModel *variableModel { nullptr };
 
     private: // Property getters/setters
         int aspectRatioMode { 0 };
@@ -160,13 +140,6 @@ class GameConsole : public Node {
         QString userDataLocation;
 
     signals: // Property changed notifiers
-        void controlOutputChanged();
-        void globalGamepadChanged();
-        void phoenixWindowChanged();
-        void remapperModelChanged();
-        void videoOutputChanged();
-        void variableModelChanged();
-
         void aspectRatioModeChanged();
         void playbackSpeedChanged();
         void sourceChanged();

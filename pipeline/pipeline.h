@@ -58,6 +58,13 @@ class Pipeline : public QObject {
         // Register your non-Node QObject so it can be used with Nodes
         static void registerNonNode( QObject *object, Thread objThread = Thread::Main );
 
+        // Disconnect current pipeline and begin assembling the specified type
+        // TODO: Notify caller when complete somehow
+        static void changePipeline( PipelineType type );
+
+        static State getCurrentState();
+        static PipelineType getCurrentPipeline();
+
     private: // Pipelines
         static QMap<QString, QStringList> defaultPipeline;
         static QMap<QString, QStringList> libretroPipeline;
@@ -66,13 +73,13 @@ class Pipeline : public QObject {
         static void disconnectPipeline( QMap<QString, QStringList> pipeline );
 
     private: // Node API internals
-        static PipelineType currentPipeline;
-        static bool currentlyAssembling;
-        static State state;
         static QMap<QString, QStringList> nonNodeDependencies;
         static QMap<QString, Node *> nodes;
         static QMap<QString, QObject *> nonNodes;
         static QThread *gameThread;
+
+        static PipelineType currentPipeline;
+        static State state;
 
         // Used with Nodes and non-Nodes alike
         static QMap<QString, Thread> threads;

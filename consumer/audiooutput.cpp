@@ -449,4 +449,3 @@ void AudioOutput::allocateMemory() {
     outputDataFloat = new float[ outputBufferSamples ]();
     outputDataShort = new short[ outputBufferSamples ]();
 }
-

@@ -26,6 +26,20 @@ void Pipeline::registerNonNode( QObject *object, Pipeline::Thread objThread ) {
     pipelineHeartbeat();
 }
 
+void Pipeline::changePipeline( Pipeline::PipelineType type ) {
+    qDebug() << "Begin assembling" << type;
+    currentPipeline = type;
+    state = State::Assembling;
+}
+
+Pipeline::PipelineType Pipeline::getCurrentPipeline() {
+    return currentPipeline;
+}
+
+Pipeline::State Pipeline::getCurrentState() {
+    return state;
+}
+
 QMap<QString, QStringList> Pipeline::defaultPipeline = {
     { QT_STRINGIFY( GameConsole ), { QT_STRINGIFY( PhoenixWindowNode ) } },
     { QT_STRINGIFY( PhoenixWindowNode ), { QT_STRINGIFY( MicroTimer ) } },
@@ -133,7 +147,6 @@ void Pipeline::disconnectPipeline( QMap<QString, QStringList> pipeline ) {
 
 // Private (Node API internals)
 
-bool Pipeline::currentlyAssembling = true;
 QMap<QString, QStringList> Pipeline::nonNodeDependencies;
 QMap<QString, Node *> Pipeline::nodes;
 QMap<QString, QObject *> Pipeline::nonNodes;
