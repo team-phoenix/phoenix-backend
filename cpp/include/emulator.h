@@ -33,12 +33,15 @@ public:
         Paused,
         Killed,
     };
+    Q_ENUM( State );
 
     static Emulator &instance();
     ~Emulator();
 
     void setEmuState( State t_state );
 
+    // This member variables need to be public so they can be accessed
+    // by the static callbacks.
 public: // Libretro specific variables
 
     LibretroLibrary m_libretroLibrary;
@@ -48,25 +51,32 @@ public: // Libretro specific variables
     GamepadManager m_gamepadManager;
 
 public slots:
-    void run();
 
-    void initializeSession( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
+    // Runs the Emulator for a single frame.
+    // Key calling this function to pump out more frames.
+    void runEmu();
 
+    // Initializes the Emulator fully.
+    // Calling runEmu() directly after this is safe and optimal.
+    void initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
 
-signals:
-
-    void emulationInitialized();
 
 private slots:
-    void shutdownSession();
-    void resetSession();
-    void killProcess();
+    void shutdownEmu();
+    void restartEmu();
+
+    // Kills this Emulator server process.
+    // So long fellow!
+    void killEmu();
 
 private: // Functions
 
     explicit Emulator( QObject *parent = nullptr );
 
+    // Sends a JSON data package to any listening sockets.
     void sendVideoInfo();
+
+    // Sends the Emulator's current state to and listening sockets.
     void sendState();
 
     void setCallbacks();

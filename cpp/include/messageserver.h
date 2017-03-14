@@ -22,6 +22,8 @@ signals:
     void playEmu();
     void pauseEmu();
     void shutdownEmu();
+    void restartEmu();
+
     void killEmu();
 
     void saveState( const QString &path );

@@ -94,7 +94,14 @@ void MessageServer::parseJsonObject(const QJsonObject &t_jsonObject) {
         } else if ( request == "pauseEmu" ) {
             emit pauseEmu();
 
+        } else if ( request == "restartEmu" ) {
+            emit restartEmu();
+
+        } else if ( request == "shutdownEmu" ) {
+            emit shutdownEmu();
+
         } else if ( request == "saveState" ) {
+
             const QString path = t_jsonObject[ "path" ].toString();
 
             emit saveState( path );

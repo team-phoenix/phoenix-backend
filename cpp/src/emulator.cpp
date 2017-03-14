@@ -91,7 +91,7 @@ QString Emulator::toString(Emulator::State t_state) {
     }
 }
 
-void Emulator::run() {
+void Emulator::runEmu() {
 
     m_libretroLibrary.retro_run();
 
@@ -101,7 +101,7 @@ void Emulator::run() {
 
 }
 
-void Emulator::initializeSession( const QString &t_corePath, const QString &t_gamePath, const QString &hwType ) {
+void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType ) {
 
     if ( hwType == "2d" ) {
 
@@ -119,7 +119,6 @@ void Emulator::initializeSession( const QString &t_corePath, const QString &t_ga
         // Init the core
         m_libretroLibrary.retro_init();
 
-        qDebug() << "max height:" <<m_avInfo.geometry.base_width;
         // Get some info about the game
         m_libretroLibrary.retro_get_system_info( &m_systemInfo );
 
@@ -268,7 +267,7 @@ void Emulator::initializeSession( const QString &t_corePath, const QString &t_ga
 
 }
 
-void Emulator::shutdownSession() {
+void Emulator::shutdownEmu() {
 
     // Calls retro_deinit().
     m_libretroLibrary.unload();
@@ -289,9 +288,8 @@ void Emulator::shutdownSession() {
 
 }
 
-void Emulator::resetSession() {
-    shutdownSession();
-
+void Emulator::restartEmu() {
+    shutdownEmu();
 }
 
 Emulator::Emulator(QObject *parent) : QObject( parent ),
@@ -300,19 +298,20 @@ Emulator::Emulator(QObject *parent) : QObject( parent ),
     m_timer.setTimerType( Qt::PreciseTimer );
     m_timer.setInterval( 16 );
 
-    connect( &m_timer, &QTimer::timeout, this, &Emulator::run );
+    connect( &m_timer, &QTimer::timeout, this, &Emulator::runEmu );
 
     connect( &m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
     connect( &m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
-    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownSession );
+    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownEmu );
+    connect( &m_messageServer, &MessageServer::restartEmu, this, &Emulator::restartEmu );
 
-    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initializeSession );
-    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killProcess );
+    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initEmu );
+    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killEmu );
 
     setEmuState( State::Uninitialized );
 }
 
-void Emulator::killProcess() {
+void Emulator::killEmu() {
     setEmuState( State::Killed );
     QCoreApplication::quit();
 }
@@ -809,12 +808,12 @@ void videoRefreshCallback(const void *t_data, unsigned width, unsigned height, s
 }
 
 uintptr_t getFramebufferCallback() {
+    // Unsupported.
     return 0;
 }
 
 retro_proc_address_t openGLProcAddressCallback( const char *sym ) {
-    //return Emulator::instance().m_openglContext->getProcAddress( sym );
-
+    // Unsupported.
     return nullptr;
 }
 
