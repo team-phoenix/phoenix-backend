@@ -1,18 +1,19 @@
 #pragma once
 
 #include "libretro.h"
-#include "coresymbols.h"
+#include "libretrolibrary.h"
+#include "messageserver.h"
+#include "gamepadmanager.h"
 
 #include <QObject>
 #include <QImage>
+#include <QFile>
 
-class QLibrary;
-class QFile;
+#include <QTimer>
+
 class QJsonObject;
-class QDataStream;
-class InputManager;
 
-// The CoreDemuxer's job is to load a core and game, and split up the video and audio streams,
+// The Emulator's job is to load a core and game, and split up the video and audio streams,
 // sending those streams to their destined places.
 
 // Audio data goes straight into the computer's audio output, usually the speaker
@@ -20,71 +21,76 @@ class InputManager;
 // Video data goes into a shared memory region so that other processes can manipulate
 // and output this data onto the user's screen.
 
-class CoreDemuxer : public QObject
+class Emulator : public QObject
 {
     Q_OBJECT
 public:
 
     enum class State {
-        Initial,
-        PlayReady,
+        Uninitialized = 0,
+        Initialized,
         Playing,
-        Stopping,
-        Stopped,
+        Paused,
+        Killed,
     };
 
-    static CoreDemuxer &instance();
-    ~CoreDemuxer();
+    static Emulator &instance();
+    ~Emulator();
 
-    void loadLibrary( QString t_lib );
-    void loadGame( QString t_game );
+    void setEmuState( State t_state );
 
 public: // Libretro specific variables
 
-    CoreSymbols m_symbols;
+    LibretroLibrary m_libretroLibrary;
     retro_system_av_info m_avInfo;
     QImage::Format m_pixelFormat;
+
+    GamepadManager m_gamepadManager;
 
 public slots:
     void run();
 
+    void initializeSession( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
+
+
 signals:
-    void init();
-    void pipeMessage( QByteArray );
+
+    void emulationInitialized();
 
 private slots:
-    void handleInit();
-    void handleSocketRead( QJsonObject &t_message );
+    void shutdownSession();
+    void resetSession();
+    void killProcess();
 
 private: // Functions
 
-    explicit CoreDemuxer( QObject *parent = nullptr );
-
-    void resetSession();
-    void shutdownSession();
-    bool sessionReady();
+    explicit Emulator( QObject *parent = nullptr );
 
     void sendVideoInfo();
+    void sendState();
 
-    // Send a connected process a message.
-    void sendProcessMessage( QString t_section, QString t_value = "" );
-
-    void sendProcessMessage( QJsonObject &&t_message );
-    void sendProcessMessage( const QJsonObject &t_message );
+    void setCallbacks();
 
 
 private: // Variables
 
+    State m_emuState;
     QByteArray m_partialSocketCmd;
-    QLibrary *m_coreLib;
-    QFile *m_game;
+    QFile m_game;
 
     QByteArray m_gameData;
     QByteArray m_gameFileName;
 
     retro_system_info m_systemInfo;
 
-    InputManager *m_inputManager;
+    MessageServer m_messageServer;
+    QTimer m_timer;
+
+    bool loadEmulationCore( const QString &t_emuCore );
+    bool loadEmulationGame( const QString &t_emuGame );
+
+    QString toString( State t_state );
+
 };
 
 // Callbacks

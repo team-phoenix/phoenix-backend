@@ -1,4 +1,4 @@
-#include "sharedprocessmemory.h"
+#include "sharedmemory.h"
 #include "logging.h"
 
 #include <QMutex>
@@ -16,7 +16,7 @@ const int defaultInputBlockSize = sizeof(quint8) + sizeof(quint8);
 
 class MemoryLocker {
 public:
-    MemoryLocker( SharedProcessMemory *memory )
+    MemoryLocker( SharedMemory *memory )
         : m_memory( memory )
     {
         m_memory->lock();
@@ -27,15 +27,15 @@ public:
     }
 
 private:
-    SharedProcessMemory *m_memory;
+    SharedMemory *m_memory;
 };
 
-SharedProcessMemory::~SharedProcessMemory() {
+SharedMemory::~SharedMemory() {
     delete m_mutex;
     m_mutex = nullptr;
 }
 
-void SharedProcessMemory::setVideoMemory( uint t_width, uint t_height, uint t_pitch, const void *t_data ) {
+void SharedMemory::setVideoMemory( uint t_width, uint t_height, uint t_pitch, const void *t_data ) {
     QMutexLocker locker( m_mutex );
 
     // Construct the total size of the buffer, which will leave up with enough space for the data plus enough
@@ -78,12 +78,12 @@ void SharedProcessMemory::setVideoMemory( uint t_width, uint t_height, uint t_pi
 
 }
 
-SharedProcessMemory &SharedProcessMemory::instance() {
-    static SharedProcessMemory memory;
+SharedMemory &SharedMemory::instance() {
+    static SharedMemory memory;
     return memory;
 }
 
-SharedProcessMemory::SharedProcessMemory(QObject *parent)
+SharedMemory::SharedMemory(QObject *parent)
     : QSharedMemory( sharedMemoryKey, parent ),
       m_mutex( new QMutex ),
       m_videoBlockOffset( 0 ),
@@ -95,7 +95,7 @@ SharedProcessMemory::SharedProcessMemory(QObject *parent)
 
 }
 
-bool SharedProcessMemory::resizeMem( int t_blockSize ) {
+bool SharedMemory::resizeMem( int t_blockSize ) {
 
     if ( size() == t_blockSize ) {
         return true;

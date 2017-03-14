@@ -1,12 +1,12 @@
 #include <QCoreApplication>
 
-#include "coredemuxer.h"
+#include "emulator.h"
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    (void)CoreDemuxer::instance();
+    (void)Emulator::instance();
 
     return a.exec();
 }

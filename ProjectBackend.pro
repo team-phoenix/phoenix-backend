@@ -14,7 +14,8 @@ SOURCES += cpp/src/main.cpp \
     cpp/src/audiobuffer.cpp \
     cpp/src/audiooutput.cpp \
     cpp/src/sharedprocessmemory.cpp \
-    cpp/src/serialization.cpp
+    cpp/src/serialization.cpp \
+    cpp/src/inputmanager.cpp
 
 HEADERS += \
     cpp/include/coredemuxer.h \
@@ -24,7 +25,8 @@ HEADERS += \
     cpp/include/audiobuffer.h \
     cpp/include/audiooutput.h \
     cpp/include/sharedprocessmemory.h \
-    cpp/include/serialization.h
+    cpp/include/serialization.h \
+    cpp/include/inputmanager.h
 
 RESOURCES +=
 

@@ -5,7 +5,7 @@ list( APPEND CMAKE_MODULE_PATH
 )
 
 project( SandboxedBackend )
-add_executable( ${PROJECT_NAME} "" )
+add_executable( ${PROJECT_NAME} "")
 
 
 ##

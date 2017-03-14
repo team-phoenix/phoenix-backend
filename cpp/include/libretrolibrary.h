@@ -1,21 +1,23 @@
 #pragma once
 
-#pragma once
-
 #include "libretro.h"
 
-class QLibrary;
+#include <QLibrary>
 
-class CoreSymbols {
+class LibretroLibrary {
     public:
-        CoreSymbols() = default;
-        ~CoreSymbols();
+        LibretroLibrary() = default;
+        ~LibretroLibrary();
 
-        void resolveSymbols( QLibrary &t_lib );
+        bool load( const QString &t_filePath );
+        bool isLoaded() const;
+        bool unload();
+
+        QString fileName() const;
 
         // Libretro core functions
 
-        unsigned( *retro_api_version )( void );
+        unsigned(*retro_api_version)(void);
         void ( *retro_cheat_reset )( void );
         void ( *retro_cheat_set )( unsigned , bool , const char * );
         void ( *retro_deinit )( void );
@@ -25,6 +27,7 @@ class CoreSymbols {
         void ( *retro_get_system_av_info )( struct retro_system_av_info * );
         void ( *retro_get_system_info )( struct retro_system_info * );
         void ( *retro_init )( void );
+
         bool ( *retro_load_game )( const struct retro_game_info * );
         bool ( *retro_load_game_special )( unsigned , const struct retro_game_info *, size_t );
         void ( *retro_reset )( void );
@@ -51,5 +54,11 @@ class CoreSymbols {
         void ( *retro_hw_context_reset )( void );
 
         void clear();
+
+private:
+        QLibrary m_library;
+
+        void resolveSymbols();
+
 
 };

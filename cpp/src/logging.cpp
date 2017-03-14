@@ -9,4 +9,7 @@ Q_LOGGING_CATEGORY( phxGameConsole, "phoenix.gameconsole" )
 Q_LOGGING_CATEGORY( phxInput, "phoenix.input" )
 Q_LOGGING_CATEGORY( phxTimer, "phoenix.timer" )
 Q_LOGGING_CATEGORY( phxVideo, "phoenix.video" )
+Q_LOGGING_CATEGORY( phxSharedLibrary, "phoenix.sharedlibrary" )
+Q_LOGGING_CATEGORY( phxServer, "phoenix.server" )
+
 

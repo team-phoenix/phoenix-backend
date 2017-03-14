@@ -1,17 +1,15 @@
-#include "coredemuxer.h"
-#include "sharedprocessmemory.h"
+#include "emulator.h"
+#include "sharedmemory.h"
 #include "logging.h"
-#include "inputmanager.h"
+#include "gamepad.h"
+
+#include <cstdarg>
 
 #include <QLibrary>
 #include <QFile>
 
 #include <QTimer>
 
-#include <QLocalServer>
-#include <QLocalSocket>
-
-#include <QJsonDocument>
 #include <QJsonObject>
 
 #include <QCoreApplication>
@@ -21,148 +19,167 @@
 #include <QOpenGLFramebufferObject>
 
 
-CoreDemuxer &CoreDemuxer::instance() {
-    static CoreDemuxer demuxer;
+Emulator &Emulator::instance() {
+    static Emulator demuxer;
     return demuxer;
 }
 
-CoreDemuxer::~CoreDemuxer() {
+Emulator::~Emulator() {
 }
 
-void CoreDemuxer::loadLibrary(QString t_lib) {
-    if ( !QFile::exists( t_lib ) ) {
-        qCDebug( phxCore ) << t_lib << "does not exist.";
-    }
-
-    if ( m_coreLib->isLoaded() ) {
-        resetSession();
-    }
-    m_coreLib->setFileName( t_lib );
-    m_coreLib->load();
-    Q_ASSERT( m_coreLib->isLoaded() );
-
-    emit init();
-
-}
-
-void CoreDemuxer::loadGame(QString t_game) {
-    if ( !QFile::exists( t_game ) ) {
-        qCDebug( phxCore ) << t_game << "does not exist.";
-    }
-
-    if ( m_game->isOpen() ) {
-        resetSession();
-    }
-
-    m_gameFileName = t_game.toLocal8Bit();
-    m_game->setFileName( t_game );
-    m_game->open( QIODevice::ReadOnly );
-    Q_ASSERT( m_game->isOpen() );
-
-    emit init();
-}
-
-void CoreDemuxer::sendProcessMessage(QString t_section, QString t_value) {
-    sendProcessMessage( { { t_section, t_value } } );
-}
-
-void CoreDemuxer::sendProcessMessage(QJsonObject &&t_message) {
-    sendProcessMessage( t_message );
-}
-
-void CoreDemuxer::sendProcessMessage( const QJsonObject &t_message ) {
-    emit pipeMessage( QJsonDocument( t_message ).toBinaryData() );
-}
-
-void CoreDemuxer::run() {
-    static bool ranOnce = false;
-
-    m_symbols.retro_run();
-
-    if ( !ranOnce ) {
-        sendProcessMessage( "stateChanged", "playing" );
-        ranOnce = true;
+void Emulator::setEmuState(Emulator::State t_state) {
+    if ( t_state != m_emuState ) {
+        m_emuState = t_state;
+        sendState();
     }
 }
 
-void CoreDemuxer::handleInit() {
-    if ( !m_game->isOpen() && m_coreLib->isLoaded() ) {
-        return;
-    }
 
-    QJsonObject resultMessage;
-
-
-    m_symbols.resolveSymbols( *m_coreLib );
-
-    qCDebug( phxCore ) << "Core loaded:" << m_coreLib->isLoaded();
-    qCDebug( phxCore ) << "retro_api_version =" << m_symbols.retro_api_version();
-
+void Emulator::setCallbacks() {
     // Set callbacks
-    m_symbols.retro_set_environment( environmentCallback );
-    m_symbols.retro_set_audio_sample( audioSampleCallback );
-    m_symbols.retro_set_audio_sample_batch( audioSampleBatchCallback );
-    m_symbols.retro_set_input_poll( inputPollCallback );
-    m_symbols.retro_set_input_state( inputStateCallback );
-    m_symbols.retro_set_video_refresh( videoRefreshCallback );
+    m_libretroLibrary.retro_set_environment( environmentCallback );
+    m_libretroLibrary.retro_set_audio_sample( audioSampleCallback );
+    m_libretroLibrary.retro_set_audio_sample_batch( audioSampleBatchCallback );
+    m_libretroLibrary.retro_set_input_poll( inputPollCallback );
+    m_libretroLibrary.retro_set_input_state( inputStateCallback );
+    m_libretroLibrary.retro_set_video_refresh( videoRefreshCallback );
+}
 
-    // Init the core
-    m_symbols.retro_init();
+bool Emulator::loadEmulationCore(const QString &t_emuCore) {
 
-    qDebug() << "max height:" <<m_avInfo.geometry.base_width;
-    // Get some info about the game
-    m_symbols.retro_get_system_info( &m_systemInfo );
+    if ( t_emuCore != m_libretroLibrary.fileName() ) {
 
-    // Load game
-    {
-        qCDebug( phxCore ) << "Loading game:" << m_game->fileName();
+        return m_libretroLibrary.load( t_emuCore );
 
-        // Argument struct for symbols.retro_load_game()
-        retro_game_info gameInfo;
-
-        // Full path needed, simply pass the game's file path to the core
-        if( m_systemInfo.need_fullpath ) {
-            qCDebug( phxCore ) << "Passing file path to core...";
-
-            gameInfo.path = m_gameFileName.constData();
-            gameInfo.data = nullptr;
-            gameInfo.size = 0;
-            gameInfo.meta = "";
-        }
-
-        // Full path not needed, read the file to memory and pass that to the core
-        else {
-            qCDebug( phxCore ) << "Copying game contents to memory...";
-
-            // Read into memory
-
-            gameInfo.path = nullptr;
-
-            m_gameData = m_game->readAll();
-            gameInfo.data = m_gameData.constData();
-            gameInfo.size = m_gameData.size();
-            gameInfo.meta = "";
-
-            m_game->close();
-
-        }
-
-        m_symbols.retro_load_game( &gameInfo );
-
-        qDebug() << "";
+    } else {
+        return false;
     }
 
-    // Flush stderr, some cores may still write to it despite having RETRO_LOG
-    fflush( stderr );
+}
 
-    // Load save data
-    //LibretroCoreLoadSaveData();
+bool Emulator::loadEmulationGame(const QString &t_emuGame) {
 
-    m_symbols.retro_get_system_av_info( &m_avInfo );
-    qCDebug( phxCore ).nospace() << "coreFPS: " << m_avInfo.timing.fps;
-    qCDebug( phxCore ).nospace() << "aspectRatio: " << m_avInfo.geometry.aspect_ratio;
-    qCDebug( phxCore ).nospace() << "baseHeight: " << m_avInfo.geometry.base_height;
-    qCDebug( phxCore ).nospace() << "baseWidth: " << m_avInfo.geometry.base_width;
+    if ( t_emuGame != m_game.fileName() ) {
+        if ( !QFile::exists( t_emuGame ) ) {
+            qCCritical( phxCore ) << t_emuGame << "does not exist.";
+            return false;
+        }
+
+        m_gameFileName = t_emuGame.toLocal8Bit();
+        m_game.setFileName( t_emuGame );
+
+        return m_game.open( QIODevice::ReadOnly );
+    }
+
+    return false;
+}
+
+QString Emulator::toString(Emulator::State t_state) {
+    switch( t_state ) {
+        case State::Playing:
+            return QStringLiteral( "emuPlaying" );
+        case State::Initialized:
+            return QStringLiteral( "emuInit" );
+        case State::Paused:
+            return QStringLiteral( "emuPaused" );
+        case State::Uninitialized:
+            return QStringLiteral( "emuUninit" );
+        case State::Killed:
+            return QStringLiteral( "emuKilled" );
+        default:
+            Q_UNREACHABLE();
+    }
+}
+
+void Emulator::run() {
+
+    m_libretroLibrary.retro_run();
+
+    if ( m_emuState != State::Playing ) {
+        setEmuState( State::Playing );
+    }
+
+}
+
+void Emulator::initializeSession( const QString &t_corePath, const QString &t_gamePath, const QString &hwType ) {
+
+    if ( hwType == "2d" ) {
+
+        if ( !( loadEmulationCore( t_corePath ) && loadEmulationGame( t_gamePath ) ) ) {
+            qCWarning( phxCore, "Could not load the core or game." );
+        } else {
+
+        }
+
+        qCDebug( phxCore ) << "Core loaded:" << m_libretroLibrary.isLoaded();
+        qCDebug( phxCore ) << "retro_api_version =" << m_libretroLibrary.retro_api_version();
+
+        setCallbacks();
+
+        // Init the core
+        m_libretroLibrary.retro_init();
+
+        qDebug() << "max height:" <<m_avInfo.geometry.base_width;
+        // Get some info about the game
+        m_libretroLibrary.retro_get_system_info( &m_systemInfo );
+
+        // Load game
+        {
+            qCDebug( phxCore ) << "Loading game:" << m_game.fileName();
+
+            // Argument struct for symbols.retro_load_game()
+            retro_game_info gameInfo;
+
+            // Full path needed, simply pass the game's file path to the core
+            if( m_systemInfo.need_fullpath ) {
+                qCDebug( phxCore ) << "Passing file path to core...";
+
+                gameInfo.path = m_gameFileName.constData();
+                gameInfo.data = nullptr;
+                gameInfo.size = 0;
+                gameInfo.meta = "";
+            }
+
+            // Full path not needed, read the file to memory and pass that to the core
+            else {
+                qCDebug( phxCore ) << "Copying game contents to memory...";
+
+                // Read into memory
+
+                gameInfo.path = nullptr;
+
+                m_gameData = m_game.readAll();
+                gameInfo.data = m_gameData.constData();
+                gameInfo.size = m_gameData.size();
+                gameInfo.meta = "";
+
+                m_game.close();
+
+            }
+
+            m_libretroLibrary.retro_load_game( &gameInfo );
+
+            qDebug() << "";
+        }
+
+        // Flush stderr, some cores may still write to it despite having RETRO_LOG
+        fflush( stderr );
+
+        // Load save data
+        //LibretroCoreLoadSaveData();
+
+        m_libretroLibrary.retro_get_system_av_info( &m_avInfo );
+        qCDebug( phxCore ).nospace() << "coreFPS: " << m_avInfo.timing.fps;
+        qCDebug( phxCore ).nospace() << "aspectRatio: " << m_avInfo.geometry.aspect_ratio;
+        qCDebug( phxCore ).nospace() << "baseHeight: " << m_avInfo.geometry.base_height;
+        qCDebug( phxCore ).nospace() << "baseWidth: " << m_avInfo.geometry.base_width;
+
+        setEmuState( State::Initialized );
+        sendVideoInfo();
+
+    } else {
+        qCWarning( phxCore, "hardware type %s is not supported", qPrintable( hwType ) );
+    }
 
 
 //        // Get audio/video timing and send to consumers, allocate buffer pool
@@ -247,142 +264,80 @@ void CoreDemuxer::handleInit() {
     // Flush stderr, some cores may still write to it despite having RETRO_LOG
     fflush( stderr );
 
-    sendVideoInfo();
+
 
 }
 
-void CoreDemuxer::handleSocketRead( QJsonObject &t_message ) {
-   qDebug() << "Accepted pipe request:" << t_message << t_message.isEmpty();
+void Emulator::shutdownSession() {
 
-   if ( !t_message.isEmpty() ) {
-       for ( auto iter = t_message.begin(); iter != t_message.end(); ++iter ) {
-           QString value = iter.value().toString();
+    // Calls retro_deinit().
+    m_libretroLibrary.unload();
 
-           if ( iter.key() == "loadCore" ) {
-               loadLibrary( value );
-           } else if ( iter.key() == "loadGame" ) {
-               loadGame( value );
-           } else if ( iter.key() == "setState" ) {
+    m_game.close();
+    m_gameData.clear();
 
-               if ( iter.value() == "play" ) {
-                   QTimer *timer = new QTimer( this );
-                   timer->setInterval( ( 1 / m_avInfo.timing.fps ) * 1000.0 );
+    m_gameFileName.clear();
 
-                   connect( timer, &QTimer::timeout, this, &CoreDemuxer::run );
+    m_systemInfo = {};
+    m_avInfo = {};
 
-                   qDebug() << "sent message" << "playing";
-               }
+    m_pixelFormat = QImage::Format_Invalid;
 
-           } else if ( iter.key() == "quitProcess" ) {
-               qDebug() << "QUIT PROCESS";
+    m_emuState = State::Uninitialized;
 
-               QCoreApplication::quit();
-           }
-       }
-   }
+    setEmuState( State::Uninitialized );
 
 }
 
-CoreDemuxer::CoreDemuxer(QObject *parent)
-    : QObject( parent ),
+void Emulator::resetSession() {
+    shutdownSession();
 
-      m_pixelFormat( QImage::Format_Invalid ),
+}
 
-      m_coreLib( new QLibrary( this ) ),
-      m_game( new QFile( this ) ),
-      m_inputManager( new InputManager( nullptr ) )
+Emulator::Emulator(QObject *parent) : QObject( parent ),
+    m_pixelFormat( QImage::Format_Invalid )
 {
-    connect( this, &CoreDemuxer::init, this, &CoreDemuxer::handleInit );
+    m_timer.setTimerType( Qt::PreciseTimer );
+    m_timer.setInterval( 16 );
 
-    QLocalServer *server = new QLocalServer( this );
-    const QString serverName = "phoenixEmulatorProcess";
-    QLocalServer::removeServer(serverName);
-    if ( !server->listen( serverName ) ) {
-        qCDebug( phxCore ) << "QLocalSocket is not started...";
-    } else {
-        qDebug() << "Backend server is listening";
-    }
+    connect( &m_timer, &QTimer::timeout, this, &Emulator::run );
 
-    connect( server, &QLocalServer::newConnection, this, [this, server] {
-        QLocalSocket *socket = server->nextPendingConnection();
+    connect( &m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
+    connect( &m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
+    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownSession );
 
-        qDebug() << "Connected to a new process.";
+    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initializeSession );
+    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killProcess );
 
-        // Listen to incoming pipes from external processes, we can we
-        // fulfill their request.
-        connect( socket, &QLocalSocket::readyRead, this, [ this, socket ] {
-
-            if ( socket->bytesAvailable() > 4 ) {
-                while ( socket->bytesAvailable() ) {
-
-                    quint32 msgSize = 0;
-                    socket->read( reinterpret_cast<char *>( &msgSize ), sizeof( msgSize ) );
-
-
-                    if ( socket->bytesAvailable() >= msgSize ) {
-                        QByteArray socketMsg( msgSize, '\0' );
-
-                        socket->read( socketMsg.data(), msgSize );
-
-                        qDebug() << socketMsg;
-
-                        QJsonObject obj = QJsonDocument::fromBinaryData( socketMsg ).object();
-                        handleSocketRead( obj );
-                    }
-                }
-
-            }
-
-        });
-
-        // Connect to a frontend server, so we can request information from it.
-        QLocalSocket *outSocket = new QLocalSocket( this );
-        outSocket->connectToServer( "phoenixExternalProcess" );
-
-        connect( this, &CoreDemuxer::pipeMessage, this, [this, outSocket] ( QByteArray t_data ) {
-            quint32 size = static_cast<quint32>( t_data.size() );
-            outSocket->write( reinterpret_cast<char *>( &size ), sizeof( size ) );
-            outSocket->write( t_data );
-            outSocket->flush();
-        });
-
-        connect( outSocket, &QLocalSocket::connected, this, [this] {
-           qCDebug( phxCore ) << "Connected to Frontend";
-        });
-
-    });
-
-
+    setEmuState( State::Uninitialized );
 }
 
-void CoreDemuxer::resetSession() {
-    m_coreLib->unload();
-    m_game->close();
+void Emulator::killProcess() {
+    setEmuState( State::Killed );
+    QCoreApplication::quit();
 }
 
-void CoreDemuxer::shutdownSession() {
-    m_coreLib->unload();
-    m_game->close();
+void Emulator::sendVideoInfo() {
 
-}
-
-bool CoreDemuxer::sessionReady() {
-    return m_coreLib->isLoaded() && m_game->isOpen();
-}
-
-void CoreDemuxer::sendVideoInfo() {
-
-    QJsonObject videoInfo;
-
-    videoInfo[ "videoInfo" ] = QJsonValue( {
+    QJsonObject videoInfo {
+        { "response", "videoInfo" },
         { "frameRate", m_avInfo.timing.fps },
         { "aspectRatio", m_avInfo.geometry.aspect_ratio },
-        { "baseHeight", static_cast<int>( m_avInfo.geometry.base_height ) },
-        { "baseWidth", static_cast<int>( m_avInfo.geometry.base_width ) },
-        { "pixelFormat" , static_cast<int>( m_pixelFormat ) },
-    } );
+        { "height", static_cast<int>( m_avInfo.geometry.base_height ) },
+        { "width", static_cast<int>( m_avInfo.geometry.base_width ) },
+        { "pixelFmt", static_cast<int>( m_pixelFormat ) },
+    };
 
-    sendProcessMessage( videoInfo  );
+    m_messageServer.encodeMessage( videoInfo );
+}
+
+void Emulator::sendState() {
+
+    QJsonObject json {
+        { "response", toString( m_emuState ) },
+    };
+
+    m_messageServer.encodeMessage( json );
 }
 
 void audioSampleCallback(int16_t left, int16_t right) {
@@ -413,9 +368,13 @@ bool environmentCallback(unsigned cmd, void *data) {
 
         // 4 and 5 have been deprecated
 
-        case RETRO_ENVIRONMENT_SET_MESSAGE: // 6
+        case RETRO_ENVIRONMENT_SET_MESSAGE: {// 6
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_MESSAGE (6)";
+            retro_message *message = static_cast<retro_message *>( data );
+            (void)message;
+
             break;
+        }
 
         case RETRO_ENVIRONMENT_SHUTDOWN: // 7
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SHUTDOWN (7)";
@@ -439,9 +398,9 @@ bool environmentCallback(unsigned cmd, void *data) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    CoreDemuxer::instance().m_pixelFormat = QImage::Format_RGB555;
+                    Emulator::instance().m_pixelFormat = QImage::Format_RGB555;
 
-//                    CoreDemuxer::instance().sendProcessMessage( {
+//                    Emulator::instance().sendProcessMessage( {
 //                                                                    { "retro_cmd", {
 //                                                                          "environ_cb",
 //                                                                      }
@@ -451,12 +410,12 @@ bool environmentCallback(unsigned cmd, void *data) {
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    CoreDemuxer::instance().m_pixelFormat  = QImage::Format_RGB16;
+                    Emulator::instance().m_pixelFormat  = QImage::Format_RGB16;
                     qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    CoreDemuxer::instance().m_pixelFormat  = QImage::Format_RGB32;
+                    Emulator::instance().m_pixelFormat  = QImage::Format_RGB32;
                     qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
                 default:
@@ -484,7 +443,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: { // 12
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK (12) (handled)";
-            CoreDemuxer::instance().m_symbols.retro_keyboard_event = ( decltype( CoreSymbols::retro_keyboard_event ) )data;
+            Emulator::instance().m_libretroLibrary.retro_keyboard_event = ( decltype( LibretroLibrary::retro_keyboard_event ) )data;
             break;
         }
 
@@ -502,7 +461,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 //            hardwareRenderData->get_current_framebuffer = getFramebufferCallback;
 //            hardwareRenderData->get_proc_address = openGLProcAddressCallback;
 
-//            CoreDemuxer::instance().m_symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
+//            Emulator::instance().m_symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
 
 //            QSurfaceFormat surfaceFmt;
 
@@ -512,8 +471,8 @@ bool environmentCallback(unsigned cmd, void *data) {
 //                    break;
 
 //                case RETRO_HW_CONTEXT_OPENGL: {
-//                    if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() < 2
-//                            || CoreDemuxer::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGL ) {
+//                    if( Emulator::instance().m_offscreenSurface->format().majorVersion() < 2
+//                            || Emulator::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGL ) {
 //                        qWarning() << "\t\tOpenGL 2.x not available! Please install a driver for your GPU that supports modern OpenGL";
 //                        return false;
 //                    }
@@ -524,8 +483,8 @@ bool environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES2: {
-//                    if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() < 2
-//                            || CoreDemuxer::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+//                    if( Emulator::instance().m_offscreenSurface->format().majorVersion() < 2
+//                            || Emulator::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
 //                        qWarning() << "\t\tOpenGL ES 2.0 not available! Please install a driver for your GPU that supports this";
 //                        return false;
 //                    }
@@ -535,15 +494,15 @@ bool environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGL_CORE: {
-//                    if( CoreDemuxer::instance().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGL ) {
-//                        if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+//                    if( Emulator::instance().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGL ) {
+//                        if( Emulator::instance().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
 //                        }
 
-//                        if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
-//                            CoreDemuxer::instance().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+//                        if( Emulator::instance().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+//                            Emulator::instance().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
@@ -556,8 +515,8 @@ bool environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES3: {
-//                    if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() < 3
-//                            || CoreDemuxer::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+//                    if( Emulator::instance().m_offscreenSurface->format().majorVersion() < 3
+//                            || Emulator::instance().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
 //                        qWarning() << "\t\tOpenGL ES 3.0 not available! Please install a driver for your GPU that supports this";
 //                        return false;
 //                    }
@@ -567,15 +526,15 @@ bool environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES_VERSION: {
-//                    if( CoreDemuxer::instance().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGLES ) {
-//                        if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+//                    if( Emulator::instance().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGLES ) {
+//                        if( Emulator::instance().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
 //                        }
 
-//                        if( CoreDemuxer::instance().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
-//                            CoreDemuxer::instance().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+//                        if( Emulator::instance().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+//                            Emulator::instance().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
@@ -679,7 +638,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: { // 21
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
-            CoreDemuxer::instance().m_symbols.retro_frame_time = ( decltype( CoreSymbols::retro_frame_time ) )data;
+            Emulator::instance().m_libretroLibrary.retro_frame_time = ( decltype( LibretroLibrary::retro_frame_time ) )data;
             return true;
         }
 
@@ -711,7 +670,7 @@ bool environmentCallback(unsigned cmd, void *data) {
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: { // 27
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_LOG_INTERFACE (27) (handled)";
             struct retro_log_callback *logcb = ( struct retro_log_callback * )data;
-            //logcb->log = logCallback;
+            logcb->log = logCallback;
             return true;
         }
 
@@ -781,7 +740,7 @@ bool environmentCallback(unsigned cmd, void *data) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37) (handled)";
 
             // Get info from the core
-            CoreDemuxer::instance().m_symbols.retro_get_system_av_info( &CoreDemuxer::instance().m_avInfo );
+            Emulator::instance().m_libretroLibrary.retro_get_system_av_info( &Emulator::instance().m_avInfo );
             // Although we hope the core would have updated its internal av_info struct by now, we'll play it safe and
             // use the given geometry
             //memcpy( &( avInfo->geometry ), data, sizeof( struct retro_game_geometry ) );
@@ -813,66 +772,27 @@ bool environmentCallback(unsigned cmd, void *data) {
 }
 
 void inputPollCallback() {
-
-}
-
-void logCallback( retro_log_level level, const char *fmt ) {
-//    QVarLengthArray<char, 1024> outbuf( 1024 );
-//    va_list args;
-//    va_start( args, fmt );
-//    int ret = vsnprintf( outbuf.data(), outbuf.size(), fmt, args );
-
-//    if( ret < 0 ) {
-//        qCDebug( phxCore ) << "logCallback: could not format string";
-//        va_end( args );
-//        return;
-//    } else if( ( ret + 1 ) > outbuf.size() ) {
-//        outbuf.resize( ret + 1 );
-//        ret = vsnprintf( outbuf.data(), outbuf.size(), fmt, args );
-
-//        if( ret < 0 ) {
-//            qCDebug( phxCore ) << "logCallback: could not format string";
-//            va_end( args );
-//            return;
-//        }
-//    }
-
-//    va_end( args );
-
-//    // remove trailing newline, which are already added by qCDebug
-//    if( outbuf.value( ret - 1 ) == '\n' ) {
-//        outbuf[ret - 1] = '\0';
-
-//        if( outbuf.value( ret - 2 ) == '\r' ) {
-//            outbuf[ret - 2] = '\0';
-//        }
-//    }
-
-//    switch( level ) {
-//        case RETRO_LOG_DEBUG:
-//            qCDebug( phxCore ) << "RETRO_LOG_DEBUG:" << outbuf.data();
-//            break;
-
-//        case RETRO_LOG_INFO:
-//            qCDebug( phxCore ) << "RETRO_LOG_INFO:" << outbuf.data();
-//            break;
-
-//        case RETRO_LOG_WARN:
-//            qCWarning( phxCore ) << "RETRO_LOG_WARN:" << outbuf.data();
-//            break;
-
-//        case RETRO_LOG_ERROR:
-//            qCCritical( phxCore ) << "RETRO_LOG_ERROR:" << outbuf.data();
-//            break;
-
-//        default:
-//            qCWarning( phxCore ) << "RETRO_LOG (unknown category!?):" << outbuf.data();
-//            break;
-//    }
+    Emulator::instance().m_gamepadManager.poll();
 }
 
 int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id) {
-    return 0;
+
+    quint16 result = 0;
+
+    if ( Emulator::instance().m_gamepadManager.size() > port ) {
+        const Gamepad &gamepad = Emulator::instance().m_gamepadManager.at( port );
+
+        if ( device & RETRO_DEVICE_JOYPAD ) {
+            result = static_cast<quint16>( gamepad.getButtonState( id ) );
+        }
+
+        if ( device & RETRO_DEVICE_ANALOG ) {
+            //qDebug() << "get analog";
+        }
+    }
+
+
+    return result;
 }
 
 void videoRefreshCallback(const void *t_data, unsigned width, unsigned height, size_t pitch) {
@@ -880,7 +800,7 @@ void videoRefreshCallback(const void *t_data, unsigned width, unsigned height, s
     if ( t_data == RETRO_HW_FRAME_BUFFER_VALID ) {
 
     } else {
-        SharedProcessMemory::instance().setVideoMemory( width
+        SharedMemory::instance().setVideoMemory( width
                                                         , height
                                                         , pitch
                                                         , t_data );
@@ -893,11 +813,66 @@ uintptr_t getFramebufferCallback() {
 }
 
 retro_proc_address_t openGLProcAddressCallback( const char *sym ) {
-    //return CoreDemuxer::instance().m_openglContext->getProcAddress( sym );
+    //return Emulator::instance().m_openglContext->getProcAddress( sym );
 
     return nullptr;
 }
 
 bool rumbleCallback(unsigned port, retro_rumble_effect effect, uint16_t strength) {
     return false;
+}
+
+void logCallback(retro_log_level level, const char *fmt, ...) {
+    QVarLengthArray<char, 1024> outbuf( 1024 );
+    va_list args;
+    va_start( args, fmt );
+    int ret = vsnprintf( outbuf.data(), outbuf.size(), fmt, args );
+
+    if( ret < 0 ) {
+        qCDebug( phxCore ) << "logCallback: could not format string";
+        va_end( args );
+        return;
+    } else if( ( ret + 1 ) > outbuf.size() ) {
+        outbuf.resize( ret + 1 );
+        ret = vsnprintf( outbuf.data(), outbuf.size(), fmt, args );
+
+        if( ret < 0 ) {
+            qCDebug( phxCore ) << "logCallback: could not format string";
+            va_end( args );
+            return;
+        }
+    }
+
+    va_end( args );
+
+    // remove trailing newline, which are already added by qCDebug
+    if( outbuf.value( ret - 1 ) == '\n' ) {
+        outbuf[ret - 1] = '\0';
+
+        if( outbuf.value( ret - 2 ) == '\r' ) {
+            outbuf[ret - 2] = '\0';
+        }
+    }
+
+    switch( level ) {
+    case RETRO_LOG_DEBUG:
+        qCDebug( phxCore ) << "RETRO_LOG_DEBUG:" << outbuf.data();
+        break;
+
+    case RETRO_LOG_INFO:
+        qCDebug( phxCore ) << "RETRO_LOG_INFO:" << outbuf.data();
+        break;
+
+    case RETRO_LOG_WARN:
+        qCWarning( phxCore ) << "RETRO_LOG_WARN:" << outbuf.data();
+        break;
+
+    case RETRO_LOG_ERROR:
+        qCCritical( phxCore ) << "RETRO_LOG_ERROR:" << outbuf.data();
+        break;
+
+    default:
+        qCWarning( phxCore ) << "RETRO_LOG (unknown category!?):" << outbuf.data();
+        break;
+    }
 }
