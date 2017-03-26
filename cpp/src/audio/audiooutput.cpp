@@ -1,25 +1,45 @@
-//#include "audiooutput.h"
-//#include "logging.h"
+#include "audiooutput.h"
+#include "logging.h"
+#include "ringbuffer.h"
 
-//#include <QAudioOutput>
-//#include <QTimer>
+
+#include <QAudioOutput>
+#include <QAudioFormat>
+
+#include <QTimer>
+
+#include <QThread>
+
 
 //// FIXME: Stop assuming stereo?
 //const auto samplesPerFrame = 2;
 //// const auto framesPerSample = 0.5;
 
-//AudioOutput::AudioOutput( QObject *parent )
-//    : QObject( parent ),
-//      outputBuffer( this )
-//{
-//    outputBuffer.start();
-//}
+AudioOutput::AudioOutput( QObject *parent ) : QObject( parent ),
+    m_readSize( 0 ),
+    m_audioOut( nullptr),
+    m_device( nullptr )
+{
 
-//AudioOutput::~AudioOutput() {
-//    if( outputAudioInterface != nullptr || outputDataFloat != nullptr || outputDataShort != nullptr ) {
-//        shutdown();
-//    }
-//}
+
+//    connect( &m_audioBuffer, &QBuffer::readyRead, this, [] {
+//       qDebug() << "read ready";
+//    });
+
+//    connect( &m_audioBuffer, &QBuffer::bytesWritten, this, []( qint64 written ) {
+//       qDebug() << "bytes written" << written;
+//    });
+
+
+
+ }
+
+AudioOutput::~AudioOutput() {
+}
+
+void AudioOutput::setBuffer(RingBuffer *t_buffer) {
+    m_ringBuffer = t_buffer;
+}
 
 //void AudioOutput::handleAudioSampleCallback(quint16 left, quint16 right) {
 //    // Sanity check
@@ -503,3 +523,109 @@
 //    outputDataShort = new short[ outputBufferSamples ]();
 //}
 
+
+void AudioOutput::emuPlaying() {
+
+    m_device = m_audioOut->start();
+    if ( !m_device ) {
+        qCCritical( phxAudioOutput, "Could not open the audio device, audio is disabled." );
+        return;
+    }
+
+    m_timer->start();
+
+}
+
+void AudioOutput::handleAudioFmtChanged(double t_fps, double t_sampleRate) {
+
+    if ( m_audioOut ) {
+        delete m_audioOut;
+        m_audioOut = nullptr;
+    }
+
+
+    const int channelCount = 2;
+    const int sampleSize = 16;
+    const QString codec = QStringLiteral( "audio/pcm" );
+    const QAudioFormat::SampleType sampleType = QAudioFormat::SignedInt;
+    const QAudioFormat::Endian endian = QAudioFormat::LittleEndian;
+
+
+    // Set up the format, eg.
+    m_inputFmt.setSampleRate( t_sampleRate );
+    m_inputFmt.setChannelCount( channelCount );
+    m_inputFmt.setSampleSize( sampleSize );
+    m_inputFmt.setCodec( codec );
+
+    m_inputFmt.setSampleType( sampleType );
+    m_inputFmt.setByteOrder( endian );
+
+    QAudioDeviceInfo deviceInfo( QAudioDeviceInfo::defaultOutputDevice() );
+    qCDebug( phxAudioOutput, "Default audio device is %s", qPrintable( deviceInfo.deviceName() ) );
+
+    if (!deviceInfo.isFormatSupported(m_inputFmt)) {
+
+        qCWarning( phxAudioOutput ) << "Raw audio format not supported by backend, cannot play audio.";
+        qCWarning( phxAudioOutput ) << "Default audio format will be used";
+
+        m_inputFmt = deviceInfo.nearestFormat( m_inputFmt );
+
+    }
+
+
+    m_timer = new QTimer( this );
+
+    connect( m_timer, &QTimer::timeout, this, &AudioOutput::readAudio );
+
+    m_timer->setInterval( static_cast<int>( ( 1 / t_fps ) * 1000.0 ) );
+
+    m_readSize = m_inputFmt.bytesForDuration( m_timer->interval() * 1000.0 * 3 );
+    m_ringBuffer->resize( m_readSize );
+
+    m_tempBuf = QByteArray( m_readSize, '\0' );
+
+    m_audioOut = new QAudioOutput( m_inputFmt, this );
+
+    connect( m_audioOut, &QAudioOutput::stateChanged, this, &AudioOutput::audioStateChanged );
+
+
+    qCDebug( phxAudioOutput, "Audio format set. Set timer for %d", m_timer->interval() );
+    qDebug() << Q_FUNC_INFO << QThread::currentThread();
+
+}
+
+void AudioOutput::audioStateChanged(QAudio::State outputState) {
+
+    switch( outputState ) {
+        case QAudio::ActiveState:
+            qCDebug( phxAudioOutput ) << "Active state";
+            break;
+        case QAudio::SuspendedState:
+            qCDebug( phxAudioOutput ) << "Suspended state";
+            break;
+        case QAudio::StoppedState:
+            qCDebug( phxAudioOutput ) << "Stopped state";
+            //m_device = new QAudioOutput( )
+            break;
+        case QAudio::IdleState:
+            qCDebug( phxAudioOutput ) << "Idle state";
+            break;
+        default:
+            Q_UNREACHABLE();
+    }
+
+}
+
+void AudioOutput::readAudio() {
+
+    const int wrote = m_ringBuffer->readAvailable( m_tempBuf.data() );
+
+    if ( wrote > 0 ) {
+
+        //qDebug() << "wrote" << wrote;
+        if (  m_device->write( m_tempBuf.data(), wrote ) == -1 ) {
+            qDebug() << "Error writing to audio out";
+        }
+    }
+
+}

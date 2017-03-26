@@ -1,7 +1,8 @@
 target_sources( ${PROJECT_NAME}
 	PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/src/audio/audiobuffer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/audio/ringbuffer.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/audio/audiooutput.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/audio/audiocontroller.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/emulator.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/libretrolibrary.cpp
 	${CMAKE_CURRENT_LIST_DIR}/src/logging.cpp
@@ -13,8 +14,9 @@ target_sources( ${PROJECT_NAME}
 
 
 	PUBLIC
-        ${CMAKE_CURRENT_LIST_DIR}/include/audio/audiobuffer.h
+        ${CMAKE_CURRENT_LIST_DIR}/include/audio/ringbuffer.h
         ${CMAKE_CURRENT_LIST_DIR}/include/audio/audiooutput.h
+        ${CMAKE_CURRENT_LIST_DIR}/include/audio/audiocontroller.h
         ${CMAKE_CURRENT_LIST_DIR}/include/emulator.h
         ${CMAKE_CURRENT_LIST_DIR}/include/libretrolibrary.h
 	${CMAKE_CURRENT_LIST_DIR}/include/logging.h

@@ -3,27 +3,27 @@
 #include "QSharedMemory"
 
 class QMutex;
+class Gamepad;
 
-class SharedMemory : public QSharedMemory {
-    Q_OBJECT
+class SharedMemory {
+
 public:
-
+     SharedMemory();
     ~SharedMemory();
 
-    void setVideoMemory( uint t_width, uint t_height, uint t_pitch, const void *t_data );
-
-    //void decodeInput( uint t_port, uint t_device, uint t_index, uint t_id );
-
-    static SharedMemory &instance();
+    void readKeyboardStates( quint8 *m_keyboardStates, int t_size );
+    void writeVideoFrame( uint t_width, uint t_height, uint t_pitch, const void *t_data );
 
 private:
-    size_t m_videoBlockOffset;
+
+    size_t m_inputBlockSize;
+    size_t m_videoBlockSize;
+
     size_t m_inputBlockOffset;
+    size_t m_videoBlockOffset;
 
-    mutable QMutex *m_mutex;
+    QSharedMemory m_memory;
 
-    explicit SharedMemory( QObject *parent = nullptr );
-
-    bool resizeMem( int t_blockSize );
+    bool resizeMem();
 
 };

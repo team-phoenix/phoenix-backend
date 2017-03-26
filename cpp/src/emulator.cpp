@@ -14,11 +14,6 @@
 
 #include <QCoreApplication>
 
-#include <QOffscreenSurface>
-#include <QOpenGLContext>
-#include <QOpenGLFramebufferObject>
-
-
 Emulator &Emulator::instance() {
     static Emulator demuxer;
     return demuxer;
@@ -33,7 +28,6 @@ void Emulator::setEmuState(Emulator::State t_state) {
         sendState();
     }
 }
-
 
 void Emulator::setCallbacks() {
     // Set callbacks
@@ -168,10 +162,14 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
         //LibretroCoreLoadSaveData();
 
         m_libretroLibrary.retro_get_system_av_info( &m_avInfo );
+
+        emit m_audioController.audioFmtChanged( m_avInfo.timing.fps, m_avInfo.timing.sample_rate );
+
         qCDebug( phxCore ).nospace() << "coreFPS: " << m_avInfo.timing.fps;
         qCDebug( phxCore ).nospace() << "aspectRatio: " << m_avInfo.geometry.aspect_ratio;
         qCDebug( phxCore ).nospace() << "baseHeight: " << m_avInfo.geometry.base_height;
         qCDebug( phxCore ).nospace() << "baseWidth: " << m_avInfo.geometry.base_width;
+
 
         setEmuState( State::Initialized );
         sendVideoInfo();
@@ -301,6 +299,8 @@ Emulator::Emulator(QObject *parent) : QObject( parent ),
     connect( &m_timer, &QTimer::timeout, this, &Emulator::runEmu );
 
     connect( &m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
+    connect( &m_messageServer, &MessageServer::playEmu, &m_audioController, &AudioController::playEmu );
+
     connect( &m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
     connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownEmu );
     connect( &m_messageServer, &MessageServer::restartEmu, this, &Emulator::restartEmu );
@@ -318,7 +318,7 @@ void Emulator::killEmu() {
 
 void Emulator::sendVideoInfo() {
 
-    QJsonObject videoInfo {
+    const QJsonObject videoInfo {
         { "response", "videoInfo" },
         { "frameRate", m_avInfo.timing.fps },
         { "aspectRatio", m_avInfo.geometry.aspect_ratio },
@@ -339,12 +339,12 @@ void Emulator::sendState() {
     m_messageServer.encodeMessage( json );
 }
 
-void audioSampleCallback(int16_t left, int16_t right) {
-
+void audioSampleCallback(int16_t t_left, int16_t t_right) {
+    Emulator::instance().m_audioController.write( t_left, t_right );
 }
 
-size_t audioSampleBatchCallback(const int16_t *data, size_t frames) {
-
+size_t audioSampleBatchCallback(const int16_t *t_data, size_t t_frames) {
+    Emulator::instance().m_audioController.write( t_data, t_frames );
 }
 
 bool environmentCallback(unsigned cmd, void *data) {
@@ -727,8 +727,6 @@ bool environmentCallback(unsigned cmd, void *data) {
                ) {
                 qDebug() << "Special controller:" << controllerInfo->types->desc;
             }
-
-
         }
 
         case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: //36
@@ -771,18 +769,33 @@ bool environmentCallback(unsigned cmd, void *data) {
 }
 
 void inputPollCallback() {
-    Emulator::instance().m_gamepadManager.poll();
+
+    Emulator::instance().m_gamepadManager.pollGamepads();
+    Emulator::instance().m_gamepadManager.pollKeys( Emulator::instance().m_sharedMemory );
+
 }
 
 int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id) {
 
     quint16 result = 0;
 
-    if ( Emulator::instance().m_gamepadManager.size() > port ) {
+    // If there are no gamepads connected, just use the keyboard.
+    if ( Emulator::instance().m_gamepadManager.isEmpty() ) {
+        if ( device == RETRO_DEVICE_JOYPAD ) {
+            const quint8 keyPress = Emulator::instance().m_gamepadManager.keyAt( id );
+            result |= static_cast<qint16>( keyPress );
+        }
+    } else if ( Emulator::instance().m_gamepadManager.size() > port ) {
         const Gamepad &gamepad = Emulator::instance().m_gamepadManager.at( port );
 
-        if ( device & RETRO_DEVICE_JOYPAD ) {
+        if ( device == RETRO_DEVICE_JOYPAD ) {
             result = static_cast<quint16>( gamepad.getButtonState( id ) );
+
+            // OR the keyboard's state with the first controller's.
+            if ( port == 0 ) {
+                const quint8 keyPress = Emulator::instance().m_gamepadManager.keyAt( id );
+                result |= static_cast<qint16>( keyPress );
+            }
         }
 
         if ( device & RETRO_DEVICE_ANALOG ) {
@@ -799,7 +812,7 @@ void videoRefreshCallback(const void *t_data, unsigned width, unsigned height, s
     if ( t_data == RETRO_HW_FRAME_BUFFER_VALID ) {
 
     } else {
-        SharedMemory::instance().setVideoMemory( width
+        Emulator::instance().m_sharedMemory.writeVideoFrame( width
                                                         , height
                                                         , pitch
                                                         , t_data );

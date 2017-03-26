@@ -4,6 +4,8 @@
 #include "libretrolibrary.h"
 #include "messageserver.h"
 #include "gamepadmanager.h"
+#include "sharedmemory.h"
+#include "audiocontroller.h"
 
 #include <QObject>
 #include <QImage>
@@ -48,7 +50,11 @@ public: // Libretro specific variables
     retro_system_av_info m_avInfo;
     QImage::Format m_pixelFormat;
 
+public:
+
     GamepadManager m_gamepadManager;
+    SharedMemory m_sharedMemory;
+    AudioController m_audioController;
 
 public slots:
 
@@ -60,9 +66,8 @@ public slots:
     // Calling runEmu() directly after this is safe and optimal.
     void initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
 
-
-private slots:
     void shutdownEmu();
+
     void restartEmu();
 
     // Kills this Emulator server process.
@@ -99,7 +104,8 @@ private: // Variables
     bool loadEmulationCore( const QString &t_emuCore );
     bool loadEmulationGame( const QString &t_emuGame );
 
-    QString toString( State t_state );
+    static QString toString( State t_state );
+
 
 };
 

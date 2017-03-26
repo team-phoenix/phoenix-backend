@@ -10,7 +10,10 @@
 #include <QCoreApplication>
 #include <QThread>
 
+#include "sharedmemory.h"
+
 GamepadManager::GamepadManager() :
+    m_keyboardStates( 16, 0 ),
     m_gamepadListSize( 0 ),
     m_gamepads( 16, nullptr ),
     m_initialized( false )
@@ -35,7 +38,7 @@ GamepadManager::~GamepadManager() {
 
 }
 
-void GamepadManager::poll() {
+void GamepadManager::pollGamepads() {
 
     // DO NOT REFACTOR THIS INTO USING THE SDL_EVENT SYSTEM!!!!
 
@@ -99,6 +102,16 @@ void GamepadManager::poll() {
 
 }
 
+void GamepadManager::pollKeys( SharedMemory &t_memory ) {
+    t_memory.readKeyboardStates( m_keyboardStates.data(), m_keyboardStates.size() );
+
+
+}
+
+bool GamepadManager::isEmpty() const {
+    return size() == 0;
+}
+
 const Gamepad &GamepadManager::at(int t_index) {
     return *m_gamepads[ t_index ];
 }
@@ -115,5 +128,12 @@ void GamepadManager::debugStates(Gamepad *t_gamepad ) {
 
     for ( int i=0; i < SDL_CONTROLLER_AXIS_MAX; ++i ) {
         debug << t_gamepad->getAxisState( static_cast<SDL_GameControllerAxis>( i ) );
+    }
+}
+
+void GamepadManager::debugKeyStates() {
+    auto debug = qDebug();
+    for ( int i=0; i < m_keyboardStates.size(); ++i ) {
+        debug << m_keyboardStates[ i ] << " ";
     }
 }

@@ -1,91 +1,70 @@
-//#pragma once
+#pragma once
 
-//#include "audiobuffer.h"
-//#include "samplerate.h"
+#include "samplerate.h"
 
-//#include <QAudio>
-//#include <QAudioFormat>
+#include <QAudio>
+#include <QAudioFormat>
+#include <QBuffer>
 
-///*
-// * The AudioOutput class writes data to the default output device. Its internal buffers must be set by invoking
-// * commandIn() with the proper arguments before any data can be passed to it via dataIn(). Set the volume (from 0 to 1
-// * inclusive) with slotSetVolume().
-// *
-// * Comments in this class use the words "frames" and "samples". For clarity, assuming 16-bit stereo audio:
-// * 1 frame = 4 bytes (L, L, R, R)
-// * 1 sample = 2 bytes (L, L) or (R, R)
-// */
+#include <QTimer>
+#include <QFile>
+/*
+ * The AudioOutput class writes data to the default output device. Its internal buffers must be set by invoking
+ * commandIn() with the proper arguments before any data can be passed to it via dataIn(). Set the volume (from 0 to 1
+ * inclusive) with slotSetVolume().
+ *
+ * Comments in this class use the words "frames" and "samples". For clarity, assuming 16-bit stereo audio:
+ * 1 frame = 4 bytes (L, L, R, R)
+ * 1 sample = 2 bytes (L, L) or (R, R)
+ */
 
-//class QAudioOutput;
+class QAudioOutput;
+class RingBuffer;
 
-//class AudioOutput : public QObject {
-//        Q_OBJECT
+class AudioOutput : public QObject {
+        Q_OBJECT
 
-//    public:
-//        explicit AudioOutput( QObject *parent = nullptr );
-//        ~AudioOutput();
+    public:
+        explicit AudioOutput( QObject *parent = nullptr );
+        ~AudioOutput();
 
-//    public slots:
+        void setBuffer( RingBuffer *t_buffer );
 
-//    /*
-//     * void LibretroCoreAudioSampleCallback( int16_t left, int16_t right ) {
-//    // Sanity check
-//    Q_ASSERT_X( libretroCore.audioBufferCurrentByte < libretroCore.audioSampleRate * 5,
-//                "audio batch callback", QString( "Buffer pool overflow (%1)" ).arg( libretroCore.audioBufferCurrentByte ).toLocal8Bit() );
+    public slots:
+        void emuPlaying();
+        void handleAudioFmtChanged( double t_fps, double t_sampleRate );
 
-//    // Stereo audio is interleaved, left then right
-//    libretroCore.audioMutex.lock();
-//    libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ][ libretroCore.audioBufferCurrentByte / 2 ] = left;
-//    libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ][ libretroCore.audioBufferCurrentByte / 2 + 1 ] = right;
-//    libretroCore.audioMutex.unlock();
+    private slots:
+        void audioStateChanged( QAudio::State outputState );
 
-//    // Each frame is 4 bytes (16-bit stereo)
-//    libretroCore.audioBufferCurrentByte += 4;
+        void readAudio();
 
-//    // Flush if we have more than 1/2 of a frame's worth of data
-//    if( libretroCore.audioBufferCurrentByte > libretroCore.audioSampleRate * 4 / libretroCore.videoFormat.videoFramerate / 2 ) {
-//        libretroCore.fireDataOut( Node::DataType::Audio, &libretroCore.audioMutex, &libretroCore.audioBufferPool[ libretroCore.audioPoolCurrentBuffer ],
-//                                  libretroCore.audioBufferCurrentByte, nodeCurrentTime() );
-//        libretroCore.audioBufferCurrentByte = 0;
-//        libretroCore.audioPoolCurrentBuffer = ( libretroCore.audioPoolCurrentBuffer + 1 ) % POOL_SIZE;
-//    }
-//}
+    private:
+        QByteArray m_tempBuf;
+        bool vsync{ true };
 
-//size_t LibretroCoreAudioSampleBatchCallback( const int16_t *data, size_t frames ) {
+        QIODevice *m_device;
+        QAudioOutput *m_audioOut;
 
-//}
+        RingBuffer *m_ringBuffer;
 
-//     */
+        QAudioFormat m_inputFmt;
+        int m_readSize;
 
-//        void handleAudioSampleCallback( quint16 left, quint16 right );
+        QTimer *m_timer;
 
-//        void handleAudioBatch( const quint16 *data, size_t frames );
+        //State state{ State::Stopped };
 
-//        //void commandIn( Command command, QVariant data, qint64 timeStamp ) override;
-//        //void dataIn( DataType type, QMutex *mutex, void *data, size_t bytes, qint64 timeStamp ) override;
-
-//    private slots:
-//        void outputStateChanged( QAudio::State outputState );
-//        void outputUnderflow();
-
-//    private:
-//        bool vsync{ true };
-//        //State state{ State::Stopped };
-
-//        // Respond to the core running or not by keeping audio output active or not
-//        // AKA we'll pause if core is paused
-//        void pipelineStateChanged();
-
-//        // Free memory, clean up
+        // Free memory, clean up
 //        void shutdown();
 
-//        // Completely init/re-init audio output and resampler
+        // Completely init/re-init audio output and resampler
 //        void resetAudio();
 
-//        // Allocate memory for conversion
+        // Allocate memory for conversion
 //        void allocateMemory();
 
-//        // Opaque pointer for libsamplerate
+        // Opaque pointer for libsamplerate
 //        SRC_STATE *resamplerState{ nullptr };
 
 //        // Audio and video timing provided by Core via the controller
@@ -129,8 +108,8 @@
 //        // Max amount of stretching performed to compensate for output buffer position being off target
 //        double maxDeviation{ 0.005 };
 
-//        //
-//        // ---
-//        //
+        //
+        // ---
+        //
 
-//};
+};
