@@ -4,6 +4,7 @@
 #include "gamepad.h"
 
 #include <cstdarg>
+#include <utility>
 
 #include <QLibrary>
 #include <QFile>
@@ -11,6 +12,7 @@
 #include <QTimer>
 
 #include <QJsonObject>
+#include <QJsonArray>
 
 #include <QCoreApplication>
 
@@ -69,6 +71,7 @@ bool Emulator::loadEmulationGame(const QString &t_emuGame) {
 }
 
 QString Emulator::toString(Emulator::State t_state) {
+
     switch( t_state ) {
         case State::Playing:
             return QStringLiteral( "emuPlaying" );
@@ -83,6 +86,14 @@ QString Emulator::toString(Emulator::State t_state) {
         default:
             Q_UNREACHABLE();
     }
+
+}
+
+void Emulator::handleVariableUpdate(const QByteArray &t_key, const QByteArray &t_value) {
+
+    m_variableModel.insert( t_key, t_value );
+    coreVarsUpdated( true );
+
 }
 
 void Emulator::runEmu() {
@@ -112,6 +123,8 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
 
         // Init the core
         m_libretroLibrary.retro_init();
+
+
 
         // Get some info about the game
         m_libretroLibrary.retro_get_system_info( &m_systemInfo );
@@ -173,6 +186,7 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
 
         setEmuState( State::Initialized );
         sendVideoInfo();
+        sendVariables();
 
     } else {
         qCWarning( phxCore, "hardware type %s is not supported", qPrintable( hwType ) );
@@ -293,6 +307,8 @@ void Emulator::restartEmu() {
 Emulator::Emulator(QObject *parent) : QObject( parent ),
     m_pixelFormat( QImage::Format_Invalid )
 {
+    coreVarsUpdated( false );
+
     m_timer.setTimerType( Qt::PreciseTimer );
     m_timer.setInterval( 16 );
 
@@ -308,7 +324,16 @@ Emulator::Emulator(QObject *parent) : QObject( parent ),
     connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initEmu );
     connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killEmu );
 
+    connect( &m_messageServer, &MessageServer::updateVariable, this, &Emulator::handleVariableUpdate );
+
     setEmuState( State::Uninitialized );
+}
+
+void Emulator::sendVariables() {
+
+    for ( const CoreVariable &variable : m_variableModel ) {
+        m_messageServer.encodeMessage( variable );
+    }
 }
 
 void Emulator::killEmu() {
@@ -348,6 +373,7 @@ size_t audioSampleBatchCallback(const int16_t *t_data, size_t t_frames) {
 }
 
 bool environmentCallback(unsigned cmd, void *data) {
+
     switch( cmd ) {
     case RETRO_ENVIRONMENT_SET_ROTATION: // 1
         qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_ROTATION (1)";
@@ -558,62 +584,48 @@ bool environmentCallback(unsigned cmd, void *data) {
         }
 
         case RETRO_ENVIRONMENT_GET_VARIABLE: { // 15
-            // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
-//            auto *retroVariable = static_cast<struct retro_variable *>( data );
+            //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
+            retro_variable *retroVariable = static_cast<retro_variable *>( data );
+            retroVariable->value = nullptr;
 
-//            if( libretroCore.variables.contains( retroVariable->key ) ) {
-//                const auto &var = libretroCore.variables[ retroVariable->key ];
+            if ( Emulator::instance().m_variableModel.contains( retroVariable->key ) ) {
 
-//                if( var.isValid() ) {
-//                    retroVariable->value = var.value().data();
+                retroVariable->value = Emulator::instance().m_variableModel.currentValue( retroVariable->key ).constData();
 
-//                    if( !var.value().isEmpty() ) {
-//                        //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)" << var.key().c_str() << var.value().c_str();
-//                        return true;
-//                    }
-//                }
-//            }
+                return true;
+            }
 
-            // Variable was not found
             return false;
         }
 
         case RETRO_ENVIRONMENT_SET_VARIABLES: { // 16
             qCDebug( phxCore ) << "RETRO_ENVIRONMENT_SET_VARIABLES (16) (handled)";
-//            auto *rv = ( const struct retro_variable * )( data );
+            const retro_variable *rv = ( const retro_variable * )( data );
 
-//            for( ; rv->key != NULL; rv++ ) {
-//                LibretroVariable v( rv );
-
-//                if( !( libretroCore.variables.contains( v.key() ) ) ) {
-//                    libretroCore.variables.insert( v.key(), v );
-//                }
-
-//            }
+            for ( ; rv->key != nullptr; rv++ ) {
+                qDebug( phxCore ) << "\tretro_variable:" << rv->key << rv->value;
+                Emulator::instance().m_variableModel.insert( rv->key, CoreVariable{ rv->key, rv->value } );
+            }
 
             return true;
         }
 
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: { // 17
-            // qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
+            //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE_UPDATE (17)(handled)";
             // Let the core know we have some variable changes if we set our internal flag (clear it so the change only happens once)
             // TODO: Protect all variable-touching code with mutexes?
-//            if( libretroCore.variablesAreDirty ) {
-//                // Special case: Force DeSmuME's pointer type variable to "touch" in order to work with our touch code
-//                if( libretroCore.variables.contains( "desmume_pointer_type" ) ) {
-//                    libretroCore.variables[ "desmume_pointer_type" ].setValue( QByteArrayLiteral( "touch" ) );
-//                }
 
-//                libretroCore.variablesAreDirty = false;
-//                *static_cast<bool *>( data ) = true;
-//                return true;
-//            } else {
-//                *static_cast<bool *>( data ) = false;
-//                return false;
-//            }
+            const bool updated = Emulator::instance().coreVarsUpdated();
 
+            *static_cast<bool *>( data ) = updated;
 
-            break;
+            if ( updated ) {
+                qDebug() << "cores updated";
+
+                Emulator::instance().coreVarsUpdated( false );
+            }
+
+            return updated;
         }
 
         case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: { // 18
@@ -771,7 +783,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 void inputPollCallback() {
 
     Emulator::instance().m_gamepadManager.pollGamepads();
-    Emulator::instance().m_gamepadManager.pollKeys( Emulator::instance().m_sharedMemory );
+    //Emulator::instance().m_gamepadManager.pollKeys( Emulator::instance().m_sharedMemory );
 
 }
 

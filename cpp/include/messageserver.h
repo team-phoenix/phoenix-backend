@@ -27,6 +27,7 @@ signals:
     void killEmu();
 
     void saveState( const QString &path );
+    void updateVariable( const QByteArray &t_key, const QByteArray &t_value );
 
 public slots:
 

@@ -28,12 +28,13 @@ SharedMemory::~SharedMemory() {
 }
 
 void SharedMemory::readKeyboardStates(quint8 *t_src, int t_size ) {
+
     Q_CHECK_PTR( t_src );
     Q_ASSERT( t_size == m_inputBlockSize );
-
     MemoryLocker memLocker( &m_memory );
 
     char *memData = static_cast<char *>( m_memory.data() );
+
 
     memcpy( t_src, memData + m_inputBlockOffset, t_size );
 
@@ -60,9 +61,7 @@ void SharedMemory::writeVideoFrame( uint t_width, uint t_height, uint t_pitch, c
 
     Q_ASSERT( m_videoBlockSize > 0 );
 
-    if ( resizeMem() ) {
-
-    }
+    resizeMem();
 
     char *memData = static_cast<char *>( m_memory.data() );
 
@@ -70,6 +69,19 @@ void SharedMemory::writeVideoFrame( uint t_width, uint t_height, uint t_pitch, c
 
         size_t offset = m_videoBlockOffset;
 
+
+        bool frameWasNotRead;
+        memcpy( &frameWasNotRead, memData + offset, sizeof( frameWasNotRead ) );
+
+        if ( frameWasNotRead ) {
+            qDebug() << "Frame was skipped";
+        }
+
+        static const bool frameIsUpdated = true;
+
+        memcpy( memData + offset, &frameIsUpdated, sizeof(frameIsUpdated) );
+
+        offset += sizeof( frameIsUpdated );
         memcpy( memData + offset, &t_width, sizeof(t_width) );
 
         offset += sizeof(t_width);
@@ -105,6 +117,7 @@ SharedMemory::SharedMemory()
 bool SharedMemory::resizeMem() {
 
     const int newSize = m_inputBlockSize + m_videoBlockSize;
+
 
     if ( m_memory.size() == newSize ) {
         return true;

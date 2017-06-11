@@ -41,6 +41,7 @@ void AudioOutput::setBuffer(RingBuffer *t_buffer) {
     m_ringBuffer = t_buffer;
 }
 
+
 //void AudioOutput::handleAudioSampleCallback(quint16 left, quint16 right) {
 //    // Sanity check
 //    Q_ASSERT_X( libretroCore.audioBufferCurrentByte < libretroCore.audioSampleRate * 5,
@@ -532,7 +533,7 @@ void AudioOutput::emuPlaying() {
         return;
     }
 
-    m_timer->start();
+   // m_timer->start();
 
 }
 
@@ -572,14 +573,13 @@ void AudioOutput::handleAudioFmtChanged(double t_fps, double t_sampleRate) {
 
     }
 
-
     m_timer = new QTimer( this );
 
     connect( m_timer, &QTimer::timeout, this, &AudioOutput::readAudio );
 
-    m_timer->setInterval( static_cast<int>( ( 1 / t_fps ) * 1000.0 ) );
+    m_timer->setInterval( static_cast<int>( ( 1 / t_fps ) * 1000.0 ) / 2 );
 
-    m_readSize = m_inputFmt.bytesForDuration( m_timer->interval() * 1000.0 * 3 );
+    m_readSize = 10000;//m_inputFmt.bytesForDuration( 5000 );
     m_ringBuffer->resize( m_readSize );
 
     m_tempBuf = QByteArray( m_readSize, '\0' );
@@ -590,7 +590,6 @@ void AudioOutput::handleAudioFmtChanged(double t_fps, double t_sampleRate) {
 
 
     qCDebug( phxAudioOutput, "Audio format set. Set timer for %d", m_timer->interval() );
-    qDebug() << Q_FUNC_INFO << QThread::currentThread();
 
 }
 
@@ -618,14 +617,17 @@ void AudioOutput::audioStateChanged(QAudio::State outputState) {
 
 void AudioOutput::readAudio() {
 
-    const int wrote = m_ringBuffer->readAvailable( m_tempBuf.data() );
+//    const int wrote = m_ringBuffer->readAvailable( m_tempBuf.data() );
 
-    if ( wrote > 0 ) {
+//    if ( wrote > 0 ) {
 
         //qDebug() << "wrote" << wrote;
-        if (  m_device->write( m_tempBuf.data(), wrote ) == -1 ) {
-            qDebug() << "Error writing to audio out";
-        }
-    }
+//        if (  m_device->write( m_tempBuf.data(), wrote ) == -1 ) {
+//            qDebug() << "Error writing to audio out";
+//        }
+    //}
+
+
+    m_device->write( m_ringBuffer->data(), m_ringBuffer->bytesAvailable() );
 
 }

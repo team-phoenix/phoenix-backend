@@ -8,6 +8,8 @@
 #include "audiooutput.h"
 #include "ringbuffer.h"
 
+#include "readerwriterqueue.h"
+
 class AudioController : public QObject
 {
     Q_OBJECT
@@ -23,9 +25,6 @@ signals:
     void audioFmtChanged( double t_fps, double t_sampleRate );
 
 private slots:
-    void setIsDisabled( bool t_disabled ) {
-        m_isDisabled = t_disabled;
-    }
 
 private:
 
@@ -34,6 +33,5 @@ private:
 
     RingBuffer m_ringBuffer;
 
-    bool m_isDisabled;
 
 };

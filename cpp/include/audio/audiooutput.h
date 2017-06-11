@@ -30,6 +30,10 @@ class AudioOutput : public QObject {
 
         void setBuffer( RingBuffer *t_buffer );
 
+        void write( qint16 *t_data,  size_t t_frames );
+
+        QIODevice *m_device;
+
     public slots:
         void emuPlaying();
         void handleAudioFmtChanged( double t_fps, double t_sampleRate );
@@ -43,7 +47,6 @@ class AudioOutput : public QObject {
         QByteArray m_tempBuf;
         bool vsync{ true };
 
-        QIODevice *m_device;
         QAudioOutput *m_audioOut;
 
         RingBuffer *m_ringBuffer;

@@ -23,11 +23,13 @@ public:
 
     void clear();
 
-
+    const char *data() const {
+        return m_buffer.data();
+    }
 
 private:
-    std::atomic<int> m_head;
-    std::atomic<int> m_tail;
+    int m_head;
+    int m_tail;
 
     QByteArray m_buffer;
 

@@ -104,8 +104,6 @@ void GamepadManager::pollGamepads() {
 
 void GamepadManager::pollKeys( SharedMemory &t_memory ) {
     t_memory.readKeyboardStates( m_keyboardStates.data(), m_keyboardStates.size() );
-
-
 }
 
 bool GamepadManager::isEmpty() const {

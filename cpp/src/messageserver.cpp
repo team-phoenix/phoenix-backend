@@ -106,6 +106,14 @@ void MessageServer::parseJsonObject(const QJsonObject &t_jsonObject) {
 
             emit saveState( path );
 
+        } else if ( request == "updateVariable" ) {
+
+            const QByteArray key = t_jsonObject[ "key" ].toString().toLocal8Bit();
+            const QByteArray value = t_jsonObject[ "value" ].toString().toLocal8Bit();
+
+            qDebug() << "key" << key << "value" << value;
+
+            emit updateVariable( key, value );
         }
     }
 }

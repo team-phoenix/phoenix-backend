@@ -75,7 +75,10 @@ int RingBuffer::readAvailable(char *_data) {
 }
 
 int RingBuffer::bytesAvailable() const {
-    return m_tail.load() - m_head.load();
+    if ( m_head < m_tail ) {
+        return m_head + ( m_buffer.size() - m_tail );
+    }
+    return m_head - m_tail;
 }
 
 int RingBuffer::size() const {

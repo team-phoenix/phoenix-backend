@@ -6,6 +6,7 @@
 #include "gamepadmanager.h"
 #include "sharedmemory.h"
 #include "audiocontroller.h"
+#include "corevariable.h"
 
 #include <QObject>
 #include <QImage>
@@ -35,7 +36,7 @@ public:
         Paused,
         Killed,
     };
-    Q_ENUM( State );
+    Q_ENUM( State )
 
     static Emulator &instance();
     ~Emulator();
@@ -49,6 +50,10 @@ public: // Libretro specific variables
     LibretroLibrary m_libretroLibrary;
     retro_system_av_info m_avInfo;
     QImage::Format m_pixelFormat;
+
+    VariableModel m_variableModel;
+
+    GET_SET( Emulator, bool, coreVarsUpdated )
 
 public:
 
@@ -78,6 +83,8 @@ private: // Functions
 
     explicit Emulator( QObject *parent = nullptr );
 
+    void sendVariables();
+
     // Sends a JSON data package to any listening sockets.
     void sendVideoInfo();
 
@@ -101,11 +108,17 @@ private: // Variables
     MessageServer m_messageServer;
     QTimer m_timer;
 
+    QHash<QByteArray, QByteArray> m_coreVars;
+
+
     bool loadEmulationCore( const QString &t_emuCore );
     bool loadEmulationGame( const QString &t_emuGame );
 
     static QString toString( State t_state );
 
+private slots:
+
+    void handleVariableUpdate( const QByteArray &t_key, const QByteArray &t_value );
 
 };
 
