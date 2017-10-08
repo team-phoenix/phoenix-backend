@@ -16,26 +16,13 @@ GamepadManager::GamepadManager() :
     m_keyboardStates( 16, 0 ),
     m_gamepadListSize( 0 ),
     m_gamepads( 16, nullptr ),
-    m_initialized( false )
+    m_init( false )
 {
-
-    //putenv( "SDL_VIDEODRIVER=dummy" );
-    // Init SDL
-    if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC | SDL_INIT_VIDEO ) < 0 ) {
-        qFatal( "Fatal: Unable to initialize SDL2: %s", SDL_GetError() );
-    }
-
-    qCDebug( phxInput ) << "SDL2 initialized";
 
 }
 
 GamepadManager::~GamepadManager() {
-    qDeleteAll( m_gamepads );
-
-    qCDebug( phxInput ) << "Shutting down SDL2.";
-
-    SDL_Quit();
-
+    fini();
 }
 
 void GamepadManager::pollGamepads() {
@@ -45,7 +32,7 @@ void GamepadManager::pollGamepads() {
     const int oldNumJoysticks = SDL_NumJoysticks();
     SDL_GameControllerUpdate();
 
-    if ( SDL_NumJoysticks() > oldNumJoysticks || !m_initialized ) {
+    if ( SDL_NumJoysticks() > oldNumJoysticks || !m_init ) {
         for ( int i=0; i < SDL_NumJoysticks(); ++i ) {
             if ( SDL_TRUE == SDL_IsGameController( i ) ) {
                 SDL_GameController *controller = SDL_GameControllerFromInstanceID( i );
@@ -53,7 +40,9 @@ void GamepadManager::pollGamepads() {
                     qCDebug(phxInput) << "is attached";
                 } else {
 
-                    Gamepad *gamepad = new Gamepad( i );
+                    Gamepad *gamepad = new Gamepad;
+
+                    gamepad->open( i );
 
                     qCDebug( phxInput, "Gamepad %s was added.", qPrintable( gamepad->name() ) );
 
@@ -95,9 +84,9 @@ void GamepadManager::pollGamepads() {
         }
     }
 
-    if ( !m_initialized ) {
+    if ( !m_init ) {
         qCDebug( phxInput ) << "Polling for input";
-        m_initialized = true;
+        m_init = true;
     }
 
 }
@@ -108,6 +97,21 @@ void GamepadManager::pollKeys( SharedMemory &t_memory ) {
 
 bool GamepadManager::isEmpty() const {
     return size() == 0;
+}
+
+void GamepadManager::init() {
+
+    //putenv( "SDL_VIDEODRIVER=dummy" );
+    // Init SDL
+    if( SDL_Init( SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC | SDL_INIT_VIDEO ) < 0 ) {
+        const QString message = "Unable to initialize SDL2: " + QString( SDL_GetError() );
+        throw std::runtime_error( message.toStdString() );
+    }
+
+
+    m_init = true;
+    qCDebug( phxInput ) << "SDL2 initialized";
+
 }
 
 const Gamepad &GamepadManager::at(int t_index) {
@@ -134,4 +138,15 @@ void GamepadManager::debugKeyStates() {
     for ( int i=0; i < m_keyboardStates.size(); ++i ) {
         debug << m_keyboardStates[ i ] << " ";
     }
+}
+
+void GamepadManager::fini() {
+    m_init = false;
+
+    qDeleteAll( m_gamepads );
+
+    qCDebug( phxInput ) << "Shutting down SDL2.";
+
+    SDL_Quit();
+
 }

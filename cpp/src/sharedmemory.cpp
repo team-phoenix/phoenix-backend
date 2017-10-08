@@ -23,8 +23,16 @@ private:
 
     QSharedMemory *m_memory;
 };
+
 SharedMemory::~SharedMemory() {
 
+    MemoryLocker locker( &m_memory );
+
+    const char payload = '\0';
+
+    for ( int i=0; i < m_memory.size(); ++i ) {
+        memcpy( static_cast<char *>( m_memory.data() ) + i, &payload, sizeof( payload ) );
+    }
 }
 
 void SharedMemory::readKeyboardStates(quint8 *t_src, int t_size ) {
@@ -33,11 +41,12 @@ void SharedMemory::readKeyboardStates(quint8 *t_src, int t_size ) {
     Q_ASSERT( t_size == m_inputBlockSize );
     MemoryLocker memLocker( &m_memory );
 
-    char *memData = static_cast<char *>( m_memory.data() );
+    char *memData = static_cast<char *>( m_memory.data() ) + m_inputBlockOffset;
 
-
-    memcpy( t_src, memData + m_inputBlockOffset, t_size );
-
+    for ( int i=0; i < t_size; ++i ) {
+        t_src[ i ] = memData[ i ];
+        memData[ i ] = 0;
+    }
 }
 
 
@@ -51,8 +60,6 @@ void SharedMemory::writeVideoFrame( uint t_width, uint t_height, uint t_pitch, c
 
     // The types of the data are represented like:
     //      [ bool, uint, uint, uint, uint, uchar [] ]
-
-    // The order of the data
 
     MemoryLocker memLocker( &m_memory );
     (void)memLocker;
@@ -112,12 +119,13 @@ SharedMemory::SharedMemory()
         m_memory.detach();
     }
 
+    resizeMem();
+
 }
 
 bool SharedMemory::resizeMem() {
 
     const int newSize = m_inputBlockSize + m_videoBlockSize;
-
 
     if ( m_memory.size() == newSize ) {
         return true;
@@ -135,6 +143,7 @@ bool SharedMemory::resizeMem() {
                                 << "video is disabled: " << m_memory.errorString();
             return false;
         } else {
+            qDebug() << m_memory.error() << m_memory.errorString();
             qDebug() << "An old memory allocation will be used. of size:" << m_memory.size();
         }
 

@@ -1,18 +1,21 @@
 #pragma once
 
+#include "testing.h"
+
 #include "QSharedMemory"
 
 class QMutex;
 class Gamepad;
 
 class SharedMemory {
-
+    friend class Test_SharedMemory;
+    friend class Test_GamepadManager;
 public:
      SharedMemory();
     ~SharedMemory();
 
-    void readKeyboardStates( quint8 *m_keyboardStates, int t_size );
-    void writeVideoFrame( uint t_width, uint t_height, uint t_pitch, const void *t_data );
+    MOCKABLE void readKeyboardStates( quint8 *m_keyboardStates, int t_size );
+    MOCKABLE void writeVideoFrame( uint t_width, uint t_height, uint t_pitch, const void *t_data );
 
 private:
 
@@ -24,6 +27,6 @@ private:
 
     QSharedMemory m_memory;
 
-    bool resizeMem();
+    MOCKABLE bool resizeMem();
 
 };

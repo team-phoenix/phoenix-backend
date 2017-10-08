@@ -8,6 +8,7 @@ class SharedMemory;
 
 class GamepadManager
 {
+    friend class Test_GamepadManager;
 public:
     GamepadManager();
     ~GamepadManager();
@@ -16,6 +17,8 @@ public:
     void pollKeys( SharedMemory &t_memory );
 
     bool isEmpty() const;
+
+    void init();
 
 public: // Iterators
 
@@ -27,14 +30,16 @@ public: // Iterators
 
     int size() const;
 
-
 private:
     QVector<quint8> m_keyboardStates;
     QVector<Gamepad *> m_gamepads;
     QHash<int, int> m_gamepadIndexMap;
     int m_gamepadListSize;
-    bool m_initialized;
+    bool m_init;
 
     void debugStates( Gamepad *t_gamepad );
     void debugKeyStates();
+
+    void fini();
+
 };

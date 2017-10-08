@@ -27,11 +27,21 @@ target_sources( ${PROJECT_NAME}
         ${CMAKE_CURRENT_LIST_DIR}/include/input/gamepad.h
         ${CMAKE_CURRENT_LIST_DIR}/include/corevariable.h
         ${CMAKE_CURRENT_LIST_DIR}/include/macros.h
+        ${CMAKE_CURRENT_LIST_DIR}/include/fakeit.hpp
 
+        ${CMAKE_CURRENT_LIST_DIR}/test/testing.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_emulator.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_libretrolibrary.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_messageserver.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_sharedmemory.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_gamepad.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_gamepadmanager.h
+        ${CMAKE_CURRENT_LIST_DIR}/test/test_corevariable.h
 )
 
 target_include_directories( ${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include" )
 target_include_directories( ${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/src" )
+target_include_directories( ${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/test" )
 
 target_include_directories( ${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include/audio" )
 target_include_directories( ${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_LIST_DIR}/src/audio" )

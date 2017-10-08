@@ -72,17 +72,10 @@ QDebug &operator<<(QDebug &debug, CoreVariable &&t_var) {
     return operator <<( debug, t_var );
 }
 
-void VariableModel::insert(const char *t_key, CoreVariable &&t_var) {
+void VariableModel::insert( const retro_variable& t_variable) {
 
-    m_variables.insert( t_key, t_var );
-}
-
-void VariableModel::insert(const QByteArray &t_key, const QByteArray &t_value) {
-
-    if ( m_variables.contains( t_key ) ) {
-
-        m_variables[ t_key ].currentValue( t_value );
-
+    if ( m_variables.contains( t_variable.key ) ) {
+        m_variables[ t_variable.key ].currentValue( t_variable.value );
     }
-
 }
+

@@ -1,3 +1,5 @@
+add_definitions( -DRUN_UNIT_TESTS )
+
 cmake_minimum_required( VERSION 3.6.0 FATAL_ERROR )
 list( APPEND CMAKE_MODULE_PATH
         ${CMAKE_CURRENT_LIST_DIR}/cmake
@@ -39,8 +41,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set_target_properties( ${PROJECT_NAME} PROPERTIES AUTOMOC ON AUTORCC ON )
 
 
-find_package( Qt5 REQUIRED COMPONENTS  Core Multimedia Gui )
-target_link_libraries( ${PROJECT_NAME} Qt5::Core Qt5::Multimedia Qt5::Gui )
+find_package( Qt5 REQUIRED COMPONENTS  Core Multimedia Gui Test )
+target_link_libraries( ${PROJECT_NAME} Qt5::Core Qt5::Multimedia Qt5::Gui Qt5::Test )
 
 ##
 ## Compiler

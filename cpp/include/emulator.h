@@ -7,6 +7,7 @@
 #include "sharedmemory.h"
 #include "audiocontroller.h"
 #include "corevariable.h"
+#include "testing.h"
 
 #include <QObject>
 #include <QImage>
@@ -27,6 +28,8 @@ class QJsonObject;
 class Emulator : public QObject
 {
     Q_OBJECT
+    friend class Test_Emulator;
+
 public:
 
     enum class State {
@@ -38,10 +41,12 @@ public:
     };
     Q_ENUM( State )
 
-    static Emulator &instance();
-    ~Emulator();
+    explicit Emulator( QObject *parent = nullptr );
 
-    void setEmuState( State t_state );
+    static Emulator* instance();
+    MOCKABLE ~Emulator();
+
+    MOCKABLE void setEmuState( State t_state );
 
     // This member variables need to be public so they can be accessed
     // by the static callbacks.
@@ -65,33 +70,32 @@ public slots:
 
     // Runs the Emulator for a single frame.
     // Key calling this function to pump out more frames.
-    void runEmu();
+    MOCKABLE void runEmu();
 
     // Initializes the Emulator fully.
     // Calling runEmu() directly after this is safe and optimal.
-    void initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
+    MOCKABLE void initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType );
 
-    void shutdownEmu();
+    MOCKABLE void shutdownEmu();
 
-    void restartEmu();
+    MOCKABLE void restartEmu();
 
     // Kills this Emulator server process.
     // So long fellow!
-    void killEmu();
+    MOCKABLE void killEmu();
 
 private: // Functions
 
-    explicit Emulator( QObject *parent = nullptr );
 
-    void sendVariables();
+    MOCKABLE void sendVariables();
 
     // Sends a JSON data package to any listening sockets.
-    void sendVideoInfo();
+    MOCKABLE void sendVideoInfo();
 
     // Sends the Emulator's current state to and listening sockets.
-    void sendState();
+    MOCKABLE void sendState();
 
-    void setCallbacks();
+    MOCKABLE void setCallbacks();
 
 
 private: // Variables
@@ -111,14 +115,14 @@ private: // Variables
     QHash<QByteArray, QByteArray> m_coreVars;
 
 
-    bool loadEmulationCore( const QString &t_emuCore );
-    bool loadEmulationGame( const QString &t_emuGame );
+    MOCKABLE bool loadEmulationCore( const QString &t_emuCore );
+    MOCKABLE bool loadEmulationGame( const QString &t_emuGame );
 
-    static QString toString( State t_state );
+    MOCKABLE QString toString( State t_state );
 
 private slots:
 
-    void handleVariableUpdate( const QByteArray &t_key, const QByteArray &t_value );
+    MOCKABLE void handleVariableUpdate( const QByteArray &t_key, const QByteArray &t_value );
 
 };
 

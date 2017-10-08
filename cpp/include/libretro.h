@@ -1870,6 +1870,7 @@ struct retro_variable
     * delimited by semicolons as so:
     * "key1=value1;key2=value2;..."
     */
+
    const char *key;
 
    /* Value to be obtained. If key does not exist, it is set to NULL. */

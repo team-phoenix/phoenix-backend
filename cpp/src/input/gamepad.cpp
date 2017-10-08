@@ -3,14 +3,20 @@
 
 #include "libretro.h"
 
-Gamepad::Gamepad( int t_joystickIndex ) :
+Gamepad::Gamepad() :
     m_sdlController( nullptr ),
     m_sdlJoystick( nullptr ),
     m_buttonStates( SDL_CONTROLLER_BUTTON_MAX, 0 ),
     m_axisStates( SDL_CONTROLLER_AXIS_MAX, 0 ),
     m_buttonMapping( SDL_CONTROLLER_BUTTON_MAX + 1, SDL_CONTROLLER_BUTTON_INVALID )
 {
-    if ( !open( t_joystickIndex ) ) {
+
+}
+
+void Gamepad::open(int t_joystickIndex) {
+
+    m_sdlController = SDL_GameControllerOpen( t_joystickIndex );
+    if ( !m_sdlController ) {
         const QString message = QString( "Could not open SDL_Gamepad %0: %1" ).arg(
                     QString::number( t_joystickIndex )
                     , QString( SDL_GetError() ) );
@@ -18,6 +24,9 @@ Gamepad::Gamepad( int t_joystickIndex ) :
         throw std::runtime_error( message.toStdString() );
     }
 
+    m_sdlJoystick = SDL_GameControllerGetJoystick( m_sdlController );
+
+    m_name = SDL_GameControllerName( m_sdlController );
 
     for ( int i=RETRO_DEVICE_ID_JOYPAD_B; i < RETRO_DEVICE_ID_JOYPAD_R3 + 1; ++i ) {
         switch( i ) {
@@ -73,27 +82,13 @@ Gamepad::Gamepad( int t_joystickIndex ) :
                 m_buttonMapping[ i ] = SDL_CONTROLLER_BUTTON_LEFTSTICK;
                 break;
             case RETRO_DEVICE_ID_JOYPAD_R3:
-            m_buttonMapping[ i ] = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
+                m_buttonMapping[ i ] = SDL_CONTROLLER_BUTTON_RIGHTSTICK;
                 break;
             default:
                 Q_UNREACHABLE();
         }
     }
 
-
-}
-
-bool Gamepad::open(int t_joystickIndex) {
-    m_sdlController = SDL_GameControllerOpen( t_joystickIndex );
-    if ( !m_sdlController ) {
-        return false;
-    }
-
-    m_sdlJoystick = SDL_GameControllerGetJoystick( m_sdlController );
-
-    m_name = SDL_GameControllerName( m_sdlController );
-
-    return true;
 }
 
 void Gamepad::updateStates() {

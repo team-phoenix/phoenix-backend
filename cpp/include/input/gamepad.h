@@ -1,32 +1,32 @@
 #pragma once
 
 #include <SDL_gamecontroller.h>
+#include "testing.h"
 
 #include <QVector>
 
 class Gamepad {
+    friend class Test_Gamepad;
 public:
-    explicit Gamepad( int t_joystickIndex );
-    ~Gamepad();
+    explicit Gamepad();
+    MOCKABLE ~Gamepad();
 
 public: // Getters
 
-    quint8 getButtonState( uint t_libretroID ) const;
-    quint8 getButtonState( SDL_GameControllerButton t_button ) const;
+    MOCKABLE quint8 getButtonState( uint t_libretroID ) const;
+    MOCKABLE quint8 getButtonState( SDL_GameControllerButton t_button ) const;
 
-    qint16 getAxisState( SDL_GameControllerAxis t_axis );
+    MOCKABLE qint16 getAxisState( SDL_GameControllerAxis t_axis );
 
-    const QString &name() const;
-    int instanceID() const;
-    bool isAttached() const;
+    MOCKABLE const QString &name() const;
+    MOCKABLE int instanceID() const;
+    MOCKABLE bool isAttached() const;
 
 public: // Modifiers
 
-    void updateStates();
+    MOCKABLE void updateStates();
 
-private:
-
-    bool open( int t_joystickIndex );
+    MOCKABLE void open( int t_joystickIndex );
 
 private:
     SDL_GameController *m_sdlController;

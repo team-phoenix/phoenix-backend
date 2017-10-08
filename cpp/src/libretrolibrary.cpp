@@ -9,6 +9,10 @@
 #define resolved_sym( sym ) sym = reinterpret_cast<decltype( sym )>( m_library.resolve( #sym ) )
 
 
+LibretroLibrary::LibretroLibrary() {
+    clear();
+}
+
 LibretroLibrary::~LibretroLibrary() {
     clear();
 }
@@ -18,7 +22,6 @@ bool LibretroLibrary::isLoaded() const {
 }
 
 bool LibretroLibrary::unload() {
-    retro_deinit();
     clear();
     return m_library.unload();
 }
@@ -33,15 +36,12 @@ bool LibretroLibrary::load(const QString &t_filePath) {
         return false;
     }
 
-    Q_ASSERT( !m_library.isLoaded() );
-
     m_library.setFileName( t_filePath );
 
     if ( m_library.load() ) {
         resolveSymbols();
     }
 
-    Q_ASSERT( m_library.isLoaded() );
     return m_library.isLoaded();
 }
 

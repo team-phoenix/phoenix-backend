@@ -5,6 +5,7 @@
 #include <QJsonObject>
 
 #include "macros.h"
+#include "libretro.h"
 
 #include <QHash>
 
@@ -30,23 +31,19 @@ public:
 };
 
 class VariableModel {
-
+    friend class Test_VariableModel;
 public:
-    VariableModel()
-    {
-    }
+    VariableModel() = default;
 
-    bool contains( const char *t_key ) {
-        return m_variables.contains( t_key );
+    bool contains( const retro_variable& variable ) {
+        return m_variables.contains( variable.key );
     }
 
     const QByteArray &currentValue( const char *t_key ) {
         return m_variables[ t_key ].currentValue();
     }
 
-    void insert( const char *t_key, CoreVariable &&t_var );
-
-    void insert( const QByteArray &t_key, const QByteArray &t_value );
+    void insert( const retro_variable& variable );
 
 
 public:
