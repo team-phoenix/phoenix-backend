@@ -32,6 +32,10 @@ CMakeLists.txt.*
 
 *.autosave
 
+# Clion
+.idea
+.idea/*
+
 #QtCtreator Qml
 *.qmlproject.user
 *.qmlproject.user.*

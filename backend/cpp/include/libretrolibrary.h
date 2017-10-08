@@ -1,7 +1,6 @@
 #pragma once
 
 #include "libretro.h"
-#include "testing.h"
 
 #include <QLibrary>
 
@@ -11,13 +10,13 @@ class LibretroLibrary {
     public:
         LibretroLibrary();
 
-        MOCKABLE ~LibretroLibrary();
+         ~LibretroLibrary();
 
-        MOCKABLE bool load( const QString &t_filePath );
-        MOCKABLE bool isLoaded() const;
-        MOCKABLE bool unload();
+         bool load( const QString &t_filePath );
+         bool isLoaded() const;
+         bool unload();
 
-        MOCKABLE QString fileName() const;
+         QString fileName() const;
 
         // Libretro core functions
 
@@ -57,12 +56,12 @@ class LibretroLibrary {
         void ( *retro_keyboard_event )( bool down, unsigned keycode, uint32_t character, uint16_t key_modifiers );
         void ( *retro_hw_context_reset )( void );
 
-        MOCKABLE void clear();
+         void clear();
 
 private:
         QLibrary m_library;
 
-        MOCKABLE void resolveSymbols();
+         void resolveSymbols();
 
 
 };
