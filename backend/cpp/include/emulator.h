@@ -49,19 +49,19 @@ public:
     // by the static callbacks.
 public: // Libretro specific variables
 
-    LibretroLibrary m_libretroLibrary;
+    LibretroLibrary *m_libretroLibrary;
     retro_system_av_info m_avInfo;
     QImage::Format m_pixelFormat;
 
-    VariableModel m_variableModel;
+    VariableModel *m_variableModel;
 
     GET_SET( Emulator, bool, coreVarsUpdated )
 
 public:
 
-    GamepadManager m_gamepadManager;
-    SharedMemory m_sharedMemory;
-    AudioController m_audioController;
+    GamepadManager *m_gamepadManager;
+    SharedMemory *m_sharedMemory;
+    AudioController *m_audioController;
 
 public slots:
 
@@ -106,7 +106,7 @@ private: // Variables
 
     retro_system_info m_systemInfo;
 
-    MessageServer m_messageServer;
+    MessageServer *m_messageServer;
     QTimer m_timer;
 
     QHash<QByteArray, QByteArray> m_coreVars;

@@ -12,9 +12,13 @@
 #include <QDebug>
 #include <QCoreApplication>
 
+#include "emulator.h"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app( argc, argv );
+
+    Emulator emu;
 //    app.setAttribute(Qt::AA_Use96Dpi, true);
 
 //    QTEST_SET_MAIN_SOURCE_PATH

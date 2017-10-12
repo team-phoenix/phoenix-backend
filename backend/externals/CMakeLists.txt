@@ -1,3 +1,7 @@
+include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include)
+include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include/input )
+include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include/audio )
+
 ##
 ## Externals
 ##

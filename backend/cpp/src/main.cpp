@@ -8,7 +8,6 @@ int main(int argc, char *argv[])
 
     (void)Emulator::instance();
 
-
     return a.exec();
 }
 

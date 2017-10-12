@@ -5,4 +5,4 @@ project (phoenix)
 add_subdirectory (backend)
 
 enable_testing ()
-add_subdirectory (tests)
+add_subdirectory (unit_tests)
