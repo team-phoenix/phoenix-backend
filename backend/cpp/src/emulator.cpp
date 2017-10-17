@@ -34,20 +34,20 @@ void Emulator::setEmuState(Emulator::State t_state) {
 
 void Emulator::setCallbacks() {
     // Set callbacks
-    m_libretroLibrary->retro_set_environment( environmentCallback );
-    m_libretroLibrary->retro_set_audio_sample( audioSampleCallback );
-    m_libretroLibrary->retro_set_audio_sample_batch( audioSampleBatchCallback );
-    m_libretroLibrary->retro_set_input_poll( inputPollCallback );
-    m_libretroLibrary->retro_set_input_state( inputStateCallback );
-    m_libretroLibrary->retro_set_video_refresh( videoRefreshCallback );
+    m_libretroLibrary.retro_set_environment( environmentCallback );
+    m_libretroLibrary.retro_set_audio_sample( audioSampleCallback );
+    m_libretroLibrary.retro_set_audio_sample_batch( audioSampleBatchCallback );
+    m_libretroLibrary.retro_set_input_poll( inputPollCallback );
+    m_libretroLibrary.retro_set_input_state( inputStateCallback );
+    m_libretroLibrary.retro_set_video_refresh( videoRefreshCallback );
 }
 
 bool Emulator::loadEmulationCore(const QString &t_emuCore) {
 
     qDebug() << t_emuCore;
-    if ( t_emuCore != m_libretroLibrary->fileName() ) {
+    if ( t_emuCore != m_libretroLibrary.fileName() ) {
 
-        return m_libretroLibrary->load( t_emuCore );
+        return m_libretroLibrary.load( t_emuCore );
 
     } else {
         return false;
@@ -97,14 +97,14 @@ void Emulator::handleVariableUpdate(const QByteArray &t_key, const QByteArray &t
     variable.key = t_key.data();
     variable.value = t_value.data();
 
-    m_variableModel->insert( variable );
+    m_variableModel.insert( variable );
     coreVarsUpdated( true );
 
 }
 
 void Emulator::runEmu() {
 
-    m_libretroLibrary->retro_run();
+    m_libretroLibrary.retro_run();
 
     if ( m_emuState != State::Playing ) {
         setEmuState( State::Playing );
@@ -122,16 +122,16 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
 
         }
 
-        qCDebug( phxCore ) << "Core loaded:" << m_libretroLibrary->isLoaded();
-        qCDebug( phxCore ) << "retro_api_version =" << m_libretroLibrary->retro_api_version();
+        qCDebug( phxCore ) << "Core loaded:" << m_libretroLibrary.isLoaded();
+        qCDebug( phxCore ) << "retro_api_version =" << m_libretroLibrary.retro_api_version();
 
         setCallbacks();
 
         // Init the core
-        m_libretroLibrary->retro_init();
+        m_libretroLibrary.retro_init();
 
         // Get some info about the game
-        m_libretroLibrary->retro_get_system_info( &m_systemInfo );
+        m_libretroLibrary.retro_get_system_info( &m_systemInfo );
 
         // Load game
         {
@@ -167,7 +167,7 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
 
             }
 
-            m_libretroLibrary->retro_load_game( &gameInfo );
+            m_libretroLibrary.retro_load_game( &gameInfo );
 
             qDebug() << "";
         }
@@ -178,9 +178,9 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
         // Load save data
         //LibretroCoreLoadSaveData();
 
-        m_libretroLibrary->retro_get_system_av_info( &m_avInfo );
+        m_libretroLibrary.retro_get_system_av_info( &m_avInfo );
 
-        emit m_audioController->audioFmtChanged( m_avInfo.timing.fps, m_avInfo.timing.sample_rate );
+        emit m_audioController.audioFmtChanged( m_avInfo.timing.fps, m_avInfo.timing.sample_rate );
 
         qCDebug( phxCore ).nospace() << "coreFPS: " << m_avInfo.timing.fps;
         qCDebug( phxCore ).nospace() << "aspectRatio: " << m_avInfo.geometry.aspect_ratio;
@@ -288,10 +288,10 @@ void Emulator::shutdownEmu() {
     // Calls retro_deinit().
 
     if ( m_emuState != State::Uninitialized && m_emuState != State::Killed ) {
-        m_libretroLibrary->retro_deinit();
+        m_libretroLibrary.retro_deinit();
     }
 
-    m_libretroLibrary->unload();
+    m_libretroLibrary.unload();
 
     m_game.close();
     m_gameData.clear();
@@ -327,25 +327,25 @@ Emulator::Emulator(QObject *parent) : QObject( parent ),
 
     connect( &m_timer, &QTimer::timeout, this, &Emulator::runEmu );
 
-    connect( m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
-    connect( m_messageServer, &MessageServer::playEmu, m_audioController, &AudioController::playEmu );
+    connect( &m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
+    connect( &m_messageServer, &MessageServer::playEmu, &m_audioController, &AudioController::playEmu );
 
-    connect( m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
-    connect( m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownEmu );
-    connect( m_messageServer, &MessageServer::restartEmu, this, &Emulator::restartEmu );
+    connect( &m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
+    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownEmu );
+    connect( &m_messageServer, &MessageServer::restartEmu, this, &Emulator::restartEmu );
 
-    connect( m_messageServer, &MessageServer::initEmu, this, &Emulator::initEmu );
-    connect( m_messageServer, &MessageServer::killEmu, this, &Emulator::killEmu );
+    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initEmu );
+    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killEmu );
 
-    connect( m_messageServer, &MessageServer::updateVariable, this, &Emulator::handleVariableUpdate );
+    connect( &m_messageServer, &MessageServer::updateVariable, this, &Emulator::handleVariableUpdate );
 
     setEmuState( State::Uninitialized );
 }
 
 void Emulator::sendVariables() {
 
-    for ( const CoreVariable &variable : *m_variableModel ) {
-        m_messageServer->encodeMessage( variable );
+    for ( const CoreVariable &variable : m_variableModel ) {
+        m_messageServer.encodeMessage( variable );
     }
 }
 
@@ -365,7 +365,7 @@ void Emulator::sendVideoInfo() {
         { "pixelFmt", static_cast<int>( m_pixelFormat ) },
     };
 
-    m_messageServer->encodeMessage( videoInfo );
+    m_messageServer.encodeMessage( videoInfo );
 }
 
 void Emulator::sendState() {
@@ -374,15 +374,15 @@ void Emulator::sendState() {
         { "response", toString( m_emuState ) },
     };
 
-    m_messageServer->encodeMessage( json );
+    m_messageServer.encodeMessage( json );
 }
 
 void audioSampleCallback(int16_t t_left, int16_t t_right) {
-    Emulator::instance()->m_audioController->write( t_left, t_right );
+    Emulator::instance()->m_audioController.write( t_left, t_right );
 }
 
 size_t audioSampleBatchCallback(const int16_t *t_data, size_t t_frames) {
-    Emulator::instance()->m_audioController->write( t_data, t_frames );
+    Emulator::instance()->m_audioController.write( t_data, t_frames );
 }
 
 bool environmentCallback(unsigned cmd, void *data) {
@@ -481,7 +481,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: { // 12
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK (12) (handled)";
-            Emulator::instance()->m_libretroLibrary->retro_keyboard_event = ( decltype( LibretroLibrary::retro_keyboard_event ) )data;
+            Emulator::instance()->m_libretroLibrary.retro_keyboard_event = ( decltype( LibretroLibrary::retro_keyboard_event ) )data;
             break;
         }
 
@@ -601,9 +601,9 @@ bool environmentCallback(unsigned cmd, void *data) {
             retro_variable *retroVariable = static_cast<retro_variable *>( data );
             retroVariable->value = nullptr;
 
-            if ( Emulator::instance()->m_variableModel->contains( *retroVariable ) ) {
+            if ( Emulator::instance()->m_variableModel.contains( *retroVariable ) ) {
 
-                retroVariable->value = Emulator::instance()->m_variableModel->currentValue( retroVariable->key ).constData();
+                retroVariable->value = Emulator::instance()->m_variableModel.currentValue( retroVariable->key ).constData();
 
                 return true;
             }
@@ -618,7 +618,7 @@ bool environmentCallback(unsigned cmd, void *data) {
             for ( ; variable->key != nullptr; variable++ ) {
                 qDebug( phxCore ) << "\tretro_variable:" << variable->key << variable->value;
                 if ( variable->key != nullptr && variable->key == "" ) {
-                    Emulator::instance()->m_variableModel->insert( *variable );
+                    Emulator::instance()->m_variableModel.insert( *variable );
                 }
             }
 
@@ -664,7 +664,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: { // 21
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
-            Emulator::instance()->m_libretroLibrary->retro_frame_time = ( decltype( LibretroLibrary::retro_frame_time ) )data;
+            Emulator::instance()->m_libretroLibrary.retro_frame_time = ( decltype( LibretroLibrary::retro_frame_time ) )data;
             return true;
         }
 
@@ -764,7 +764,7 @@ bool environmentCallback(unsigned cmd, void *data) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37) (handled)";
 
             // Get info from the core
-            Emulator::instance()->m_libretroLibrary->retro_get_system_av_info( &Emulator::instance()->m_avInfo );
+            Emulator::instance()->m_libretroLibrary.retro_get_system_av_info( &Emulator::instance()->m_avInfo );
             // Although we hope the core would have updated its internal av_info struct by now, we'll play it safe and
             // use the given geometry
             //memcpy( &( avInfo->geometry ), data, sizeof( struct retro_game_geometry ) );
@@ -797,7 +797,7 @@ bool environmentCallback(unsigned cmd, void *data) {
 
 void inputPollCallback() {
 
-    Emulator::instance()->m_gamepadManager->pollGamepads();
+    Emulator::instance()->m_gamepadManager.pollGamepads();
     //Emulator::instance()->m_gamepadManager.pollKeys( Emulator::instance()->m_sharedMemory );
 
 }
@@ -807,20 +807,20 @@ int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsig
     quint16 result = 0;
 
     // If there are no gamepads connected, just use the keyboard.
-    if ( Emulator::instance()->m_gamepadManager->isEmpty() ) {
+    if ( Emulator::instance()->m_gamepadManager.isEmpty() ) {
         if ( device == RETRO_DEVICE_JOYPAD ) {
-            const quint8 keyPress = Emulator::instance()->m_gamepadManager->keyAt( id );
+            const quint8 keyPress = Emulator::instance()->m_gamepadManager.keyAt( id );
             result |= static_cast<qint16>( keyPress );
         }
-    } else if ( Emulator::instance()->m_gamepadManager->size() > port ) {
-        const Gamepad &gamepad = Emulator::instance()->m_gamepadManager->at( port );
+    } else if ( Emulator::instance()->m_gamepadManager.size() > port ) {
+        const Gamepad &gamepad = Emulator::instance()->m_gamepadManager.at( port );
 
         if ( device == RETRO_DEVICE_JOYPAD ) {
             result = static_cast<quint16>( gamepad.getButtonState( id ) );
 
             // OR the keyboard's state with the first controller's.
             if ( port == 0 ) {
-                const quint8 keyPress = Emulator::instance()->m_gamepadManager->keyAt( id );
+                const quint8 keyPress = Emulator::instance()->m_gamepadManager.keyAt( id );
                 result |= static_cast<qint16>( keyPress );
             }
         }
@@ -839,7 +839,7 @@ void videoRefreshCallback(const void *t_data, unsigned width, unsigned height, s
     if ( t_data == RETRO_HW_FRAME_BUFFER_VALID ) {
 
     } else {
-        Emulator::instance()->m_sharedMemory->writeVideoFrame( width
+        Emulator::instance()->m_sharedMemory.writeVideoFrame( width
                                                         , height
                                                         , pitch
                                                         , t_data );
