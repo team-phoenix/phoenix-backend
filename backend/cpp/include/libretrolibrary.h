@@ -6,7 +6,6 @@
 
 class LibretroLibrary {
 
-    friend class Test_LibretroLibrary;
     public:
         LibretroLibrary();
 

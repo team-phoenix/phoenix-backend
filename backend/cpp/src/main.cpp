@@ -1,6 +1,6 @@
  #include <QCoreApplication>
 
-#include "emulator.h"
+#include "retrocallbacks.h"
 
 #include <QDebug>
 
@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    (void)Emulator::instance();
+    RetroCallbacks::listen();
 
     return a.exec();
 }
