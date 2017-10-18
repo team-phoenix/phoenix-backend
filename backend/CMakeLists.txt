@@ -7,7 +7,7 @@ list( APPEND CMAKE_MODULE_PATH
 
 project( backend )
 
-add_executable( ${PROJECT_NAME} "" )
+add_executable( ${PROJECT_NAME} "" cpp/include/abstractemulator.h cpp/include/videoframewriter.h)
 
 ##
 ## Source files

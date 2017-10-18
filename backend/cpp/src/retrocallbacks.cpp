@@ -4,17 +4,19 @@
 #include "logging.h"
 #include "gamepad.h"
 
-static Emulator& emulator() {
-    static Emulator emu;
-    return emu;
+
+static AbstractEmulator *emulator = nullptr;
+
+void RetroCallbacks::setEmulator( AbstractEmulator *emu ) {
+    emulator = emu;
 }
 
 void RetroCallbacks::audioSampleCallback(int16_t t_left, int16_t t_right) {
-    emulator().m_audioController.write( t_left, t_right );
+    emulator->routeAudioSample( t_left, t_right );
 }
 
 size_t RetroCallbacks::audioSampleBatchCallback(const int16_t *t_data, size_t t_frames) {
-    emulator().m_audioController.write( t_data, t_frames );
+    emulator->routeAudioBatch( t_data, t_frames );
 }
 
 bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
@@ -68,9 +70,9 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 
             switch( *pixelformat ) {
                 case RETRO_PIXEL_FORMAT_0RGB1555:
-                    emulator().m_pixelFormat = QImage::Format_RGB555;
+                    emulator->m_pixelFormat = QImage::Format_RGB555;
 
-//                    emulator().sendProcessMessage( {
+//                    emulator->sendProcessMessage( {
 //                                                                    { "retro_cmd", {
 //                                                                          "environ_cb",
 //                                                                      }
@@ -80,12 +82,12 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
                     return true;
 
                 case RETRO_PIXEL_FORMAT_RGB565:
-                    emulator().m_pixelFormat  = QImage::Format_RGB16;
+                    emulator->m_pixelFormat  = QImage::Format_RGB16;
                     qCDebug( phxCore ) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
                     return true;
 
                 case RETRO_PIXEL_FORMAT_XRGB8888:
-                    emulator().m_pixelFormat  = QImage::Format_RGB32;
+                    emulator->m_pixelFormat  = QImage::Format_RGB32;
                     qCDebug( phxCore ) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
                     return true;
                 default:
@@ -113,7 +115,7 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK: { // 12
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK (12) (handled)";
-            emulator().m_libretroLibrary.retro_keyboard_event = ( decltype( LibretroLibrary::retro_keyboard_event ) )data;
+            emulator->m_libretroLibrary.retro_keyboard_event = ( decltype( LibretroLibrary::retro_keyboard_event ) )data;
             break;
         }
 
@@ -131,7 +133,7 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //            hardwareRenderData->get_current_framebuffer = getFramebufferCallback;
 //            hardwareRenderData->get_proc_address = openGLProcAddressCallback;
 
-//            emulator().m_symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
+//            emulator->m_symbols.retro_hw_context_reset = hardwareRenderData->context_reset;
 
 //            QSurfaceFormat surfaceFmt;
 
@@ -141,8 +143,8 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //                    break;
 
 //                case RETRO_HW_CONTEXT_OPENGL: {
-//                    if( emulator().m_offscreenSurface->format().majorVersion() < 2
-//                            || emulator().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGL ) {
+//                    if( emulator->m_offscreenSurface->format().majorVersion() < 2
+//                            || emulator->m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGL ) {
 //                        qWarning() << "\t\tOpenGL 2.x not available! Please install a driver for your GPU that supports modern OpenGL";
 //                        return false;
 //                    }
@@ -153,8 +155,8 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES2: {
-//                    if( emulator().m_offscreenSurface->format().majorVersion() < 2
-//                            || emulator().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+//                    if( emulator->m_offscreenSurface->format().majorVersion() < 2
+//                            || emulator->m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
 //                        qWarning() << "\t\tOpenGL ES 2.0 not available! Please install a driver for your GPU that supports this";
 //                        return false;
 //                    }
@@ -164,15 +166,15 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGL_CORE: {
-//                    if( emulator().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGL ) {
-//                        if( emulator().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+//                    if( emulator->m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGL ) {
+//                        if( emulator->m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
 //                        }
 
-//                        if( emulator().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
-//                            emulator().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+//                        if( emulator->m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+//                            emulator->m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
@@ -185,8 +187,8 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES3: {
-//                    if( emulator().m_offscreenSurface->format().majorVersion() < 3
-//                            || emulator().m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
+//                    if( emulator->m_offscreenSurface->format().majorVersion() < 3
+//                            || emulator->m_offscreenSurface->format().renderableType() != QSurfaceFormat::OpenGLES ) {
 //                        qWarning() << "\t\tOpenGL ES 3.0 not available! Please install a driver for your GPU that supports this";
 //                        return false;
 //                    }
@@ -196,15 +198,15 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 //                }
 
 //                case RETRO_HW_CONTEXT_OPENGLES_VERSION: {
-//                    if( emulator().m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGLES ) {
-//                        if( emulator().m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
+//                    if( emulator->m_offscreenSurface->format().renderableType() == QSurfaceFormat::OpenGLES ) {
+//                        if( emulator->m_offscreenSurface->format().majorVersion() > static_cast<int>( hardwareRenderData->version_major ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
 //                        }
 
-//                        if( emulator().m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
-//                            emulator().m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
+//                        if( emulator->m_offscreenSurface->format().majorVersion() >= static_cast<int>( hardwareRenderData->version_major ) &&
+//                            emulator->m_offscreenSurface->format().minorVersion() >= static_cast<int>( hardwareRenderData->version_minor ) ) {
 //                            qDebug().nospace() << "\t\tOpenGL ES " << hardwareRenderData->version_major << "." << hardwareRenderData->version_minor << " "
 //                                               << "context was selected";
 //                            return true;
@@ -233,9 +235,9 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
             retro_variable *retroVariable = static_cast<retro_variable *>( data );
             retroVariable->value = nullptr;
 
-            if ( emulator().m_variableModel.contains( *retroVariable ) ) {
+            if ( emulator->m_variableModel.contains( *retroVariable ) ) {
 
-                retroVariable->value = emulator().m_variableModel.currentValue( retroVariable->key ).constData();
+                retroVariable->value = emulator->m_variableModel.currentValue( retroVariable->key ).constData();
 
                 return true;
             }
@@ -250,7 +252,7 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
             for ( ; variable->key != nullptr; variable++ ) {
                 qDebug( phxCore ) << "\tretro_variable:" << variable->key << variable->value;
                 if ( variable->key != nullptr && variable->key == "" ) {
-                    emulator().m_variableModel.insert( *variable );
+                    emulator->m_variableModel.insert( *variable );
                 }
             }
 
@@ -262,14 +264,14 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
             // Let the core know we have some variable changes if we set our internal flag (clear it so the change only happens once)
             // TODO: Protect all variable-touching code with mutexes?
 
-            const bool updated = emulator().coreVarsUpdated();
+            const bool updated = emulator->coreVarsUpdated();
 
             *static_cast<bool *>( data ) = updated;
 
             if ( updated ) {
                 qDebug() << "cores updated";
 
-                emulator().coreVarsUpdated( false );
+                emulator->coreVarsUpdated( false );
             }
 
             return updated;
@@ -296,7 +298,7 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 
         case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: { // 21
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK (21) (handled)";
-            emulator().m_libretroLibrary.retro_frame_time = ( decltype( LibretroLibrary::retro_frame_time ) )data;
+            emulator->m_libretroLibrary.retro_frame_time = ( decltype( LibretroLibrary::retro_frame_time ) )data;
             return true;
         }
 
@@ -396,7 +398,7 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
             qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_SET_GEOMETRY (37) (handled)";
 
             // Get info from the core
-            emulator().m_libretroLibrary.retro_get_system_av_info( &emulator().m_avInfo );
+            emulator->m_libretroLibrary.retro_get_system_av_info( &emulator->m_avInfo );
             // Although we hope the core would have updated its internal av_info struct by now, we'll play it safe and
             // use the given geometry
             //memcpy( &( avInfo->geometry ), data, sizeof( struct retro_game_geometry ) );
@@ -429,8 +431,8 @@ bool RetroCallbacks::environmentCallback(unsigned cmd, void *data) {
 
 void RetroCallbacks::inputPollCallback() {
 
-    emulator().m_gamepadManager.pollGamepads();
-    //emulator().m_gamepadManager.pollKeys( emulator().m_sharedMemory );
+    emulator->m_gamepadManager.pollGamepads();
+    //emulator->m_gamepadManager.pollKeys( emulator->m_sharedMemory );
 
 }
 
@@ -439,20 +441,20 @@ int16_t RetroCallbacks::inputStateCallback(unsigned port, unsigned device, unsig
     quint16 result = 0;
 
     // If there are no gamepads connected, just use the keyboard.
-    if ( emulator().m_gamepadManager.isEmpty() ) {
+    if ( emulator->m_gamepadManager.isEmpty() ) {
         if ( device == RETRO_DEVICE_JOYPAD ) {
-            const quint8 keyPress = emulator().m_gamepadManager.keyAt( id );
+            const quint8 keyPress = emulator->m_gamepadManager.keyAt( id );
             result |= static_cast<qint16>( keyPress );
         }
-    } else if ( emulator().m_gamepadManager.size() > port ) {
-        const Gamepad &gamepad = emulator().m_gamepadManager.at( port );
+    } else if ( emulator->m_gamepadManager.size() > port ) {
+        const Gamepad &gamepad = emulator->m_gamepadManager.at( port );
 
         if ( device == RETRO_DEVICE_JOYPAD ) {
             result = static_cast<quint16>( gamepad.getButtonState( id ) );
 
             // OR the keyboard's state with the first controller's.
             if ( port == 0 ) {
-                const quint8 keyPress = emulator().m_gamepadManager.keyAt( id );
+                const quint8 keyPress = emulator->m_gamepadManager.keyAt( id );
                 result |= static_cast<qint16>( keyPress );
             }
         }
@@ -471,10 +473,9 @@ void RetroCallbacks::videoRefreshCallback(const void *t_data, unsigned width, un
     if ( t_data == RETRO_HW_FRAME_BUFFER_VALID ) {
 
     } else {
-        emulator().m_sharedMemory.writeVideoFrame( width
+        emulator->routeVideoFrame( static_cast<const char *>( t_data ), width
                 , height
-                , pitch
-                , t_data );
+                , pitch );
     }
 
 }
@@ -546,8 +547,4 @@ void RetroCallbacks::logCallback(retro_log_level level, const char *fmt, ...) {
             qCWarning( phxCore ) << "RETRO_LOG (unknown category!?):" << outbuf.data();
             break;
     }
-}
-
-void RetroCallbacks::listen() {
-    (void)emulator();
 }

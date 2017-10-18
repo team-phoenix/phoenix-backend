@@ -1,11 +1,12 @@
 #pragma once
 
 #include <libretro.h>
+#include "abstractemulator.h"
 
 class RetroCallbacks {
 public:
 
-    static void listen();
+    static void setEmulator( AbstractEmulator *emu );
 
 // Required
     static void audioSampleCallback( int16_t left, int16_t right );

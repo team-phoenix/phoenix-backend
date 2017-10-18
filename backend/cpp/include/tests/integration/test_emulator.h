@@ -85,7 +85,7 @@
 //        ptr->loadEmulationCore( workingCorePath );
 //        ptr->loadEmulationGame( workingGamePath );
 
-//        ptr->initEmu( workingCorePath, workingGamePath, QString( "2d" ) );
+//        ptr->init( workingCorePath, workingGamePath, QString( "2d" ) );
 
 //        // Check retro_system_info struct
 
@@ -121,7 +121,7 @@
 
 //        should_initializeEmulatorWithWorkingArgs();
 
-//        ptr->shutdownEmu();
+//        ptr->shutdown();
 
 //        compare_thatMemberVariablesWereNotModified();
 //    }

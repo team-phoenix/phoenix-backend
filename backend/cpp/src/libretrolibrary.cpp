@@ -47,8 +47,6 @@ bool LibretroLibrary::load(const QString &t_filePath) {
 
 void LibretroLibrary::resolveSymbols() {
 
-    qCDebug( phxSharedLibrary, "resolving symbols." );
-
     resolved_sym( retro_set_environment );
     resolved_sym( retro_set_video_refresh );
     resolved_sym( retro_set_audio_sample );
@@ -74,8 +72,6 @@ void LibretroLibrary::resolveSymbols() {
     resolved_sym( retro_get_region );
     resolved_sym( retro_get_memory_data );
     resolved_sym( retro_get_memory_size );
-
-    qCDebug( phxSharedLibrary, "symbols resolved." );
 
 }
 

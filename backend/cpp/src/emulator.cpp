@@ -7,7 +7,7 @@
 #include <QCoreApplication>
 
 Emulator::~Emulator() {
-    shutdownEmu();
+    shutdown();
 }
 
 void Emulator::setEmuState(Emulator::State t_state) {
@@ -87,7 +87,7 @@ void Emulator::handleVariableUpdate(const QByteArray &t_key, const QByteArray &t
 
 }
 
-void Emulator::runEmu() {
+void Emulator::run() {
 
     m_libretroLibrary.retro_run();
 
@@ -97,7 +97,7 @@ void Emulator::runEmu() {
 
 }
 
-void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, const QString &hwType ) {
+void Emulator::init(const QString &t_corePath, const QString &t_gamePath, const QString &hwType) {
 
     if ( hwType == "2d" ) {
 
@@ -268,7 +268,7 @@ void Emulator::initEmu( const QString &t_corePath, const QString &t_gamePath, co
 
 }
 
-void Emulator::shutdownEmu() {
+void Emulator::shutdown() {
 
     // Calls retro_deinit().
 
@@ -294,12 +294,11 @@ void Emulator::shutdownEmu() {
 
 }
 
-void Emulator::restartEmu() {
-    shutdownEmu();
+void Emulator::restart() {
+    shutdown();
 }
 
-Emulator::Emulator(QObject *parent) : QObject( parent ),
-    m_pixelFormat( QImage::Format_Invalid )
+Emulator::Emulator(QObject *parent) : AbstractEmulator( parent )
 {
 
     m_systemInfo = {};
@@ -310,17 +309,17 @@ Emulator::Emulator(QObject *parent) : QObject( parent ),
     m_timer.setTimerType( Qt::PreciseTimer );
     m_timer.setInterval( 16 );
 
-    connect( &m_timer, &QTimer::timeout, this, &Emulator::runEmu );
+    connect( &m_timer, &QTimer::timeout, this, &Emulator::run );
 
     connect( &m_messageServer, &MessageServer::playEmu, &m_timer, static_cast<void(QTimer::*) (void)>( &QTimer::start ) );
     connect( &m_messageServer, &MessageServer::playEmu, &m_audioController, &AudioController::playEmu );
 
     connect( &m_messageServer, &MessageServer::pauseEmu, &m_timer, &QTimer::stop );
-    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdownEmu );
-    connect( &m_messageServer, &MessageServer::restartEmu, this, &Emulator::restartEmu );
+    connect( &m_messageServer, &MessageServer::shutdownEmu, this, &Emulator::shutdown );
+    connect( &m_messageServer, &MessageServer::restartEmu, this, &Emulator::restart );
 
-    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::initEmu );
-    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::killEmu );
+    connect( &m_messageServer, &MessageServer::initEmu, this, &Emulator::init );
+    connect( &m_messageServer, &MessageServer::killEmu, this, &Emulator::kill );
 
     connect( &m_messageServer, &MessageServer::updateVariable, this, &Emulator::handleVariableUpdate );
 
@@ -334,7 +333,7 @@ void Emulator::sendVariables() {
     }
 }
 
-void Emulator::killEmu() {
+void Emulator::kill() {
     setEmuState( State::Killed );
     QCoreApplication::quit();
 }

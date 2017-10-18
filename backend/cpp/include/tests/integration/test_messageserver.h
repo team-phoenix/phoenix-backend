@@ -50,14 +50,14 @@
 //    void should_emitInitEmuSignal() {
 
 //        const QJsonObject request {
-//            { "request", "initEmu" },
+//            { "request", "init" },
 //            { "core", "abc" },
 //            { "game", "123" },
 //            { "hardwareType", "world" },
 //        };
 
 
-//        QSignalSpy spy( server, &MessageServer::initEmu );
+//        QSignalSpy spy( server, &MessageServer::init );
 
 //        server->parseJsonObject( request );
 
@@ -97,10 +97,10 @@
 //    void should_emitShutdownEmuSignal() {
 
 //        const QJsonObject request {
-//            { "request", "shutdownEmu" },
+//            { "request", "shutdown" },
 //        };
 
-//        QSignalSpy spy( server, &MessageServer::shutdownEmu );
+//        QSignalSpy spy( server, &MessageServer::shutdown );
 
 //        server->parseJsonObject( request );
 
@@ -110,10 +110,10 @@
 //    void should_emitRestartEmuSignal() {
 
 //        const QJsonObject request {
-//            { "request", "restartEmu" },
+//            { "request", "restart" },
 //        };
 
-//        QSignalSpy spy( server, &MessageServer::restartEmu );
+//        QSignalSpy spy( server, &MessageServer::restart );
 
 //        server->parseJsonObject( request );
 
@@ -123,10 +123,10 @@
 //    void should_emitKillEmuSignal() {
 
 //        const QJsonObject request {
-//            { "request", "killEmu" },
+//            { "request", "kill" },
 //        };
 
-//        QSignalSpy spy( server, &MessageServer::killEmu );
+//        QSignalSpy spy( server, &MessageServer::kill );
 
 //        server->parseJsonObject( request );
 
