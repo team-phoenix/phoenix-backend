@@ -1,6 +1,6 @@
 #pragma once
 
-#include "samplerate.h"
+#include <samplerate.h>
 
 #include <QAudio>
 #include <QAudioFormat>
