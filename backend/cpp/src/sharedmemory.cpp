@@ -38,7 +38,7 @@ SharedMemory::~SharedMemory() {
 void SharedMemory::readKeyboardStates(quint8 *t_src, int t_size ) {
 
     Q_CHECK_PTR( t_src );
-    Q_ASSERT( t_size == m_inputBlockSize );
+    Q_ASSERT( t_size == static_cast<int>( m_inputBlockSize ) );
     MemoryLocker memLocker( &m_memory );
 
     char *memData = static_cast<char *>( m_memory.data() ) + m_inputBlockOffset;

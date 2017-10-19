@@ -14,6 +14,7 @@ public:
      void writeVideoFrame( uint t_width, uint t_height, uint t_pitch, const void *t_data );
 
 private:
+     QSharedMemory m_memory;
 
     size_t m_inputBlockSize;
     size_t m_videoBlockSize;
@@ -21,7 +22,6 @@ private:
     size_t m_inputBlockOffset;
     size_t m_videoBlockOffset;
 
-    QSharedMemory m_memory;
 
      bool resizeMem();
 
