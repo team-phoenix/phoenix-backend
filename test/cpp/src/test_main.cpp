@@ -9,7 +9,7 @@
 //#include <stdlib.h>
 
 ////#include <QObject>
-//#include <QDebug>
+#include <QDebug>
 #include <QCoreApplication>
 
 //#include "emulator.h"
@@ -40,6 +40,8 @@ int main(int argc, char *argv[])
 //    if ( status == 0 ) {
 //        qDebug() << "\nAll tests have successfully passed!";
 //    }
+
+    qDebug() << "running test";
 
     return 0;
 

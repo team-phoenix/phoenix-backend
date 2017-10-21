@@ -19,8 +19,6 @@ QtApplication {
 
     }
 
-
-
     Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "test"] }
 
     cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
@@ -68,6 +66,7 @@ QtApplication {
                     "cpp/src/*cpp",
                     "cpp/src/audio/*.cpp",
                     "cpp/src/input/*.cpp",
+                    "cpp/src/main/*.cpp"
                 ]
 
         return headers.concat( sources ).concat( commonPaths )

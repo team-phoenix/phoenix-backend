@@ -10,4 +10,11 @@ Project {
         }
     }
 
+    SubProject {
+        filePath: "test/test.qbs"
+        Properties {
+            name: "test"
+        }
+    }
+
 }

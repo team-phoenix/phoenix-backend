@@ -2,10 +2,10 @@
 #include "logging.h"
 #include "gamepad.h"
 
-#include <SDL_haptic.h>
-#include <SDL_joystick.h>
+#include <SDl2/SDL_haptic.h>
+#include <SDl2/SDL_joystick.h>
 
-#include <SDL.h>
+#include <SDl2/SDL.h>
 
 #include <QCoreApplication>
 #include <QThread>

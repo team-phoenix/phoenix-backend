@@ -25,7 +25,9 @@ moc_*.cpp
 qrc_*.cpp
 ui_*.h
 Makefile*
-*-build-*
+*-buildi-*
+build/*
+build/
 
 #CMake
 CMakeLists.txt.*

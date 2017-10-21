@@ -8,7 +8,6 @@ class SharedMemory;
 
 class GamepadManager
 {
-    friend class Test_GamepadManager;
 public:
     GamepadManager();
     ~GamepadManager();
