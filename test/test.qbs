@@ -12,7 +12,8 @@ QtApplication {
                     "../backend/cpp/include/*.h",
                     "../backend/cpp/include/audio/*.h",
                     "../backend/cpp/include/input/*.h",
-                    "cpp/src/*.cpp"
+                    "cpp/include/*.h",
+                    "cpp/src/*.cpp",
                 ]
 
         var sources = [
@@ -32,6 +33,8 @@ QtApplication {
         dirs.push( "../backend/cpp/include")
         dirs.push( "../backend/cpp/include/input" )
         dirs.push( "../backend/cpp/include/audio" )
+
+        dirs.push( "cpp/include")
 
         var sdlPaths = [ "" ];
 
