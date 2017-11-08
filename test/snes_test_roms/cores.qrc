@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>snes9x_libretro.dll</file>
+    </qresource>
+</RCC>

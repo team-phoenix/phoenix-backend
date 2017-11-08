@@ -5,31 +5,37 @@
 #include <QtTest>
 #include <QObject>
 
-class EmulatorIntegrationTest : public QObject {
+class EmulatorIntegrationTest : public QObject
+{
     Q_OBJECT
     Emulator *ptr;
     QString incorrectCorePath;
 
 private slots:
 
-    void init() {
+    void init()
+    {
         ptr = new Emulator();
     }
 
-    void cleanup() {
+    void cleanup()
+    {
         delete ptr;
     }
 
-    void should_loadCorrectCorePath() {
-       // QCOMPARE( QFile::exists( workingCorePath ), true );
+    void should_loadCorrectCorePath()
+    {
+        // QCOMPARE( QFile::exists( workingCorePath ), true );
         //QCOMPARE( ptr->loadEmulationCore( workingCorePath ), true );
     }
 
-    void should_notLoadIncorrectCorePath() {
+    void should_notLoadIncorrectCorePath()
+    {
         //QCOMPARE( ptr->loadEmulationCore( incorrectCorePath ), false );
     }
 
-    void should_initializeEmulatorWithWorkingArgs() {
+    void should_initializeEmulatorWithWorkingArgs()
+    {
 
 //        ptr->loadEmulationCore( workingCorePath );
 //        ptr->loadEmulationGame( workingGamePath );
@@ -66,11 +72,13 @@ private slots:
 
     }
 
-    void should_shutdownRunningEmulatorAndNotLeaveVariablesModified() {
+    void should_shutdownRunningEmulatorAndNotLeaveVariablesModified()
+    {
         ptr->shutdown();
     }
 
-    void should_notAcceptInvalidGamePath() {
+    void should_notAcceptInvalidGamePath()
+    {
         //ptr->loadEmulationGame( incorrectGamePath );
     }
 

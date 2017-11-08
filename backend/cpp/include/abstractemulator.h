@@ -41,6 +41,12 @@ public:
 
     virtual void routeVideoFrame( const char *data, quint32 width, quint32 height, size_t pitch ) = 0;
 
+signals:
+    void initialized();
+    void running();
+    void processKilled();
+    void restarted();
+    void terminated();
 
     // This member variables need to be public so they can be accessed
     // by the static callbacks.
@@ -60,3 +66,47 @@ public:
     AudioController m_audioController;
 
 };
+
+//class MockEmulator : public AbstractEmulator {
+//public:
+//    MockEmulator( QObject *parent ) : QObject( parent ) {
+
+//    }
+
+//    ~MockEmulator() {}
+
+//     void run() {
+
+//     }
+
+//     void init(const QString &t_corePath, const QString &t_gamePath, const QString &hwType) {
+
+//     }
+
+//     void kill() {
+
+//     }
+
+//     void restart() {
+
+//     }
+
+//     void shutdown() {
+
+//     }
+
+//     void routeAudioBatch( const qint16* data, size_t frames ) {
+
+//     }
+
+//     void routeAudioSample( qint16 left, qint16 right ) {
+
+//     }
+
+//     void routeVideoFrame( const char *data, quint32 width, quint32 height, size_t pitch ) {
+
+//     }
+
+
+//};
+

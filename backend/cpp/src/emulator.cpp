@@ -31,9 +31,7 @@ bool Emulator::loadEmulationCore(const QString &t_emuCore) {
 
     qDebug() << t_emuCore;
     if ( t_emuCore != m_libretroLibrary.fileName() ) {
-
         return m_libretroLibrary.load( t_emuCore );
-
     } else {
         return false;
     }
@@ -103,6 +101,7 @@ void Emulator::init(const QString &t_corePath, const QString &t_gamePath, const 
 
         if ( !( loadEmulationCore( t_corePath ) && loadEmulationGame( t_gamePath ) ) ) {
             qCWarning( phxCore, "Could not load the core or game." );
+            return;
         } else {
 
         }
@@ -172,6 +171,8 @@ void Emulator::init(const QString &t_corePath, const QString &t_gamePath, const 
         qCDebug( phxCore ).nospace() << "baseHeight: " << m_avInfo.geometry.base_height;
         qCDebug( phxCore ).nospace() << "baseWidth: " << m_avInfo.geometry.base_width;
 
+
+        emit initialized();
 
         setEmuState( State::Initialized );
         sendVideoInfo();

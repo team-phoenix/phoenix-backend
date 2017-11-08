@@ -12,7 +12,10 @@ QtApplication {
                     "../backend/cpp/include/*.h",
                     "../backend/cpp/include/audio/*.h",
                     "../backend/cpp/include/input/*.h",
-                    "cpp/include/*.h",
+
+                    "cpp/include/integration/*.hpp",
+                    "cpp/include/unit/*.hpp",
+
                     "cpp/src/*.cpp",
                 ]
 
@@ -23,7 +26,9 @@ QtApplication {
                     "cpp/src/*.cpp",
                     "*.h",
                     "*.cpp",
-                ]
+
+                    "snes_test_roms/*.qrc",
+                 ]
 
         return headers.concat( sources )
     }
@@ -34,7 +39,8 @@ QtApplication {
         dirs.push( "../backend/cpp/include/input" )
         dirs.push( "../backend/cpp/include/audio" )
 
-        dirs.push( "cpp/include")
+        dirs.push( "cpp/include/integration" )
+        dirs.push( "cpp/include/unit" )
 
         var sdlPaths = [ "" ];
 

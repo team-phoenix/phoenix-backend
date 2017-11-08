@@ -1,9 +1,6 @@
-#include "emulatorintegrationtest.h"
+#include "emulatorintegrationtest.hpp"
+#include "emulationunittests.hpp"
 
-//#include <stdio.h>
-//#include <stdlib.h>
-
-////#include <QObject>
 #include <QDebug>
 #include <QCoreApplication>
 #include <QtTest>
@@ -18,7 +15,8 @@ int main(int argc, char *argv[])
     QTEST_SET_MAIN_SOURCE_PATH
 
     QList<QObject *> integrationTests = {
-        new EmulatorIntegrationTest(),
+//        new EmulatorIntegrationTest(),
+        new EmulatorUnitTests(),
     };
 
     int status = 0;
@@ -30,8 +28,6 @@ int main(int argc, char *argv[])
     if ( status == 0 ) {
         qDebug() << "\nAll tests have successfully passed!";
     }
-
-    qDebug() << "running test";
 
     return 0;
 
