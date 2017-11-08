@@ -54,8 +54,8 @@ private slots:
 
     void cleanupTestCase()
     {
-//        QFile::remove( workingCorePath );
-//        QFile::remove( workingGamePath );
+        QFile::remove( workingCorePath );
+        QFile::remove( workingGamePath );
     }
 
     void init()
