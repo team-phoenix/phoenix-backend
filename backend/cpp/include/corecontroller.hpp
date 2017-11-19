@@ -54,6 +54,13 @@ public:
   void fini()
   {
     game.close();
+    game.clear();
+    dylibCore.unload();
+    memory.clear();
+  }
+
+  void reset() {
+      fini();
   }
 
   void run()
@@ -63,21 +70,14 @@ public:
 
   retro_game_info openGame(const retro_system_info &systemInfo)
   {
-    // Argument struct for symbols.retro_load_game()
     retro_game_info gameInfo = {};
 
-    // Full path needed, simply pass the game's file path to the core
     if (systemInfo.need_fullpath) {
       gameInfo.path = game.filePath();
       gameInfo.data = nullptr;
       gameInfo.size = 0;
       gameInfo.meta = "";
-    }
-
-    // Full path not needed, read the file to memory and pass that to the core
-    else {
-      // Read into memory
-
+    } else {
       game.copyToRam();
 
       gameInfo.path = nullptr;
@@ -86,7 +86,6 @@ public:
       gameInfo.meta = "";
 
       game.close();
-
     }
 
     dylibCore.retro_load_game(&gameInfo);
@@ -104,10 +103,10 @@ public:
 
 //      emit m_audioController.audioFmtChanged(systemAvInfo.timing.fps, systemAvInfo.timing.sample_rate);
 
-    qCDebug(phxCore).nospace() << "coreFPS: " << info.avInfo.timing.fps;
-    qCDebug(phxCore).nospace() << "aspectRatio: " << info.avInfo.geometry.aspect_ratio;
-    qCDebug(phxCore).nospace() << "baseHeight: " << info.avInfo.geometry.base_height;
-    qCDebug(phxCore).nospace() << "baseWidth: " << info.avInfo.geometry.base_width;
+//    qCDebug(phxCore).nospace() << "coreFPS: " << info.avInfo.timing.fps;
+//    qCDebug(phxCore).nospace() << "aspectRatio: " << info.avInfo.geometry.aspect_ratio;
+//    qCDebug(phxCore).nospace() << "baseHeight: " << info.avInfo.geometry.base_height;
+//    qCDebug(phxCore).nospace() << "baseWidth: " << info.avInfo.geometry.base_width;
 
 //      emit initialized();
 

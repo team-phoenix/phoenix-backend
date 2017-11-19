@@ -50,6 +50,13 @@ SCENARIO("Video data can be written to and read from mocked shared memory", "[Sh
       bool lock() { return true; }
       bool unlock() { return true; }
 
+      void clear()
+      {
+        for (int i = 0; i < buffer.size(); ++i) {
+          buffer[i] = '\0';
+        }
+      }
+
       QVector<char> buffer;
     };
 
@@ -124,6 +131,20 @@ SCENARIO("Video data can be written to and read from mocked shared memory", "[Sh
 
         for (size_t i = offset; i < static_cast<size_t>(writtenVector.size()); ++i) {
           REQUIRE(writtenVector[i] == fakeVideoData[i - offset]);
+        }
+      }
+
+      WHEN("clear() is called") {
+        subject.clear();
+
+        THEN("the memory buffer is zeroed out") {
+          for (int i = 0; i < writtenVector.size(); ++i) {
+            writtenVector[i] = writtenBuffer[i];
+          }
+
+          for (const char &c : writtenVector) {
+            REQUIRE(c == '\0');
+          }
         }
       }
 

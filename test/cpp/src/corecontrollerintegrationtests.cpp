@@ -23,17 +23,18 @@ SCENARIO("core controller can handle loading games and cores with real dependenc
     REQUIRE(QFile::exists(workingCorePath) == true);
     REQUIRE(QFile::exists(workingGamePath) == true);
 
-    WHEN("a valid core and game are used") {
-
+    WHEN("init() is called with a valid core and game") {
       REQUIRE(subject.init(workingCorePath, workingGamePath).isEmpty == false);
       subject.run();
-
     }
 
-    WHEN("an invalid core and game are used") {
-
+    WHEN("init() is called with an invalid core and game") {
       REQUIRE(subject.init("bad/core/path", "bad/game/path").isEmpty == true);
+    }
 
+    WHEN("fini() is called after a successful init()") {
+      REQUIRE(subject.init(workingCorePath, workingGamePath).isEmpty == false);
+      subject.fini();
     }
   }
 }

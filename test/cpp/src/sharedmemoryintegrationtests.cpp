@@ -86,6 +86,22 @@ SCENARIO("Keyboard states can be read from a real memory buffer", "[SharedMemory
           REQUIRE(emptyKeyStates[i] == fakeKeyStates[i]);
         }
       }
+
+      WHEN("clear() is called") {
+        subject.clear();
+
+        THEN("the memory buffer is zeroed out") {
+          REQUIRE(mockedFrontendKeyStatesBuffer.isAttached() == true);
+          REQUIRE(mockedFrontendKeyStatesBuffer.lock() == true);
+
+          QVector<char> destMemoryBlock(mockedFrontendKeyStatesBuffer.size(), '1');
+          qint16* mockedBuffer = static_cast<qint16*>(mockedFrontendKeyStatesBuffer.data());
+          memcpy(destMemoryBlock.data(), mockedBuffer, mockedFrontendKeyStatesBuffer.size());
+
+          REQUIRE_FALSE(destMemoryBlock.contains('1'));
+          REQUIRE(mockedFrontendKeyStatesBuffer.unlock() == true);
+        }
+      }
     }
 
     WHEN("readKeyboardStates() is called with a size >= the video frame offset") {

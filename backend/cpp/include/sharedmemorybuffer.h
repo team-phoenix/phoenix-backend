@@ -123,6 +123,19 @@ public:
     return memory.attach(Memory::AccessMode::ReadWrite);
   }
 
+  void clear()
+  {
+    memory.lock();
+    char* buffer = static_cast<char*>(memory.data());
+    const char src = '\0';
+
+    for (int i = 0; i < memory.size(); ++i) {
+      memcpy(buffer + i, &src, sizeof(src));
+    }
+
+    memory.unlock();
+  }
+
 private:
   Memory memory;
   bool opened{ false };

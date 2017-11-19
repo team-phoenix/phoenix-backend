@@ -2,13 +2,16 @@
 
 #include <QFile>
 
-class Game
+template<typename GameFile = QFile,
+         typename GameBuffer = QByteArray,
+         typename GameFilePath = QByteArray>
+class Game_T
 {
 public:
 
-  Game() = default;
+  Game_T() = default;
 
-  ~Game()
+  ~Game_T()
   {
     clear();
     close();
@@ -16,11 +19,12 @@ public:
 
   void open(QString gamePath)
   {
-    if (!QFile::exists(gamePath)) {
+    gameFile.setFileName(gamePath);
+
+    if (!gameFile.exists()) {
       throw std::runtime_error(gamePath.toStdString() + " does not exist!");
     }
 
-    gameFile.setFileName(gamePath);
     gameFilePath = gamePath.toLocal8Bit();
 
     if (!gameFile.open(QIODevice::ReadOnly)) {
@@ -61,10 +65,16 @@ public:
     }
 
     buffer = gameFile.readAll();
+
+    if (buffer.size() == 0) {
+      throw std::runtime_error("The game buffer is empty after copying from the game");
+    }
   }
 
 private:
-  QByteArray buffer;
-  QFile gameFile;
-  QByteArray gameFilePath;
+  GameBuffer buffer;
+  GameFile gameFile;
+  GameFilePath gameFilePath;
 };
+
+using Game = Game_T<>;
