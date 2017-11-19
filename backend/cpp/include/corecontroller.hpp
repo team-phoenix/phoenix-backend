@@ -61,7 +61,7 @@ public:
     dylibCore.retro_run();
   }
 
-  void openGame(const retro_system_info &systemInfo)
+  retro_game_info openGame(const retro_system_info &systemInfo)
   {
     // Argument struct for symbols.retro_load_game()
     retro_game_info gameInfo = {};
@@ -86,9 +86,12 @@ public:
       gameInfo.meta = "";
 
       game.close();
+
     }
 
     dylibCore.retro_load_game(&gameInfo);
+
+    return gameInfo;
   }
 
   void fillSystemInfo(SystemInfo &info)

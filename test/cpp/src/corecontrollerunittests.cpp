@@ -53,12 +53,16 @@ SCENARIO("The core controller can handle loading a game and core")
 
     };
 
+    static const char* gameFilePath = "game/file/path.rom";
+    static const char* gameBufferData = "game/buffer/data";
+    static const int gameBufferSize = 256;
+
     struct MockGame {
       void open(QString) {}
       void close() {}
-      const char* constData() const { return nullptr; }
-      int size() const { return 0; }
-      const char* filePath() const { return nullptr; }
+      const char* constData() const { return gameBufferData; }
+      int size() const { return gameBufferSize; }
+      const char* filePath() const { return gameFilePath; }
       void copyToRam() {}
     };
 
@@ -66,6 +70,32 @@ SCENARIO("The core controller can handle loading a game and core")
     Subject subject;
     WHEN("init() is called with a core and game path") {
       REQUIRE_NOTHROW(subject.init("/core/path", "/game/path"));
+    }
+
+    WHEN("openGame() is called with 'need_fullpath = true'") {
+      retro_system_info systemInfo = {};
+      systemInfo.need_fullpath = true;
+
+      THEN("the game info path is filled in") {
+        retro_game_info gameInfo = subject.openGame(systemInfo);
+        REQUIRE(gameInfo.path == gameFilePath);
+        REQUIRE(gameInfo.data == nullptr);
+        REQUIRE(gameInfo.size == 0);
+        REQUIRE(QString(gameInfo.meta) == "");
+      }
+    }
+
+    WHEN("openGame() is called with 'need_fullpath = false'") {
+      retro_system_info systemInfo = {};
+      systemInfo.need_fullpath = false;
+
+      THEN("the game info path is filled in") {
+        retro_game_info gameInfo = subject.openGame(systemInfo);
+        REQUIRE(gameInfo.path == nullptr);
+        REQUIRE(gameInfo.data == gameBufferData);
+        REQUIRE(gameInfo.size == gameBufferSize);
+        REQUIRE(QString(gameInfo.meta) == "");
+      }
     }
   }
 }
