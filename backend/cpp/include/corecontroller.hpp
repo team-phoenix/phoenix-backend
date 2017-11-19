@@ -4,13 +4,15 @@
 #include "sharedmemorybuffer.h"
 #include "core.hpp"
 #include "game.hpp"
+#include "inputmanager.hpp"
 #include "logging.h"
 
 #include <QDebug>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,
-         typename GameRom = Game>
+         typename GameRom = Game,
+         typename InputStateManager = InputManager>
 class CoreController_T
 {
 public:
@@ -59,8 +61,9 @@ public:
     memory.clear();
   }
 
-  void reset() {
-      fini();
+  void reset()
+  {
+    fini();
   }
 
   void run()
@@ -144,6 +147,7 @@ private:
   Memory memory;
   DylibCore dylibCore;
   GameRom game;
+  InputStateManager inputManager;
 
 public:
 
@@ -180,7 +184,10 @@ public:
 
   static void inputPollCallback(void)
   {
-//    instance().memory.readKeyboardStates();
+    qint16* keyboardBuffer = instance().inputManager.getKeyboardBuffer();
+    const int keyboardBufferSize = instance().inputManager.getKeyboardBufferSize();
+
+    instance().memory.readKeyboardStates(keyboardBuffer, keyboardBufferSize + sizeof(qint16));
   }
 
 //  static void logCallback(enum retro_log_level level, const char* fmt, ...) {

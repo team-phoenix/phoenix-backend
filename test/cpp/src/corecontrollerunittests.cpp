@@ -12,6 +12,7 @@ SCENARIO("The core controller can handle loading a game and core")
       bool isOpened() { return true; }
       bool open(int) { return true; }
       void clear() {}
+      void readKeyboardStates(qint16*, size_t) {}
     };
 
     static retro_game_info retroLoadGameArg = {};
@@ -109,7 +110,13 @@ SCENARIO("The core controller can handle loading a game and core")
       void clear() {}
     };
 
-    using Subject = CoreController_T<MockMemory, MockCore, MockGame>;
+    struct MockInputManager {
+      void poll() {}
+      qint16* getKeyboardBuffer() const { return nullptr; }
+      int getKeyboardBufferSize() const { return 0; }
+    };
+
+    using Subject = CoreController_T<MockMemory, MockCore, MockGame, MockInputManager>;
     Subject subject;
     WHEN("init() is called with a core and game path") {
       REQUIRE_NOTHROW(subject.init("/core/path", "/game/path"));
