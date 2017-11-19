@@ -1,1 +1,22 @@
---style=java --indent=spaces=4 --min-conditional-indent=0 --align-pointer=name --align-reference=name --attach-namespaces --attach-classes --attach-inlines --attach-extern-c --indent-classes --indent-switches --indent-namespaces --indent-labels --indent-preproc-define --indent-col1-comments --break-blocks --pad-oper --pad-paren-in --unpad-paren --fill-empty-lines --add-brackets --convert-tabs --mode=c
+--style=kr 
+--indent=spaces=2 
+--indent-cases
+--indent-switches
+--indent-preproc-block
+--align-pointer=name 
+--align-reference=name 
+--convert-tabs 
+--attach-namespaces
+--max-code-length=100 
+--max-instatement-indent=120 
+--min-conditional-indent=0
+--pad-header
+--pad-oper
+--pad-comma
+--unpad-paren
+--break-blocks
+--align-pointer=type
+--add-braces
+--add-one-line-braces
+--keep-one-line-blocks
+--keep-one-line-statements

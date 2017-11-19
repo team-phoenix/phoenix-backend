@@ -9,22 +9,20 @@ QtApplication {
     files: {
 
         var headers = [
-                    "../backend/cpp/include/*.h",
-                    "../backend/cpp/include/audio/*.h",
-                    "../backend/cpp/include/input/*.h",
+//                    "../backend/cpp/include/*.h",
+//                    "../backend/cpp/include/audio/*.h",
+//                    "../backend/cpp/include/input/*.h",
 
-                    "cpp/include/integration/*.hpp",
-                    "cpp/include/unit/*.hpp",
+//                    "cpp/include/integration/*.hpp",
+//                    "cpp/include/unit/*.hpp",
 
-                    "cpp/src/*.cpp",
                 ]
 
         var sources = [
-                    "../backend/cpp/src/*.cpp",
-                    "../backend/cpp/src/audio/*.cpp",
-                    "../backend/cpp/src/input/*.cpp",
+                    "../backend/cpp/src/sharedmemorybuffer.cpp",
+//                    "../backend/cpp/src/audio/*.cpp",
+//                    "../backend/cpp/src/input/*.cpp",
                     "cpp/src/*.cpp",
-                    "*.h",
                     "*.cpp",
 
                     "snes_test_roms/*.qrc",
