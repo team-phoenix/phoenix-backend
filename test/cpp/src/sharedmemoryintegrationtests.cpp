@@ -18,7 +18,7 @@ SCENARIO("Video data can be written to and read from real shared memory", "[Shar
     const uint height = 2;
     const uint pitch = width + 2;
 
-    REQUIRE_NOTHROW(subject.open(pitch));
+    REQUIRE_NOTHROW(subject.open(pitch * height * sizeof(char)));
 
     WHEN("writeVideoFrame() is called with a correct buffer size") {
 

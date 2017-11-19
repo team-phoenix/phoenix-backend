@@ -7,7 +7,7 @@
 
 static const QString MEMORY_KEY = QStringLiteral("PHX_FUR_LYFE_BABY!");
 static const int MEMORY_KEY_STATES_OFFSET = 0;
-static const int MEMORY_VIDEO_FRAME_OFFSET = (RETRO_DEVICE_ID_JOYPAD_R3 + 1)* sizeof(qint16);
+static const int MEMORY_VIDEO_FRAME_OFFSET = (RETRO_DEVICE_ID_JOYPAD_R3 + 1) * sizeof(qint16);
 
 template<typename Memory = QSharedMemory>
 class SharedMemoryBuffer_T
@@ -78,6 +78,11 @@ public:
     }
   }
 
+  bool isOpened() const
+  {
+    return opened;
+  }
+
   void open(int size)
   {
     memory.setKey(MEMORY_KEY);
@@ -89,6 +94,8 @@ public:
     if (!memory.create(size, Memory::AccessMode::ReadWrite)) {
       throw std::runtime_error(memory.errorString().toStdString());
     }
+
+    opened = true;
   }
 
   int keyboardStatesMemoryOffset() const
@@ -103,7 +110,7 @@ public:
 
   bool close()
   {
-    return memory.detach();
+    return (opened = memory.detach());
   }
 
   int size() const
@@ -118,6 +125,7 @@ public:
 
 private:
   Memory memory;
+  bool opened{ false };
 };
 
 using SharedMemoryBuffer = SharedMemoryBuffer_T<>;
