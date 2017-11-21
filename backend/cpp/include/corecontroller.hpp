@@ -130,6 +130,14 @@ private:
     dylibCore.retro_set_input_state(&CoreController_T::inputStateCallback);
     dylibCore.retro_set_video_refresh(&CoreController_T::videoRefreshCallback);
   }
+
+  void readKeyStatesInputManager()
+  {
+    qint16* keyboardBuffer = inputManager.getKeyboardBuffer();
+    const int keyboardBufferSize = inputManager.getKeyboardBufferSize();
+    memory.readKeyboardStates(keyboardBuffer, keyboardBufferSize + sizeof(qint16));
+  }
+
 // Optional
 //  static uintptr_t getFramebufferCallback(void) {
 
@@ -184,10 +192,8 @@ public:
 
   static void inputPollCallback(void)
   {
-    qint16* keyboardBuffer = instance().inputManager.getKeyboardBuffer();
-    const int keyboardBufferSize = instance().inputManager.getKeyboardBufferSize();
-
-    instance().memory.readKeyboardStates(keyboardBuffer, keyboardBufferSize + sizeof(qint16));
+    instance().inputManager.poll();
+    instance().readKeyStatesInputManager();
   }
 
 //  static void logCallback(enum retro_log_level level, const char* fmt, ...) {
@@ -212,6 +218,7 @@ public:
 
     instance().memory.writeVideoFrame(static_cast<const char*>(data), width, height, pitch);
   }
+
 };
 
 using CoreController = CoreController_T<>;
