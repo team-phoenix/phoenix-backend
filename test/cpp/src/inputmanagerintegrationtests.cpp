@@ -28,3 +28,35 @@ SCENARIO("The input manager has working defaults to fit 16 key states")
     }
   }
 }
+
+SCENARIO("The input manager has working defaults to fit 16 gamepads")
+{
+  GIVEN("a real input manager") {
+
+    InputManager subject;
+    WHEN("InputManager() constructor is called") {
+
+      THEN("the gamepad buffer holds 16 controller states") {
+        REQUIRE(subject.getControllerStates().size() == 16);
+      }
+
+      THEN("controller states are of size 16") {
+        auto &allGamepadStates = subject.getControllerStates();
+
+        for (const QVector<qint16> &states : allGamepadStates) {
+          REQUIRE(states.size() == 16);
+        }
+      }
+
+      THEN("the gamepad buffer states are zeroed out") {
+        auto &allGamepadStates = subject.getControllerStates();
+
+        for (const QVector<qint16> &states : allGamepadStates) {
+          for (qint16 s : states) {
+            REQUIRE(s == 0);
+          }
+        }
+      }
+    }
+  }
+}
