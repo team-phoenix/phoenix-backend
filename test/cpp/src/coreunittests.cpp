@@ -55,7 +55,6 @@ SCENARIO("A core can load a valid core path with a mocked library")
         REQUIRE(subject.retro_set_input_poll == nullptr);
         REQUIRE(subject.retro_set_input_state == nullptr);
         REQUIRE(subject.retro_set_video_refresh == nullptr);
-
       }
     }
 
