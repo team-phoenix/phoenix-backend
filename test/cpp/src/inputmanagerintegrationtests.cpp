@@ -78,6 +78,21 @@ inline SDL_Event createControllerButtonEvent(quint32 type, SDL_JoystickID which,
   return event;
 }
 
+inline SDL_Event createControllerAxisEvent(quint32 type, SDL_JoystickID which,
+                                           quint8 axis,
+                                           qint16 value)
+{
+  SDL_ControllerAxisEvent controllerEvent;
+  controllerEvent.type = type;
+  controllerEvent.which = which;
+  controllerEvent.axis = axis;
+  controllerEvent.value = value;
+
+  SDL_Event event;
+  event.caxis = controllerEvent;
+  return event;
+}
+
 inline void pushEvents(QList<SDL_Event> &events)
 {
   for (SDL_Event &event : events) {
@@ -127,35 +142,49 @@ SCENARIO("The user has their gamepad buffer updated when there are new input eve
                                                            i, SDL_RELEASED));
     }
 
+    const int sdlAxisMovedValue = 3000;
+
+    QList<SDL_Event> sdlTriggerAxisEvents;
+    sdlTriggerAxisEvents.append(createControllerAxisEvent(SDL_CONTROLLERAXISMOTION,
+                                                          which,
+                                                          SDL_CONTROLLER_AXIS_TRIGGERLEFT, sdlAxisMovedValue));
+    sdlTriggerAxisEvents.append(createControllerAxisEvent(SDL_CONTROLLERAXISMOTION,
+                                                          which,
+                                                          SDL_CONTROLLER_AXIS_TRIGGERRIGHT, sdlAxisMovedValue));
+
+    QList<SDL_Event> sdlReleasedAxisEvents;
+    sdlReleasedAxisEvents.append(createControllerAxisEvent(SDL_CONTROLLERAXISMOTION,
+                                                           which,
+                                                           SDL_CONTROLLER_AXIS_TRIGGERLEFT, 0));
+    sdlReleasedAxisEvents.append(createControllerAxisEvent(SDL_CONTROLLERAXISMOTION,
+                                                           which,
+                                                           SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0));
+
     WHEN("all button down events are fired") {
       addController(which);
       pushEvents(sdlButtonDownEvents);
+      pushEvents(sdlTriggerAxisEvents);
       subject.updateControllerStates();
 
       THEN("the gamepad states will be all set to SDL_PRESSED") {
-
-        // TODO - Fix that last state, 15, the push events stuff only pushed up to event 14
-
-        for (int i = RETRO_DEVICE_ID_JOYPAD_B; i < RETRO_DEVICE_ID_JOYPAD_R3/* + 1*/; ++i) {
+        for (int i = RETRO_DEVICE_ID_JOYPAD_B; i < RETRO_DEVICE_ID_JOYPAD_R3 + 1; ++i) {
           qint16 state = subject.getInputState(0, RETRO_DEVICE_JOYPAD, 0, i);
-          REQUIRE(state == SDL_PRESSED);
-          qDebug() << i << state;
+          const bool downWasSet = (state == SDL_PRESSED || state == sdlAxisMovedValue);
+          REQUIRE(downWasSet == true);
         }
-
       }
     }
 
     WHEN("all button up events are fired") {
       addController(which);
       pushEvents(sdlButtonDownEvents);
+      pushEvents(sdlTriggerAxisEvents);
+      pushEvents(sdlReleasedAxisEvents);
       pushEvents(sdlButtonUpEvents);
       subject.updateControllerStates();
 
       THEN("the gamepad states will be all set to SDL_RELEASED") {
-
-        // TODO - Fix that last state, 15, the push events stuff only pushed up to event 14
-
-        for (int i = RETRO_DEVICE_ID_JOYPAD_B; i < RETRO_DEVICE_ID_JOYPAD_R3/* + 1*/; ++i) {
+        for (int i = RETRO_DEVICE_ID_JOYPAD_B; i < RETRO_DEVICE_ID_JOYPAD_R3 + 1; ++i) {
           qint16 state = subject.getInputState(0, RETRO_DEVICE_JOYPAD, 0, i);
           REQUIRE(state == SDL_RELEASED);
         }
