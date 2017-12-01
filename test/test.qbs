@@ -12,6 +12,7 @@ QtApplication {
 //                    "../backend/cpp/include/*.h",
 //                    "../backend/cpp/include/audio/*.h",
 //                    "../backend/cpp/include/input/*.h",
+                      "../backend/cpp/include/*.hpp",
 
 //                    "cpp/include/integration/*.hpp",
 //                    "cpp/include/unit/*.hpp",
@@ -26,6 +27,7 @@ QtApplication {
                     "*.cpp",
 
                     "snes_test_roms/*.qrc",
+                    "../externals/sdl_gamecontrollerdb/*.qrc",
                  ]
 
         return headers.concat( sources )
