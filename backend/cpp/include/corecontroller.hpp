@@ -7,7 +7,7 @@
 #include "inputmanager.hpp"
 #include "logging.h"
 
-#include <QDebug>
+#include <QVarLengthArray>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,
@@ -157,6 +157,7 @@ private:
   GameRom game;
   InputStateManager inputManager;
 
+
 public:
 
   static CoreController_T &instance()
@@ -183,6 +184,52 @@ public:
     Q_UNUSED(data);
 
     switch (cmd) {
+      case RETRO_ENVIRONMENT_GET_OVERSCAN: {
+          bool* result = static_cast<bool*>(data);
+          *result = true;
+          return true;
+        }
+
+      case RETRO_ENVIRONMENT_GET_VARIABLE: {
+//          struct retro_variable* variable = static_cast<retro_variable*>(data);
+//          const QString variableKey(variable->key);
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: {
+          bool* result = static_cast<bool*>(data);
+          *result = false;
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_SET_VARIABLES: {
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: {
+          const struct retro_controller_info* controllerInfo =
+              static_cast<const struct retro_controller_info*>(data);
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
+          struct retro_log_callback* logcb = (struct retro_log_callback*)data;
+          logcb->log = logCallback;
+          return true;
+        }
+
+      case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: {
+          return false;
+        }
+
+      case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS: {
+          return false;
+        }
+
       default:
         break;
     }
@@ -192,8 +239,8 @@ public:
 
   static void inputPollCallback(void)
   {
-    instance().inputManager.poll();
-    instance().readKeyStatesInputManager();
+//    instance().inputManager.poll();
+//    instance().readKeyStatesInputManager();
   }
 
 //  static void logCallback(enum retro_log_level level, const char* fmt, ...) {
@@ -217,6 +264,62 @@ public:
     }
 
     instance().memory.writeVideoFrame(static_cast<const char*>(data), width, height, pitch);
+  }
+
+  static void logCallback(retro_log_level level, const char* fmt, ...)
+  {
+    QVarLengthArray<char, 1024> outbuf(1024);
+    va_list args;
+    va_start(args, fmt);
+    int ret = vsnprintf(outbuf.data(), outbuf.size(), fmt, args);
+
+    if (ret < 0) {
+      qCDebug(phxCore) << "logCallback: could not format string";
+      va_end(args);
+      return;
+    } else if ((ret + 1) > outbuf.size()) {
+      outbuf.resize(ret + 1);
+      ret = vsnprintf(outbuf.data(), outbuf.size(), fmt, args);
+
+      if (ret < 0) {
+        qCDebug(phxCore) << "logCallback: could not format string";
+        va_end(args);
+        return;
+      }
+    }
+
+    va_end(args);
+
+    // remove trailing newline, which are already added by qCDebug
+    if (outbuf.value(ret - 1) == '\n') {
+      outbuf[ret - 1] = '\0';
+
+      if (outbuf.value(ret - 2) == '\r') {
+        outbuf[ret - 2] = '\0';
+      }
+    }
+
+    switch (level) {
+      case RETRO_LOG_DEBUG:
+        qCDebug(phxCore) << "RETRO_LOG_DEBUG:" << outbuf.data();
+        break;
+
+      case RETRO_LOG_INFO:
+        qCInfo(phxCore) << "RETRO_LOG_INFO:" << outbuf.data();
+        break;
+
+      case RETRO_LOG_WARN:
+        qCWarning(phxCore) << "RETRO_LOG_WARN:" << outbuf.data();
+        break;
+
+      case RETRO_LOG_ERROR:
+        qCCritical(phxCore) << "RETRO_LOG_ERROR:" << outbuf.data();
+        break;
+
+      default:
+        qCWarning(phxCore) << "RETRO_LOG (unknown category!?):" << outbuf.data();
+        break;
+    }
   }
 
 };

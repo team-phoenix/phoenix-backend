@@ -72,11 +72,11 @@ public:
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
-      /*
-        qCDebug(phxInput) << event.cbutton.type
-                          << event.cbutton.which
-                          << event.cbutton.button
-                          << event.cbutton.state;*/
+
+//      qCDebug(phxInput) << event.cbutton.type
+//                        << event.cbutton.which
+//                        << event.cbutton.button
+//                        << event.cbutton.state;
 
       switch (event.type) {
         case SDL_CONTROLLERDEVICEADDED:
