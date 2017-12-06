@@ -41,8 +41,8 @@ public:
     controllerDbFile.open(QIODevice::ReadOnly);
     const QByteArray controllerDbData = controllerDbFile.readAll();
 
-    if (SDL_GameControllerAddMapping(controllerDbData) != 1) {
-      throw std::runtime_error(SDL_GetError());
+    if (SDL_GameControllerAddMapping(controllerDbData) == -1) {
+      throw std::runtime_error(qPrintable(QString("SDL Error: " + QString(SDL_GetError()))));
     }
   }
 

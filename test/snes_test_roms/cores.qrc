@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>bsnes_balanced_libretro.dll</file>
+        <file>debug_snes_core.dll</file>
     </qresource>
 </RCC>

@@ -9,7 +9,7 @@ SCENARIO("A core can load a valid core path with a real library")
 {
   GIVEN("a real core") {
 
-    const QString qrcCorePath = ":/bsnes_balanced_libretro.dll";
+    const QString qrcCorePath = ":/debug_snes_core.dll";
     const QString qrcGamePath = ":/bsnesdemo_v1.sfc";
 
     const QString workingCorePath = QDir::temp().filePath("tempCore.sfc");

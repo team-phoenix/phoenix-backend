@@ -11,7 +11,7 @@ SCENARIO("core controller can handle loading games and cores with real dependenc
 
     CoreController subject;
 
-    const QString qrcCorePath = ":/bsnes_balanced_libretro.dll";
+    const QString qrcCorePath = ":/debug_snes_core.dll";
     const QString qrcGamePath = ":/bsnesdemo_v1.sfc";
 
     const QString workingCorePath = QDir::temp().filePath("tempCore.sfc");
@@ -25,7 +25,7 @@ SCENARIO("core controller can handle loading games and cores with real dependenc
 
     WHEN("init() is called with a valid core and game") {
       REQUIRE(subject.init(workingCorePath, workingGamePath).isEmpty == false);
-//      subject.run();
+      subject.run();
     }
 
     WHEN("init() is called with an invalid core and game") {
@@ -45,7 +45,7 @@ SCENARIO("The core environment GET callbacks should be all handled properly")
 
     CoreController subject;
 
-    const QString qrcCorePath = ":/bsnes_balanced_libretro.dll";
+    const QString qrcCorePath = ":/debug_snes_core.dll";
     const QString qrcGamePath = ":/bsnesdemo_v1.sfc";
 
     const QString workingCorePath = QDir::temp().filePath("tempCore.sfc");
