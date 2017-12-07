@@ -62,15 +62,33 @@ SCENARIO("The core environment GET callbacks should be all handled properly")
         REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_GET_OVERSCAN, &data));
         REQUIRE(data == true);
       }
-// TODO - Finish this
 
-//      THEN("environmentCallback(): RETRO_ENVIRONMENT_GET_VARIABLE should return true and set data to non null") {
-//        struct retro_variable variable;
-//        variable.key = "snes9x_next_overclock";
-//        variable.value = nullptr;
-//        REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_GET_VARIABLE, &variable));
-//        REQUIRE(variable.value != nullptr);
-//      }
+      THEN("environmentCallback(): RETRO_ENVIRONMENT_GET_VARIABLE "
+           "RETRO_ENVIRONMENT_SET_VARIABLES "
+           "RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE "
+           "retro variables can get set and read back") {
+        struct retro_variable vars[] = {
+          { "snes9x_next_overclock", "SuperFX Overclock; Disabled(10MHz)|40MHz|60MHz|80MHz|100MHz|Underclock(5MHz)|Underclock(8MHz)" },
+          { NULL, NULL },
+        };
+        REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_SET_VARIABLES, vars));
+
+        struct retro_variable variable;
+        variable.key = "snes9x_next_overclock";
+        variable.value = nullptr;
+
+        REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_GET_VARIABLE, &variable));
+        REQUIRE(QString(variable.value) == QString("Disabled(10MHz)"));
+      }
+
+      // TODO - Finish this mess
+      THEN("environmentCallback(): RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE should return true and set data to non null") {
+        bool data = true;
+        REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &data) == false);
+        REQUIRE(data == false);
+
+        //...
+      }
     }
   }
 }

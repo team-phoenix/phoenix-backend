@@ -6,8 +6,10 @@
 #include "game.hpp"
 #include "inputmanager.hpp"
 #include "logging.h"
+#include "retrovariablevalue.hpp"
 
 #include <QVarLengthArray>
+#include <QHash>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,
@@ -156,7 +158,7 @@ private:
   DylibCore dylibCore;
   GameRom game;
   InputStateManager inputManager;
-
+  QHash<const char*, RetroVariableValue> retroVariableMap;
 
 public:
 
@@ -191,8 +193,15 @@ public:
         }
 
       case RETRO_ENVIRONMENT_GET_VARIABLE: {
-//          struct retro_variable* variable = static_cast<retro_variable*>(data);
-//          const QString variableKey(variable->key);
+          //qCDebug( phxCore ) << "\tRETRO_ENVIRONMENT_GET_VARIABLE (15)(handled)";
+          retro_variable* retroVariable = static_cast<retro_variable*>(data);
+          retroVariable->value = nullptr;
+
+          if (instance().retroVariableMap.contains(retroVariable->key)) {
+            retroVariable->value = instance().retroVariableMap[retroVariable->key].getChosenValue();
+            return true;
+          }
+
           return false;
         }
 
@@ -203,7 +212,21 @@ public:
         }
 
       case RETRO_ENVIRONMENT_SET_VARIABLES: {
-          return false;
+          const retro_variable* variable = static_cast<const retro_variable*>(data);
+
+          for (; variable->key != nullptr; ++variable) {
+
+            if (variable->key != nullptr && variable->value != nullptr) {
+
+              const RetroVariableValue retroVariableValue(variable->value);
+
+              if (retroVariableValue.isValid) {
+                instance().retroVariableMap.insert(variable->key, retroVariableValue);
+              }
+            }
+          }
+
+          return true;
         }
 
       case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: {
