@@ -89,6 +89,16 @@ SCENARIO("The core environment GET callbacks should be all handled properly")
 
         //...
       }
+
+      THEN("environmentCallback(): RETRO_ENVIRONMENT_GET_LOG_INTERFACE the core can log to stdout, stdin, and stderr") {
+        retro_log_callback logCallback;
+        logCallback.log = nullptr;
+        REQUIRE(CoreController::environmentCallback(RETRO_ENVIRONMENT_GET_LOG_INTERFACE,
+                                                    &logCallback) == true);
+        REQUIRE(logCallback.log == CoreController::logCallback);
+      }
+
+
     }
   }
 }

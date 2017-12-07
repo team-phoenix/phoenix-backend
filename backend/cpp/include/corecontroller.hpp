@@ -10,6 +10,7 @@
 
 #include <QVarLengthArray>
 #include <QHash>
+#include <QElapsedTimer>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,
@@ -253,12 +254,18 @@ public:
           return false;
         }
 
+      case RETRO_ENVIRONMENT_GET_PERF_INTERFACE: {
+//          struct retro_perf_callback* performanceCallback = static_cast<retro_perf_callback*>(data);
+          return false;
+        }
+
       default:
         break;
     }
 
     return false;
   }
+
 
   static void inputPollCallback(void)
   {
