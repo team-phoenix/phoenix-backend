@@ -25,9 +25,9 @@ QByteArray waitForSocketReadAll(QLocalSocket &socket)
   return QByteArray();
 }
 
-SCENARIO("")
+SCENARIO("The separate process can send messages to the local server")
 {
-  GIVEN("") {
+  GIVEN("a real local server") {
 
     RestServer subject;
 
@@ -41,7 +41,7 @@ SCENARIO("")
       REQUIRE(false);
     }
 
-    WHEN("") {
+    WHEN("a request was sent to the local server") {
       const QJsonObject fakeRequest({{ "hello", "world" }});
       const auto expectedResponse = RestServer::JSONObjectToByteArray(fakeRequest);
       subject.sendRequest(fakeRequest);
@@ -50,7 +50,7 @@ SCENARIO("")
 
       const auto actualResponse = waitForSocketReadAll(stubSocket);
 
-      THEN("") {
+      THEN("the response can be read back") {
         REQUIRE(actualResponse == expectedResponse);
       }
     }
