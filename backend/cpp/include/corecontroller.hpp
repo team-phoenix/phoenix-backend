@@ -1,6 +1,5 @@
 #pragma once
 
-#include "catch.hpp"
 #include "sharedmemorybuffer.h"
 #include "core.hpp"
 #include "game.hpp"
@@ -11,6 +10,8 @@
 #include <QVarLengthArray>
 #include <QHash>
 #include <QElapsedTimer>
+#include <QTimer>
+#include <QObject>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,

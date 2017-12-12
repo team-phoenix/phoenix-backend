@@ -16,6 +16,7 @@ QtApplication {
 
 //                    "cpp/include/integration/*.hpp",
 //                    "cpp/include/unit/*.hpp",
+                    "../externals/verdigris/*.h",
 
                 ]
 
@@ -53,6 +54,7 @@ QtApplication {
         return dirs
     }
 
+    cpp.cxxLanguageVersion: "c++14";
     cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
     cpp.libraryPaths: {
         var paths = []

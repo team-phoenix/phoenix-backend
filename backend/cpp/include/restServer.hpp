@@ -66,6 +66,17 @@ public:
     return false;
   }
 
+  bool requestIsPending() const
+  {
+    const int finishImmediately = 0;
+    return currentSocket->waitForReadyRead(finishImmediately);
+  }
+
+  bool waitForRequest()
+  {
+    return currentSocket->waitForReadyRead();
+  }
+
   void waitForDataWrite(const QByteArray &buffer)
   {
     quint32 size = static_cast<quint32>(buffer.size());
@@ -104,8 +115,39 @@ public:
     currentSocket->flush();
   }
 
+  void readCurrentSocket()
+  {
+    const int avail = currentSocket->bytesAvailable();
+
+    if (currentSocket->bytesAvailable() > 4) {
+      while (currentSocket->bytesAvailable()) {
+
+        quint32 msgSize = 0;
+        currentSocket->read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
+
+
+        if (currentSocket->bytesAvailable() >= msgSize) {
+          QByteArray socketMsg(msgSize, '\0');
+
+          currentSocket->read(socketMsg.data(), msgSize);
+
+          const QJsonObject obj = QJsonDocument::fromJson(socketMsg).object();
+          currentReadObject = obj;
+          emit requestRecieved(obj);
+        }
+      }
+    }
+  }
+
+  QJsonObject takeCurrentRequest()
+  {
+    QJsonObject readObject = currentReadObject;
+    currentReadObject = QJsonObject();
+    return readObject;
+  }
+
 signals:
-  void response(QJsonObject);
+  void requestRecieved(QJsonObject);
 
 //signals:
 //  void broadcastMessage(const QByteArray &t_message, bool waitUntilFinished = false);
@@ -129,29 +171,9 @@ signals:
 private:
   QLocalServer localServer;
   QLocalSocket* currentSocket{ nullptr };
+  QJsonObject currentReadObject;
 
 private slots:
-
-  void readCurrentSocket()
-  {
-    if (currentSocket->bytesAvailable() > 4) {
-      while (currentSocket->bytesAvailable()) {
-
-        quint32 msgSize = 0;
-        currentSocket->read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
-
-
-        if (currentSocket->bytesAvailable() >= msgSize) {
-          QByteArray socketMsg(msgSize, '\0');
-
-          currentSocket->read(socketMsg.data(), msgSize);
-
-          const QJsonObject obj = QJsonDocument::fromBinaryData(socketMsg).object();
-          parseResponse(obj);
-        }
-      }
-    }
-  }
 
   void handleNewConnection()
   {
@@ -179,10 +201,6 @@ private slots:
 
   }
 
-  void parseResponse(const QJsonObject &response)
-  {
-    qDebug() << "got response";
-  }
 
 //  void parseJsonObject(const QJsonObject &t_jsonObject);
 

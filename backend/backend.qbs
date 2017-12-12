@@ -19,8 +19,23 @@ QtApplication {
 
     }
 
-    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "test"] }
+    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui"] }
 
+    cpp.includePaths: {
+        var dirs = [];
+        dirs.push( "cpp/include")
+//        dirs.push( "../backend/cpp/include/input" )
+//        dirs.push( "../backend/cpp/include/audio" )
+
+
+        if ( qbs.targetOS.contains( "windows" ) ) {
+            dirs.push( "C:/msys64/mingw64/include/SDL2" );
+        }
+
+        return dirs;
+    }
+
+    cpp.cxxLanguageVersion: "c++14";
     cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
     cpp.libraryPaths: {
         var paths = []
@@ -32,43 +47,25 @@ QtApplication {
         return paths;
     }
 
-    cpp.includePaths: {
-
-        var sdlPath = "/usr/include/SDL2/"
-
-        var dependencyPaths = [
-                sdlPath,
-                    "C:/msys64/mingw64/include",
-                    "C:/msys64/mingw64/include/SDL2",
-                ]
-
-        var projectPaths = [
-            "cpp/src"
-            , "cpp/include"
-            , "cpp/include/audio"
-            , "cpp/include/input"
-            , "cpp/src/audio/"
-            , "cpp/src/input/"
-        ]
-
-        return projectPaths.concat( dependencyPaths )
-    }
-
     files: {
 
         var headers = [
-                    "cpp/include/*.h",
-                    "cpp/include/audio/*.h",
-                    "cpp/include/input/*.h",
+                    "cpp/include/*.hpp",
+//                    "cpp/include/audio/*.h",
+//                    "cpp/include/input/*.h",
                 ]
 
         var sources = [
-                    "cpp/src/*cpp",
-                    "cpp/src/audio/*.cpp",
-                    "cpp/src/input/*.cpp",
-                    "cpp/src/main/*.cpp"
+//                    "cpp/src/*.cpp",
+//                    "cpp/src/audio/*.cpp",
+//                    "cpp/src/input/*.cpp",
+                    "cpp/src/main/*.cpp",
+                    "cpp/src/logging.cpp",
+
+                    "../externals/sdl_gamecontrollerdb/*.qrc",
                 ]
 
         return headers.concat( sources ).concat( commonPaths )
     }
+
 }

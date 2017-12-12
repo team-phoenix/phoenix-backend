@@ -25,6 +25,45 @@ QByteArray waitForSocketReadAll(QLocalSocket &socket)
   return QByteArray();
 }
 
+void sendRequest(QLocalSocket &socket, const QByteArray &buffer)
+{
+  quint32 size = static_cast<quint32>(buffer.size());
+  const size_t writeSize = sizeof(size);
+
+  qint64 wroteSize = 0;
+
+  while (wroteSize < static_cast<qint64>(writeSize)) {
+
+    auto wrote = socket.write(reinterpret_cast<char*>(&size), writeSize);
+
+    if (wrote == -1) {
+      throw std::runtime_error(
+        qPrintable(QString("There was an error with writing the buffer size to the socket: %1").arg(
+                     QString::number(size))));
+    } else {
+      wroteSize += wrote;
+    }
+  }
+
+  wroteSize = 0;
+
+  while (wroteSize < buffer.size()) {
+
+    auto wrote = socket.write(buffer);
+
+    if (wrote == -1) {
+      throw std::runtime_error(
+        qPrintable(QString("There was an error with writing data to the socket, data: %1").arg(
+                     buffer.constData())));
+    } else {
+      wroteSize += wrote;
+    }
+  }
+
+  socket.flush();
+}
+
+
 SCENARIO("The separate process can send messages to the local server")
 {
   GIVEN("a real local server") {
@@ -41,7 +80,7 @@ SCENARIO("The separate process can send messages to the local server")
       REQUIRE(false);
     }
 
-    WHEN("a request was sent to the local server") {
+    WHEN("a request was sent to the listening server") {
       const QJsonObject fakeRequest({{ "hello", "world" }});
       const auto expectedResponse = RestServer::JSONObjectToByteArray(fakeRequest);
       subject.sendRequest(fakeRequest);
@@ -52,6 +91,21 @@ SCENARIO("The separate process can send messages to the local server")
 
       THEN("the response can be read back") {
         REQUIRE(actualResponse == expectedResponse);
+      }
+    }
+
+    WHEN("a request was sent to the local server") {
+      const QJsonObject fakeRequest({{ "joe", "schmo" }});
+      const auto expectedRequest = RestServer::JSONObjectToByteArray(fakeRequest);
+
+      sendRequest(stubSocket, expectedRequest);
+
+      REQUIRE(subject.waitForRequest() == true);
+
+      const auto actualResponse = subject.takeCurrentRequest();
+
+      THEN("the request can be read back") {
+        REQUIRE(actualResponse == fakeRequest);
       }
     }
 
