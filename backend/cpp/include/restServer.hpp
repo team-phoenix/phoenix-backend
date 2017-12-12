@@ -44,11 +44,6 @@ public:
     currentSocket->waitForBytesWritten();
   }
 
-  void post(QJsonObject request)
-  {
-
-  }
-
   static QByteArray JSONObjectToByteArray(QJsonObject object)
   {
     return QJsonDocument(object).toJson(QJsonDocument::Compact);
@@ -117,8 +112,6 @@ public:
 
   void readCurrentSocket()
   {
-    const int avail = currentSocket->bytesAvailable();
-
     if (currentSocket->bytesAvailable() > 4) {
       while (currentSocket->bytesAvailable()) {
 
@@ -131,7 +124,14 @@ public:
 
           currentSocket->read(socketMsg.data(), msgSize);
 
-          const QJsonObject obj = QJsonDocument::fromJson(socketMsg).object();
+          QJsonParseError parserError;
+          const QJsonObject obj = QJsonDocument::fromJson(socketMsg, &parserError).object();
+
+          if (parserError.error != QJsonParseError::NoError) {
+            throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
+                                                parserError.errorString()));
+          }
+
           currentReadObject = obj;
           emit requestRecieved(obj);
         }
@@ -148,6 +148,7 @@ public:
 
 signals:
   void requestRecieved(QJsonObject);
+  void socketDisconnected();
 
 //signals:
 //  void broadcastMessage(const QByteArray &t_message, bool waitUntilFinished = false);
@@ -197,6 +198,7 @@ private slots:
       qCDebug(phxCore) << "localSocket is disconnected";
       delete currentSocket;
       currentSocket = nullptr;
+      emit socketDisconnected();
     });
 
   }

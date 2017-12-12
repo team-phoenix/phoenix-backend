@@ -2,6 +2,7 @@
 
 #include "corecontroller.hpp"
 #include "restServer.hpp"
+#include "logging.h"
 
 #include <QObject>
 #include <QTimer>
@@ -13,17 +14,8 @@ public:
   EmulationLoop()
   {
     connect(&messageServer, &RestServer::requestRecieved, this, &EmulationLoop::parseRequest);
+    connect(&messageServer, &RestServer::socketDisconnected, this, &EmulationLoop::stop);
     connect(&emulationTimer, &QTimer::timeout, this, &EmulationLoop::loop);
-  }
-
-  void start()
-  {
-    emulationTimer.start();
-  }
-
-  void stop()
-  {
-    emulationTimer.stop();
   }
 
   void startTimerWithInterval(int miliseconds)
@@ -38,6 +30,17 @@ public:
 
 private slots:
 
+  void stop()
+  {
+    emulationTimer.stop();
+    qCDebug(phxLoop) << "timer was stopped";
+  }
+
+  void start()
+  {
+    emulationTimer.start();
+  }
+
   void loop()
   {
     coreController.run();
@@ -45,18 +48,26 @@ private slots:
 
   void parseRequest(QJsonObject request)
   {
-    for (auto iter = request.begin(); iter != request.end(); ++iter) {
-      const QString key = iter.key();
+    const QString requestType = request[ "request" ].toString().simplified();
+    qCDebug(phxLoop, "request %s", qPrintable(requestType));
 
-      if (key == "initEmu") {
-        const QString corePath = request[ "core" ].toString();
-        const QString gamePath = request[ "game" ].toString();
-        coreController.init(corePath, gamePath);
-      } else if (key == "playEmu") {
-        const int miliseconds = 16;
-        startTimerWithInterval(miliseconds);
-      }
+    if (requestType == "initEmu") {
+      const QString corePath = request[ "core" ].toString();
+      const QString gamePath = request[ "game" ].toString();
+      coreController.init(corePath, gamePath);
+      qCDebug(phxLoop) << "initialized emulation";
+
+    } else if (requestType == "playEmu") {
+
+      const int miliseconds = 16;
+      startTimerWithInterval(miliseconds);
+      qCDebug(phxLoop) << "started emulation";
+
+    } else if (requestType == "pauseEmu") {
+      stop();
+      qCDebug(phxLoop) << "paused emulation";
     }
+
   }
 
 private:
