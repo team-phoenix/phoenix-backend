@@ -1,6 +1,8 @@
-<!DOCTYPE RCC>
-<RCC version="1.0">
+<RCC>
     <qresource prefix="/">
-        <file>main.qml</file>
+        <file>src/main.qml</file>
+        <file>src/GameListView.qml</file>
+		
+		<file>test/Test_GameListView.qml</file>
     </qresource>
 </RCC>
