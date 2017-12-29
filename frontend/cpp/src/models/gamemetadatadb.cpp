@@ -117,3 +117,30 @@
 
 //    return true;
 //}
+
+GameMetadataDB::GameMetadataDB()
+  : Database(QCoreApplication::applicationDirPath() +
+             QString("/databases/openvgdb.sqlite"))
+{
+
+}
+
+QList<QVariantHash> GameMetadataDB::findAllReleases()
+{
+  return findAllBy("RELEASES", "*");
+}
+
+QList<QVariantHash> GameMetadataDB::findAllRegions()
+{
+  return findAllBy("REGIONS", "*");
+}
+
+QList<QVariantHash> GameMetadataDB::findAllRoms()
+{
+  return findAllBy("ROMs", "*");
+}
+
+QList<QVariantHash> GameMetadataDB::findAllSystems()
+{
+  return findAllBy("SYSTEMS", "*");
+}
