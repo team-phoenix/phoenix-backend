@@ -2,7 +2,6 @@ import qbs 1.0
 
 QtApplication {
 	id: testApp;
-	name: "test"
 
     Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "test"] }
 

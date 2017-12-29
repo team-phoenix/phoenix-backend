@@ -18,16 +18,16 @@ Project {
     }
 
     SubProject {
-        filePath: "frontend/test/test_frontend.qbs"
+        filePath: "frontend/test/frontend_tests.qbs"
         Properties {
-            name: "test_frontend"
+            name: "frontend_tests"
         }
     }
 
     SubProject {
-        filePath: "test/test.qbs"
+        filePath: "test/backend_tests.qbs"
         Properties {
-            name: "test"
+            name: "backend_tests"
         }
     }
 
