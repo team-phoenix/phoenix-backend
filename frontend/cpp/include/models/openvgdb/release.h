@@ -28,7 +28,7 @@ struct Release {
     releaseID = hash.value("releaseID").toInt();
     romID = hash.value("romID").toInt();
     releaseTitleName = hash.value("releaseTitleName").toString();
-    releaseID = hash.value("releaseID").toInt();
+    regionLocalizedID = hash.value("regionLocalizedID").toInt();
     TEMPregionLocalizedName = hash.value("TEMPregionLocalizedName").toString();
     TEMPsystemShortName = hash.value("TEMPsystemShortName").toString();
     TEMPsystemName = hash.value("TEMPsystemName").toString();
