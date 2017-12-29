@@ -9,7 +9,7 @@ class OpenVgDb : public Database
 public:
   OpenVgDb();
 
-  QList<QVariantHash> findAllReleases();
+  QList<Release> findAllReleases();
 
   QList<QVariantHash> findAllRegions();
 

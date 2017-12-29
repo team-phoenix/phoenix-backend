@@ -15,9 +15,11 @@ class Database
 {
 public:
   Database(QString databaseFilePath);
+  QSqlDatabase databaseConnection();
+
+  QString filePath() const;
 
 protected:
-  QSqlDatabase databaseConnection();
 
   template<typename Result>
   QList<Result> findAllBy(QString table, QString rowName)

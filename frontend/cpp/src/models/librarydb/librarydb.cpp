@@ -51,6 +51,16 @@ void LibraryDb::insert(GameEntry entry)
   }
 }
 
+void LibraryDb::removeAllGameEntries()
+{
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query(db);
+
+  if (!query.exec("DELETE FROM games")) {
+    throw std::runtime_error(qPrintable(query.lastError().text()));
+  }
+}
+
 bool LibraryDb::createSchema(QSqlDatabase &db)
 {
   qCDebug(phxLibrary, "Initializing Library Schema");

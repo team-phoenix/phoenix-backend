@@ -19,10 +19,15 @@ QSqlDatabase Database::databaseConnection()
   }
 
   if (!database.open()) {
-    throw std::runtime_error(qPrintable(database.connectionName() + "could not be opened"));
+    throw std::runtime_error(qPrintable(database.databaseName() + " could not be opened"));
   }
 
   return database;
+}
+
+QString Database::filePath() const
+{
+  return databaseFilePath;
 }
 
 QVariantHash Database::getHashedRowValues(const QSqlRecord &record, const QSqlQuery &query)

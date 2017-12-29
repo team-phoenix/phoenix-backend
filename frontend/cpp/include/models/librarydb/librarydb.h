@@ -12,6 +12,7 @@ public:
   QList<GameEntry> findAllByGameEntry();
 
   void insert(GameEntry entry);
+  void removeAllGameEntries();
 
 private:
   bool createSchema(QSqlDatabase &db);

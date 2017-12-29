@@ -14,12 +14,13 @@ QtApplication {
         return dirs;
     }
 
-    destinationDirectory: app.name;
+    destinationDirectory: "phoenix/" + app.name;
 
     Group {
      name: "Databases";
      qbs.install: true;
      qbs.installDir: "databases";
+     qbs.installPrefix: app.name;
 
      files: [
             "externals/*.sqlite",
