@@ -7,7 +7,10 @@ QtApplication {
     Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "sql"] }
 
     cpp.includePaths: {
-        var dirs = [ "include", "include/models"];
+        var dirs = [ "include"
+                    , "include/models"
+                    , "include/models/librarydb"
+                    , "include/models/openvgdb"];
         return dirs;
     }
 
@@ -19,17 +22,27 @@ QtApplication {
      qbs.installDir: "databases";
 
      files: [
-      "externals/*.sqlite"
-     ]
+            "externals/*.sqlite",
+        ]
     }
 
     cpp.cxxLanguageVersion: "c++14";
     cpp.dynamicLibraries: [ "mingw32" ]
 
     files: {
-        var headers = ["include/*.hpp", "include/*.h", "include/models/*.h"]
-        var qmlFiles = ["qml/*.qrc", "qml/icons/*.qrc"];
-        var sources = ["src/*.cpp", "src/models/*.cpp"];
+        var headers = ["include/*.hpp"
+                       , "include/*.h"
+                       , "include/models/*.h"
+                       , "include/models/librarydb/*.h"
+                       , "include/models/openvgdb/*.h"];
+
+        var qmlFiles = ["qml/*.qrc"
+                        , "qml/icons/*.qrc"];
+
+        var sources = ["src/*.cpp"
+                       , "src/models/*.cpp"
+                       , "src/models/librarydb/*.cpp"
+                       , "src/models/openvgdb/*.cpp"];
 
         return headers.concat( sources ).concat(qmlFiles);
     }

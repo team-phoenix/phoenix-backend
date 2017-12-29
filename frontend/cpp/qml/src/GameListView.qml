@@ -6,7 +6,7 @@ import vg.phoenix.models 1.0
 ListView {
     id: listView;
 
-    model: GameMetadataDatabaseModel {}
+    model: GameEntryDbModel {}
 
     orientation: ListView.Vertical;
     spacing: 24;

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "gamemetadata.h"
+#include "gameentry.h"
 
 #include <QAbstractTableModel>
 #include <QHash>
 
-class GameMetadataDatabaseModel : public QAbstractTableModel
+class GameEntryDbModel : public QAbstractTableModel
 {
   Q_OBJECT
 public:
-  explicit GameMetadataDatabaseModel(QObject* parent = nullptr);
+  explicit GameEntryDbModel(QObject* parent = nullptr);
 
   enum Roles {
     Title,
@@ -29,5 +29,5 @@ public:
 
 private:
   QHash<int, QByteArray> roles;
-  QVector<GameMetadata> gameMetadataCache;
+  QVector<GameEntry> gameMetadataCache;
 };

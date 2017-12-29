@@ -1,4 +1,4 @@
-#include "gamemetadatadb.h"
+#include "openvgdb.h"
 
 #include <QtCore>
 #include <QtSql>
@@ -118,29 +118,39 @@
 //    return true;
 //}
 
-GameMetadataDB::GameMetadataDB()
+OpenVgDb::OpenVgDb()
   : Database(QCoreApplication::applicationDirPath() +
              QString("/databases/openvgdb.sqlite"))
 {
 
 }
 
-QList<QVariantHash> GameMetadataDB::findAllReleases()
+QList<QVariantHash> OpenVgDb::findAllReleases()
 {
-  return findAllBy("RELEASES", "*");
+  return findAllBy<QVariantHash>("RELEASES", "*");
 }
 
-QList<QVariantHash> GameMetadataDB::findAllRegions()
+QList<QVariantHash> OpenVgDb::findAllRegions()
 {
-  return findAllBy("REGIONS", "*");
+  return findAllBy<QVariantHash>("REGIONS", "*");
 }
 
-QList<QVariantHash> GameMetadataDB::findAllRoms()
+QList<QVariantHash> OpenVgDb::findAllRoms()
 {
-  return findAllBy("ROMs", "*");
+  return findAllBy<QVariantHash>("ROMs", "*");
 }
 
-QList<QVariantHash> GameMetadataDB::findAllSystems()
+QList<QVariantHash> OpenVgDb::findAllSystems()
 {
-  return findAllBy("SYSTEMS", "*");
+  return findAllBy<QVariantHash>("SYSTEMS", "*");
+}
+
+QList<Release> OpenVgDb::findReleasesByRomID(QVariant romID)
+{
+  return findRowsByAndWhere<Release>("RELEASES", "romID", romID);
+}
+
+QList<Rom> OpenVgDb::findRomsBySha1(QVariant sha1)
+{
+  return findRowsByAndWhere<Rom>("ROMs", "romHashSHA1", sha1);
 }
