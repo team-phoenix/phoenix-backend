@@ -6,7 +6,7 @@ import vg.phoenix.models 1.0
 ListView {
     id: listView;
 
-    model: GameEntryDbModel {}
+    model: GameMetadataModel {}
 
     orientation: ListView.Vertical;
     spacing: 24;
@@ -43,7 +43,7 @@ ListView {
 
                 fillMode: Image.PreserveAspectFit;
                 Layout.fillHeight: true;
-                source: "qrc:/icons/testImage";
+                source: gameImageSource;
             }
 
             Item {

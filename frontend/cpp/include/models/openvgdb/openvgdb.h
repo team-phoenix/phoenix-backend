@@ -20,4 +20,6 @@ public:
   QList<Release> findReleasesByRomID(QVariant romID);
 
   QList<Rom> findRomsBySha1(QVariant sha1);
+
+  QList<Release> findReleasesBySha1(QVariant sha1);
 };

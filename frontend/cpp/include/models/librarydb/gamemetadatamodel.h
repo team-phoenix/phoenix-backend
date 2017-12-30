@@ -1,15 +1,17 @@
 #pragma once
 
-#include "gameentry.h"
+#include "gamemetadata.h"
+#include "librarydb.h"
+#include "openvgdb.h"
 
 #include <QAbstractTableModel>
 #include <QHash>
 
-class GameEntryDbModel : public QAbstractTableModel
+class GameMetadataModel : public QAbstractTableModel
 {
   Q_OBJECT
 public:
-  explicit GameEntryDbModel(QObject* parent = nullptr);
+  explicit GameMetadataModel(QObject* parent = nullptr);
 
   enum Roles {
     Title,
@@ -27,7 +29,11 @@ public:
 
   QHash<int, QByteArray> roleNames() const override;
 
+  void forceUpdate();
+
 private:
   QHash<int, QByteArray> roles;
-  QVector<GameEntry> gameMetadataCache;
+  QVector<GameMetadata> gameMetadataCache;
+  LibraryDb libraryDb;
+  OpenVgDb openVgDb;
 };

@@ -72,5 +72,19 @@ SCENARIO("OpenVgDb")
                 "http://www.gamefaqs.com/nes/579365-89-dennou-kyuusei-uranai/images/box-20835");
       }
     }
+
+    WHEN("findReleasesBySha1(), is called with a valid sha1") {
+      const QList<Release> releases =
+        subject.findReleasesBySha1("56FE858D1035DCE4B68520F457A0858BAE7BB16D");
+
+      THEN("The returned releases will be greater than 0") {
+        REQUIRE(releases.size() > 0);
+      }
+
+      THEN("The returned release has a romID equal to the ROMs table sha1 row") {
+        const Release &release = releases.first();
+        REQUIRE(release.romID == 1);
+      }
+    }
   }
 }

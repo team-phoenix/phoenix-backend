@@ -44,4 +44,6 @@ struct Release {
     releaseReferenceURL = hash.value("releaseReferenceURL").toString();
     releaseReferenceImageURL = hash.value("releaseReferenceImageURL").toString();
   }
+
+  Release() = default;
 };

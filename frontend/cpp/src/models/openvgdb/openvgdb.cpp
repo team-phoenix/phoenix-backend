@@ -38,3 +38,25 @@ QList<Rom> OpenVgDb::findRomsBySha1(QVariant sha1)
 {
   return findRowsByAndWhere<Rom>("ROMs", "romHashSHA1", sha1);
 }
+
+QList<Release> OpenVgDb::findReleasesBySha1(QVariant sha1)
+{
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query = QSqlQuery(db);
+
+  query.prepare("SELECT RELEASES.* FROM RELEASES INNER JOIN ROMs "
+                "ON ROMs.romID = RELEASES.romID WHERE ROMS.romHashSHA1 = ?;");
+  query.addBindValue(sha1);
+
+  QList<Release> result;
+
+  if (query.exec()) {
+    while (query.next()) {
+      result.append(Release(getHashedRowValues(db.record("RELEASES"), query)));
+    }
+  } else {
+    qDebug() << query.lastError().text() << query.lastQuery();
+  }
+
+  return result;
+}
