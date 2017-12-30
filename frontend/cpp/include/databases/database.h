@@ -15,8 +15,9 @@ class Database
 {
 public:
   Database(QString databaseFilePath);
-  QSqlDatabase databaseConnection();
+  virtual ~Database() = default;
 
+  QSqlDatabase databaseConnection();
   QString filePath() const;
 
 protected:

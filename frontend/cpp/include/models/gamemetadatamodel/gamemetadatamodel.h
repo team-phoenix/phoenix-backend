@@ -12,6 +12,7 @@ class GameMetadataModel : public QAbstractTableModel
   Q_OBJECT
 public:
   explicit GameMetadataModel(QObject* parent = nullptr);
+  ~GameMetadataModel() = default;
 
   enum Roles {
     Title = Qt::UserRole + 1,
@@ -30,7 +31,11 @@ public:
 
   QHash<int, QByteArray> roleNames() const override;
 
+public slots:
   void forceUpdate();
+
+private:
+  void clearCache();
 
 private:
   QHash<int, QByteArray> roles;

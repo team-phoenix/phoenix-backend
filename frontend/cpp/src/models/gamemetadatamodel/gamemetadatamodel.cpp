@@ -1,6 +1,8 @@
 #include "gamemetadatamodel.h"
+#include "gameimporter.h"
 
 #include <QDebug>
+
 
 GameMetadataModel::GameMetadataModel(QObject* parent)
   : QAbstractTableModel(parent),
@@ -12,6 +14,8 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
   { ImageSource, "gameImageSource"},
 })
 {
+  connect(&GameImporter::instance(), &GameImporter::updateModel, this,
+          &GameMetadataModel::forceUpdate);
   forceUpdate();
 }
 
@@ -66,22 +70,39 @@ QHash<int, QByteArray> GameMetadataModel::roleNames() const
 // TODO - Update findReleasesBySha1 to use execBatch().
 void GameMetadataModel::forceUpdate()
 {
-  beginRemoveRows(QModelIndex(), 0, gameMetadataCache.size());
-  endRemoveRows(); \
+
+  clearCache();
 
   QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
-  beginInsertRows(QModelIndex(), gameMetadataCache.size(),
-                  gameMetadataCache.size() + gameEntries.size() - 1);
 
-  gameMetadataCache.clear();
+  if (gameEntries.isEmpty()) {
+    return;
+  }
+
+  beginInsertRows(QModelIndex(), 0, gameEntries.size() - 1);
+
   gameMetadataCache.resize(gameEntries.size());
 
   for (int i = 0; i < gameEntries.size(); ++i) {
     const GameEntry &entry = gameEntries.at(i);
     QList<Release> releases = openVgDb.findReleasesBySha1(entry.sha1Checksum);
-    const Release &release = releases.first();
+    Release release;
+
+    if (!releases.isEmpty()) {
+      release = releases.first();
+    }
+
     gameMetadataCache[i] = GameMetadata(entry, release);
   }
 
   endInsertRows();
+}
+
+void GameMetadataModel::clearCache()
+{
+  if (!gameMetadataCache.isEmpty()) {
+    beginRemoveRows(QModelIndex(), 0, gameMetadataCache.size() - 1);
+    endRemoveRows();
+    gameMetadataCache.clear();
+  }
 }

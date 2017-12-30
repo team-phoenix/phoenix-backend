@@ -4,122 +4,123 @@ import QtQuick.Controls 2.2
 import vg.phoenix.models 1.0
 
 ListView {
-    id: listView;
+    id: listView
 
-    model: GameMetadataModel {}
+    model: GameMetadataModel {
+    }
 
-    orientation: ListView.Vertical;
-    spacing: 12;
+    orientation: ListView.Vertical
+    spacing: 12
 
     ScrollBar.vertical: ScrollBar {
-        policy: ScrollBar.AlwaysOn;
+        policy: ScrollBar.AlwaysOn
     }
 
     delegate: Rectangle {
-        id: listViewDelegate;
+        id: listViewDelegate
 
-        height: 200;
-        width: parent.width;
+        height: 200
+        width: parent.width
 
-        color: "red";
+        color: "red"
 
         RowLayout {
             anchors {
-                fill: parent;
-                margins: spacing;
+                fill: parent
+                margins: spacing
             }
 
-            spacing: 24;
+            spacing: 24
 
             Image {
-                width: 150;
+                width: 150
                 anchors {
-                    left: parent.left;
+                    left: parent.left
                 }
                 sourceSize {
-                    height: 150;
-                    width: 150;
+                    height: 150
+                    width: 150
                 }
 
-                fillMode: Image.PreserveAspectFit;
-                Layout.fillHeight: true;
-                source: gameImageSource;
+                fillMode: Image.PreserveAspectFit
+                Layout.fillHeight: true
+                source: gameImageSource
             }
 
             Item {
-                id: gameMetaSection;
-                Layout.fillWidth: true;
-                Layout.fillHeight: true;
+                id: gameMetaSection
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
                 ColumnLayout {
-                    id: col;
+                    id: col
                     anchors {
-                        fill: parent;
+                        fill: parent
                     }
 
                     Text {
-                        text: qsTr(gameTitle);
+                        text: qsTr(gameTitle)
                         font {
-                            pixelSize: 24;
-                            bold: true;
+                            pixelSize: 24
+                            bold: true
                         }
-                        Layout.fillWidth: true;
-                        color: "white";
-                        elide: Text.ElideRight;
+                        Layout.fillWidth: true
+                        color: "white"
+                        elide: Text.ElideRight
                         Rectangle {
-                            anchors.fill: parent;
-                            color: "black";
-                            z: parent.z - 1;
+                            anchors.fill: parent
+                            color: "black"
+                            z: parent.z - 1
                         }
                     }
 
                     Text {
-                        text: qsTr(gameSystem);
+                        text: qsTr(gameSystem)
                         font {
-                            bold: true;
-                            pixelSize: 12;
+                            bold: true
+                            pixelSize: 12
                         }
-                        Layout.fillWidth: true;
-                        color: "white";
+                        Layout.fillWidth: true
+                        color: "white"
                         Rectangle {
-                            anchors.fill: parent;
-                            color: "black";
-                            z: parent.z - 1;
+                            anchors.fill: parent
+                            color: "black"
+                            z: parent.z - 1
                         }
                     }
 
                     TextArea {
-                        id: descriptionArea;
-                        Layout.fillWidth: true;
-                        Layout.fillHeight: true;
-                        selectByMouse: true;
-                        text: gameDescription;
-                        wrapMode: TextArea.Wrap;
+                        id: descriptionArea
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        selectByMouse: true
+                        text: gameDescription
+                        wrapMode: TextArea.Wrap
 
                         Rectangle {
-                            color: "green";
-                            anchors.fill: parent;
-                            z: parent.z - 1;
+                            color: "green"
+                            anchors.fill: parent
+                            z: parent.z - 1
                         }
                     }
 
                     Rectangle {
-                        id: gameActionSection;
-                        color: "pink";
-                        height: playButton.height;
-                        Layout.fillWidth: true;
+                        id: gameActionSection
+                        color: "pink"
+                        height: playButton.height
+                        Layout.fillWidth: true
                         anchors {
-                            bottom: parent.bottom;
+                            bottom: parent.bottom
                         }
 
                         RowLayout {
                             Button {
-                                id: playButton;
-                                text: qsTr("Play");
+                                id: playButton
+                                text: qsTr("Play")
                             }
 
                             Button {
-                                text: qsTr("Details");
+                                text: qsTr("Details")
                             }
                         }
                     }

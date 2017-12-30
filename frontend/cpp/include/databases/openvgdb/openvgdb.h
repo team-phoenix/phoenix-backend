@@ -9,6 +9,7 @@ class OpenVgDb : public Database
 {
 public:
   OpenVgDb();
+  ~OpenVgDb() = default;
 
   QList<Release> findAllReleases();
 

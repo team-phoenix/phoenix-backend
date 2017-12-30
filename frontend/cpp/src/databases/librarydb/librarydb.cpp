@@ -5,6 +5,7 @@
 #include <QCoreApplication>
 #include <QStringBuilder>
 #include <QSqlQuery>
+#include <QDebug>
 
 LibraryDb::LibraryDb()
   : Database(QCoreApplication::applicationDirPath()  + "/databases/librarydb.sqlite")

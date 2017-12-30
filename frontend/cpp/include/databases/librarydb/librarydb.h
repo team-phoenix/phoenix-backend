@@ -2,12 +2,12 @@
 
 #include "database.h"
 #include "gameentry.h"
-#include <QDebug>
 
 class LibraryDb : public Database
 {
 public:
   LibraryDb();
+  ~LibraryDb() = default;
 
   QList<GameEntry> findAllByGameEntry();
 

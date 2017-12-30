@@ -1,8 +1,10 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 
 #include "gamemetadatamodel.h"
 #include "systemlistmodel.h"
+#include "gameimporter.h"
 
 int main(int argc, char* argv[])
 {
@@ -11,8 +13,12 @@ int main(int argc, char* argv[])
 
   qmlRegisterType<GameMetadataModel>("vg.phoenix.models", 1, 0, "GameMetadataModel");
   qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
+  qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
 
   QQmlApplicationEngine engine;
+  QQmlContext* context = engine.rootContext();
+  context->setContextProperty("gameImporter", &GameImporter::instance());
+
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
 
   if (engine.rootObjects().isEmpty()) {
