@@ -66,6 +66,9 @@ QHash<int, QByteArray> GameMetadataModel::roleNames() const
 // TODO - Update findReleasesBySha1 to use execBatch().
 void GameMetadataModel::forceUpdate()
 {
+  beginRemoveRows(QModelIndex(), 0, gameMetadataCache.size());
+  endRemoveRows(); \
+
   QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
   beginInsertRows(QModelIndex(), gameMetadataCache.size(),
                   gameMetadataCache.size() + gameEntries.size() - 1);

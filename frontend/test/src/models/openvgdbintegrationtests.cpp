@@ -36,7 +36,7 @@ SCENARIO("OpenVgDb")
     }
 
     WHEN("findAllReleases(), is called") {
-      QList<QVariantHash> systems = subject.findAllSystems();
+      QList<System> systems = subject.findAllSystems();
       THEN("It returns a non empty list") {
         REQUIRE(systems.size() == 2);
       }

@@ -2,6 +2,7 @@
 
 #include "rom.h"
 #include "release.h"
+#include "system.h"
 #include "database.h"
 
 class OpenVgDb : public Database
@@ -15,7 +16,7 @@ public:
 
   QList<QVariantHash> findAllRoms();
 
-  QList<QVariantHash> findAllSystems();
+  QList<System> findAllSystems();
 
   QList<Release> findReleasesByRomID(QVariant romID);
 

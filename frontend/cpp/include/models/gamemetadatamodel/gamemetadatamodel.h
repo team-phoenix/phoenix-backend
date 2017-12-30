@@ -14,7 +14,7 @@ public:
   explicit GameMetadataModel(QObject* parent = nullptr);
 
   enum Roles {
-    Title,
+    Title = Qt::UserRole + 1,
     System,
     Description,
     ImageSource,

@@ -24,9 +24,9 @@ QList<QVariantHash> OpenVgDb::findAllRoms()
   return findAllBy<QVariantHash>("ROMs", "*");
 }
 
-QList<QVariantHash> OpenVgDb::findAllSystems()
+QList<System> OpenVgDb::findAllSystems()
 {
-  return findAllBy<QVariantHash>("SYSTEMS", "*");
+  return findAllBy<System>("SYSTEMS", "*");
 }
 
 QList<Release> OpenVgDb::findReleasesByRomID(QVariant romID)

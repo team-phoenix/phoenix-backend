@@ -2,10 +2,7 @@
 #include <QQmlApplicationEngine>
 
 #include "gamemetadatamodel.h"
-#include "openvgdb.h"
-#include "librarydb.h"
-
-#include <QDebug>
+#include "systemlistmodel.h"
 
 int main(int argc, char* argv[])
 {
@@ -13,6 +10,7 @@ int main(int argc, char* argv[])
   QGuiApplication app(argc, argv);
 
   qmlRegisterType<GameMetadataModel>("vg.phoenix.models", 1, 0, "GameMetadataModel");
+  qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
 
   QQmlApplicationEngine engine;
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
