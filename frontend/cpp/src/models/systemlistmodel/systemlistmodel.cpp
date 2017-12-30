@@ -41,6 +41,11 @@ void SystemModel::forceUpdate()
 {
   QList<System> systems = openVgDb.findAllSystems();
 
+  System allSystem;
+  allSystem.systemName = "All";
+  allSystem.systemShortName = "All";
+  systems.prepend(allSystem);
+
   beginRemoveRows(QModelIndex(), 0, systemCache.size());
   endRemoveRows();
 
