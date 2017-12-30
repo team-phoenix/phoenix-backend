@@ -10,6 +10,7 @@ struct GameMetadata {
   QString coreFilePath;
 
   QString gameTitle;
+  QString systemName;
   QString coreName;
 
   QString gameImageSource;
@@ -21,6 +22,7 @@ struct GameMetadata {
     gameImageSource = release.releaseCoverFront;
     gameDescription = release.releaseDescription;
     gameTitle = release.releaseTitleName;
+    systemName = release.TEMPsystemName;
   }
 
   GameMetadata() = default;

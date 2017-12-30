@@ -65,7 +65,22 @@ ListView {
                         }
                         Layout.fillWidth: true;
                         color: "white";
+                        elide: Text.ElideRight;
+                        Rectangle {
+                            anchors.fill: parent;
+                            color: "black";
+                            z: parent.z - 1;
+                        }
+                    }
 
+                    Text {
+                        text: qsTr(gameSystem);
+                        font {
+                            bold: true;
+                            pixelSize: 12;
+                        }
+                        Layout.fillWidth: true;
+                        color: "white";
                         Rectangle {
                             anchors.fill: parent;
                             color: "black";

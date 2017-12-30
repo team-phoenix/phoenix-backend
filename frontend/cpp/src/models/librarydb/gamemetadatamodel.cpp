@@ -7,6 +7,7 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
     roles(
 {
   { Title, "gameTitle"},
+  { System, "gameSystem"},
   { Description, "gameDescription"},
   { ImageSource, "gameImageSource"},
 })
@@ -39,6 +40,9 @@ QVariant GameMetadataModel::data(const QModelIndex &index, int role) const
 
       case Title:
         return gameMetadata.gameTitle;
+
+      case System:
+        return gameMetadata.systemName;
 
       case Description:
         return gameMetadata.gameDescription;

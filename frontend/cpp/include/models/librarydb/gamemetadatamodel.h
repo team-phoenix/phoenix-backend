@@ -15,6 +15,7 @@ public:
 
   enum Roles {
     Title,
+    System,
     Description,
     ImageSource,
   };
