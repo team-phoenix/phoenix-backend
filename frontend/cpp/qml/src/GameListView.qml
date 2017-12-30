@@ -9,7 +9,7 @@ ListView {
     model: GameMetadataModel {}
 
     orientation: ListView.Vertical;
-    spacing: 24;
+    spacing: 12;
 
     ScrollBar.vertical: ScrollBar {
         policy: ScrollBar.AlwaysOn;
@@ -18,7 +18,7 @@ ListView {
     delegate: Rectangle {
         id: listViewDelegate;
 
-        height: 300;
+        height: 200;
         width: parent.width;
 
         color: "red";
@@ -29,16 +29,16 @@ ListView {
                 margins: spacing;
             }
 
-            spacing: 12;
+            spacing: 24;
 
             Image {
-                width: 200;
+                width: 150;
                 anchors {
                     left: parent.left;
                 }
                 sourceSize {
-                    height: 100;
-                    width: 200;
+                    height: 150;
+                    width: 150;
                 }
 
                 fillMode: Image.PreserveAspectFit;

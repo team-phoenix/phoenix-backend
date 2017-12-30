@@ -11,11 +11,32 @@ ApplicationWindow {
     minimumWidth: 640;
     title: qsTr("Phoenix");
 
-    GameListView {
-        id: gameListView;
+    ColumnLayout {
         anchors {
             fill: parent;
         }
+
+        Rectangle {
+            Layout.fillWidth: true;
+            height: 50;
+            color: "cyan";
+
+            RowLayout {
+                anchors.centerIn: parent;
+
+                ComboBox {
+                    model: ["Systems"];
+                }
+            }
+        }
+
+        GameListView {
+            id: gameListView;
+            Layout.fillHeight: true;
+            Layout.fillWidth: true;
+        }
     }
+
+
 
 }

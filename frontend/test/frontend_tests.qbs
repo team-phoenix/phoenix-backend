@@ -9,9 +9,13 @@ QtApplication {
     cpp.includePaths: {
         var dirs = ["include"
                     , "../cpp/include"
+                    , "../cpp/include/databases"
+                    , "../cpp/include/databases/librarydb"
+                    , "../cpp/include/databases/openvgdb"
                     , "../cpp/include/models"
-                    , "../cpp/include/models/librarydb"
-                    , "../cpp/include/models/openvgdb"];
+                    , "../cpp/include/models/systemlistmodel"
+                    , "../cpp/include/models/gamemetadatamodel"
+                ];
         dirs.push( "include")
         return dirs;
     }
@@ -33,16 +37,22 @@ QtApplication {
     files: {
         var headers = ["include/*.hpp"
                        , "../cpp/include/*.h"
+                       , "../cpp/include/databases/*.h"
+                       , "../cpp/include/databases/librarydb/*.h"
+                       , "../cpp/include/databases/openvgdb/*.h"
                        , "../cpp/include/models/*.h"
-                       , "../cpp/include/models/librarydb/*.h"
-                       , "../cpp/include/models/openvgdb/*.h"]
+                       , "../cpp/include/models/systemlistmodel/*.h"
+                       , "../cpp/include/models/gamemetadatamodel/*.h"]
 
         var sources = ["src/*.cpp"
                        , "src/models/*.cpp"
                        , "../cpp/src/logging.cpp"
+                       , "../cpp/src/databases/*.cpp"
+                       , "../cpp/src/databases/librarydb/*.cpp"
+                       , "../cpp/src/databases/openvgdb/*.cpp"
                        , "../cpp/src/models/*.cpp"
-                       , "../cpp/src/models/librarydb/*.cpp"
-                       , "../cpp/src/models/openvgdb/*.cpp"
+                       , "../cpp/src/models/systemlistmodel/*.cpp"
+                       , "../cpp/src/models/gamemetadatamodel/*.cpp"
                        ];
 
         return headers.concat( sources );

@@ -8,9 +8,13 @@ QtApplication {
 
     cpp.includePaths: {
         var dirs = [ "include"
+                    , "include/databases"
+                    , "include/databases/librarydb"
+                    , "include/databases/openvgdb"
                     , "include/models"
-                    , "include/models/librarydb"
-                    , "include/models/openvgdb"];
+                    , "include/models/gamemetadatamodel"
+                    , "include/models/systemlistmodel"
+                    ];
         return dirs;
     }
 
@@ -34,16 +38,22 @@ QtApplication {
         var headers = ["include/*.hpp"
                        , "include/*.h"
                        , "include/models/*.h"
-                       , "include/models/librarydb/*.h"
-                       , "include/models/openvgdb/*.h"];
+                       , "include/models/gamemetadatamodel/*.h"
+                       , "include/models/systemlistmodel/*.h"
+                       , "include/databases/*.h"
+                       , "include/databases/librarydb/*.h"
+                       , "include/databases/openvgdb/*.h"];
 
         var qmlFiles = ["qml/*.qrc"
                         , "qml/icons/*.qrc"];
 
         var sources = ["src/*.cpp"
                        , "src/models/*.cpp"
-                       , "src/models/librarydb/*.cpp"
-                       , "src/models/openvgdb/*.cpp"];
+                       , "src/models/gamemetadatamodel/*.cpp"
+                       , "src/models/systemlistmodel/*.cpp"
+                       , "src/databases/*.cpp"
+                       , "src/databases/librarydb/*.cpp"
+                       , "src/databases/openvgdb/*.cpp"];
 
         return headers.concat( sources ).concat(qmlFiles);
     }
