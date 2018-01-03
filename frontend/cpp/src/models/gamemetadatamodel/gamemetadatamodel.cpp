@@ -19,6 +19,11 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
   forceUpdate();
 }
 
+QModelIndex GameMetadataModel::createIndexAt(int row, int column) const
+{
+  return createIndex(row, column, nullptr);
+}
+
 QModelIndex GameMetadataModel::index(int row, int column, const QModelIndex &parent) const
 {
   return hasIndex(row, column, parent) ? createIndex(row, column, nullptr) : QModelIndex();
@@ -37,7 +42,7 @@ int GameMetadataModel::columnCount(const QModelIndex &) const
 QVariant GameMetadataModel::data(const QModelIndex &index, int role) const
 {
 
-  if (index.isValid() && index.row() < gameMetadataCache.size()) {
+  if (index.row() < gameMetadataCache.size()) {
     const GameMetadata &gameMetadata = gameMetadataCache.at(index.row());
 
     switch (role) {
@@ -70,7 +75,6 @@ QHash<int, QByteArray> GameMetadataModel::roleNames() const
 // TODO - Update findReleasesBySha1 to use execBatch().
 void GameMetadataModel::forceUpdate()
 {
-
   clearCache();
 
   QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();

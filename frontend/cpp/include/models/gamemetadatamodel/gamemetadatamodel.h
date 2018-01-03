@@ -21,18 +21,20 @@ public:
     ImageSource,
   };
 
-  QModelIndex index(int row, int column, const QModelIndex &parent) const override;
+  QModelIndex createIndexAt(int row, int column) const;
 
-  int rowCount(const QModelIndex &) const override;
+  virtual QModelIndex index(int row, int column, const QModelIndex &parent) const override;
 
-  int columnCount(const QModelIndex &) const override;
+  virtual int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-  QVariant data(const QModelIndex &index, int role) const override;
+  virtual int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
-  QHash<int, QByteArray> roleNames() const override;
+  virtual QVariant data(const QModelIndex &index, int role) const override;
+
+  virtual QHash<int, QByteArray> roleNames() const override;
 
 public slots:
-  void forceUpdate();
+  virtual void forceUpdate();
 
 private:
   void clearCache();
@@ -40,6 +42,7 @@ private:
 private:
   QHash<int, QByteArray> roles;
   QVector<GameMetadata> gameMetadataCache;
+
   LibraryDb libraryDb;
   OpenVgDb openVgDb;
 };
