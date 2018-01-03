@@ -3,9 +3,11 @@
 #include "gamemetadata.h"
 #include "librarydb.h"
 #include "openvgdb.h"
+#include "gameimporter.h"
 
 #include <QAbstractTableModel>
 #include <QHash>
+#include <QDebug>
 
 class GameMetadataModel : public QAbstractTableModel
 {
@@ -33,8 +35,16 @@ public:
 
   virtual QHash<int, QByteArray> roleNames() const override;
 
+  Q_INVOKABLE static void doSomething()
+  {
+    qDebug() << "I am a static function bitch";
+  }
+
+  static GameMetadataModel &instance();
+
 public slots:
   virtual void forceUpdate();
+  void importGames(QList<QUrl> urls);
 
 private:
   void clearCache();
@@ -45,4 +55,5 @@ private:
 
   LibraryDb libraryDb;
   OpenVgDb openVgDb;
+  GameImporter gameImporter;
 };

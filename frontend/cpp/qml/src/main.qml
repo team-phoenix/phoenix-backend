@@ -27,7 +27,7 @@ ApplicationWindow {
                 selectFolder: false
                 selectMultiple: true
                 onAccepted: {
-                    gameImporter.importGames(findGameDialog.fileUrls);
+                    globalGameMetadataModel.importGames(findGameDialog.fileUrls);
                 }
             }
 

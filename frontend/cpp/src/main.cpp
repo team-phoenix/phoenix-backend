@@ -11,13 +11,12 @@ int main(int argc, char* argv[])
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QGuiApplication app(argc, argv);
 
-  qmlRegisterType<GameMetadataModel>("vg.phoenix.models", 1, 0, "GameMetadataModel");
   qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
   qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
 
   QQmlApplicationEngine engine;
   QQmlContext* context = engine.rootContext();
-  context->setContextProperty("gameImporter", &GameImporter::instance());
+  context->setContextProperty("globalGameMetadataModel", &GameMetadataModel::instance());
 
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
 

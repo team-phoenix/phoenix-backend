@@ -15,13 +15,11 @@ class GameImporter : public QObject
 public:
   explicit GameImporter(QObject* parent = nullptr);
 
-  static GameImporter &instance();
-
 signals:
   void updateModel();
 
 public slots:
-  void importGames(QList<QUrl> urls);
+  void importGames(const QList<QUrl> &urls);
 
 private:
   LibraryDb libraryDb;

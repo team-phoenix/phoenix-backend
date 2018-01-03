@@ -1,5 +1,4 @@
 #include "gamemetadatamodel.h"
-#include "gameimporter.h"
 
 #include <QDebug>
 
@@ -14,8 +13,7 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
   { ImageSource, "gameImageSource"},
 })
 {
-  connect(&GameImporter::instance(), &GameImporter::updateModel, this,
-          &GameMetadataModel::forceUpdate);
+  connect(&gameImporter, &GameImporter::updateModel, this, &GameMetadataModel::forceUpdate);
   forceUpdate();
 }
 
@@ -72,6 +70,12 @@ QHash<int, QByteArray> GameMetadataModel::roleNames() const
   return roles;
 }
 
+GameMetadataModel &GameMetadataModel::instance()
+{
+  static GameMetadataModel metadataModel;
+  return metadataModel;
+}
+
 // TODO - Update findReleasesBySha1 to use execBatch().
 void GameMetadataModel::forceUpdate()
 {
@@ -100,6 +104,11 @@ void GameMetadataModel::forceUpdate()
   }
 
   endInsertRows();
+}
+
+void GameMetadataModel::importGames(QList<QUrl> urls)
+{
+  gameImporter.importGames(urls);
 }
 
 void GameMetadataModel::clearCache()

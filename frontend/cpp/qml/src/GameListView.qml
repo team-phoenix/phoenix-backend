@@ -1,13 +1,11 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.2
-import vg.phoenix.models 1.0
 
 ListView {
     id: listView
 
-    model: GameMetadataModel {
-    }
+    model: globalGameMetadataModel;
 
     orientation: ListView.Vertical
     spacing: 12
@@ -117,6 +115,7 @@ ListView {
                             Button {
                                 id: playButton
                                 text: qsTr("Play")
+                                onClicked: listView.model.doSomething();
                             }
 
                             Button {

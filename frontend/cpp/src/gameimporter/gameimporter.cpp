@@ -18,13 +18,7 @@ GameImporter::GameImporter(QObject* parent)
   connect(this, &GameImporter::updateModel, this, [] {qDebug() << "should update model now";});
 }
 
-GameImporter &GameImporter::instance()
-{
-  static GameImporter gameImporter;
-  return gameImporter;
-}
-
-void GameImporter::importGames(QList<QUrl> urls)
+void GameImporter::importGames(const QList<QUrl> &urls)
 {
 
   qDebug() << "got games" << urls;

@@ -16,11 +16,11 @@ SCENARIO("LibraryDb")
       THEN("the database file will have been created") {
         REQUIRE(QFile::exists(subject.filePath()) == true);
       }
-
     }
 
     WHEN("a game has been inserted") {
       LibraryDb subject;
+      subject.removeAllGameEntries();
 
       subject.insert(GameEntry(QVariantHash({
         { "absoluteFilePath", "1234" },
