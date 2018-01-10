@@ -18,7 +18,7 @@ void insertTestGamesIntoDb(LibraryDb &libraryDb)
 SCENARIO("GameMetadataModel")
 {
   GIVEN("a real subject") {
-    GameMetadataModel subject;
+    GameMetadataModel &subject = GameMetadataModel::instance();
 
     WHEN("the constructor is called") {
       THEN("the member variables are filled in with items") {
@@ -81,5 +81,19 @@ SCENARIO("GameMetadataModel")
       }
     }
 
+    WHEN("a remove game by sha1 is called") {
+      LibraryDb libraryDb;
+      insertTestGamesIntoDb(libraryDb);
+
+      subject.forceUpdate();
+
+      REQUIRE(subject.rowCount() == 2);
+
+      THEN("the games cache is reduced by one") {
+        subject.removeGameAt(0);
+        subject.forceUpdate();
+        REQUIRE(subject.rowCount() == 1);
+      }
+    }
   }
 }

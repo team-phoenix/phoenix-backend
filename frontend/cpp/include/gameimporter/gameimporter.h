@@ -19,7 +19,8 @@ signals:
   void updateModel();
 
 public slots:
-  void importGames(const QList<QUrl> &urls);
+  void importGames(QList<QUrl> urls);
+  void removeGameBySha1(QString sha1);
 
 private:
   LibraryDb libraryDb;

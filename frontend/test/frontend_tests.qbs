@@ -4,7 +4,7 @@ import qbs.File
 QtApplication {
     id: app;
     name: "frontend_tests"
-    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "sql", "concurrent"] }
+    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "sql", "concurrent", "test"] }
 
     cpp.includePaths: {
         var dirs = ["include"
@@ -35,8 +35,19 @@ QtApplication {
         ]
     }
 
+    Group {
+     name: "External Files";
+     qbs.install: true;
+     qbs.installDir: "testFiles";
+     qbs.installPrefix: app.name;
+     files: [
+            "externals/*.nes",
+        ]
+    }
+
     files: {
         var headers = ["include/*.hpp"
+                       , "include/*.h"
                        , "../cpp/include/*.h"
                        , "../cpp/include/databases/*.h"
                        , "../cpp/include/databases/librarydb/*.h"

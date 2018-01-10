@@ -24,4 +24,6 @@ public:
   QList<Rom> findRomsBySha1(QVariant sha1);
 
   QList<Release> findReleasesBySha1(QVariant sha1);
+  QList<QList<Release>> findBatchReleasesBySha1List(QVariantList sha1List);
+
 };

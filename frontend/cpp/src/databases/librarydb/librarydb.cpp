@@ -7,6 +7,11 @@
 #include <QSqlQuery>
 #include <QDebug>
 
+#include <QMutex>
+#include <QMutexLocker>
+
+static QMutex* dbMutex = new QMutex();
+
 LibraryDb::LibraryDb()
   : Database(QCoreApplication::applicationDirPath()  + "/databases/librarydb.sqlite")
 {
@@ -24,6 +29,7 @@ QList<GameEntry> LibraryDb::findAllByGameEntry()
 
 void LibraryDb::insert(GameEntry entry)
 {
+  QMutexLocker locker(dbMutex);
   QSqlDatabase db = databaseConnection();
   QSqlQuery query(db);
 
@@ -52,8 +58,26 @@ void LibraryDb::insert(GameEntry entry)
   }
 }
 
+void LibraryDb::removeBySha1(QString sha1)
+{
+  QMutexLocker locker(dbMutex);
+
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query(db);
+
+  query.prepare("DELETE FROM games WHERE sha1Checksum = :sha1");
+  query.bindValue(":sha1", sha1);
+
+  if (!(query.exec())) {
+    throw std::runtime_error(qPrintable("SQL Error: " + query.lastError().text()));
+  }
+
+}
+
 void LibraryDb::removeAllGameEntries()
 {
+  QMutexLocker locker(dbMutex);
+
   QSqlDatabase db = databaseConnection();
   QSqlQuery query(db);
 
@@ -64,6 +88,8 @@ void LibraryDb::removeAllGameEntries()
 
 bool LibraryDb::createSchema(QSqlDatabase &db)
 {
+  QMutexLocker locker(dbMutex);
+
   qCDebug(phxLibrary, "Initializing Library Schema");
   db.transaction();
 
@@ -76,10 +102,12 @@ bool LibraryDb::createSchema(QSqlDatabase &db)
 
              % QStringLiteral("   \n/* file info */\n")
              % QStringLiteral("   absoluteFilePath TEXT UNIQUE NOT NULL,\n")
-             % QStringLiteral("   sha1Checksum TEXT UNIQUE NOT NULL,\n")
+             % QStringLiteral("   sha1Checksum TEXT NOT NULL,\n")
 
              % QStringLiteral("   \n/* game info */\n")
              % QStringLiteral("   timePlayed DATETIME,\n")
+             % QStringLiteral("   gameImageSource TEXT,\n")
+             % QStringLiteral("   gameDescription TEXT,\n")
 
              % QStringLiteral("   userSetCore INTEGER,\n")
              % QStringLiteral("   defaultCore INTEGER\n")
@@ -116,5 +144,4 @@ bool LibraryDb::createSchema(QSqlDatabase &db)
              % QStringLiteral(")"));
 
   return db.commit();
-
 }

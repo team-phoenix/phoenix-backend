@@ -18,23 +18,28 @@ GameImporter::GameImporter(QObject* parent)
   connect(this, &GameImporter::updateModel, this, [] {qDebug() << "should update model now";});
 }
 
-void GameImporter::importGames(const QList<QUrl> &urls)
+void GameImporter::importGames(QList<QUrl> urls)
 {
+  QtConcurrent::blockingMap(urls, [this](const QUrl & url) -> QUrl {
 
-  qDebug() << "got games" << urls;
-  QFuture<void> mappedFuture = QtConcurrent::map(urls, [this](const QUrl & url) {
+    qDebug() << url.toString();
     const QString localFile = url.toLocalFile();
 
-    qDebug() << "local:" << localFile;
+    if (!QFile::exists(localFile))
+    {
+      return localFile;
+    }
     QFile localFileObject(localFile);
 
-    if (!localFileObject.open(QIODevice::ReadOnly)) {
+    if (!localFileObject.open(QIODevice::ReadOnly))
+    {
       throw std::runtime_error(qPrintable(localFile + " could not be opened"));
     }
 
     QCryptographicHash cryptoHash(QCryptographicHash::Sha1);
 
-    if (!cryptoHash.addData(&localFileObject)) {
+    if (!cryptoHash.addData(&localFileObject))
+    {
       throw std::runtime_error(qPrintable(localFile + " could not be hashed successfully"));
     }
 
@@ -44,14 +49,23 @@ void GameImporter::importGames(const QList<QUrl> &urls)
     gameEntry.absoluteFilePath = localFile;
     gameEntry.sha1Checksum = hexHash;
     libraryDb.insert(gameEntry);
+
+    return localFile;
   });
 
-  if (importWatcher.isRunning()) {
-    qDebug() << "Future is already running, disregarding the current operation";
-    return;
-  }
+  emit updateModel();
 
-  importWatcher.setFuture(mappedFuture);
+//  if (importWatcher.isRunning()) {
+//    qDebug() << "Future is already running, disregarding the current operation";
+//    return;
+//  }
+
+//  importWatcher.setFuture(mappedFuture);
+}
+
+void GameImporter::removeGameBySha1(QString sha1)
+{
+  libraryDb.removeBySha1(sha1);
 }
 
 

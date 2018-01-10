@@ -60,3 +60,30 @@ QList<Release> OpenVgDb::findReleasesBySha1(QVariant sha1)
 
   return result;
 }
+
+QList<QList<Release> > OpenVgDb::findBatchReleasesBySha1List(QVariantList sha1List)
+{
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query = QSqlQuery(db);
+
+  query.prepare("SELECT RELEASES.* FROM RELEASES INNER JOIN ROMs "
+                "ON ROMs.romID = RELEASES.romID WHERE ROMS.romHashSHA1 = ?;");
+
+  query.addBindValue(sha1List);
+
+  QList<QList<Release>> result;
+
+  if (query.execBatch()) {
+
+    qDebug() << "exec";
+
+    while (query.next()) {
+      qDebug() << "batch record size: " << query.size();
+//      result.append(Release(getHashedRowValues(db.record("RELEASES"), query)));
+    }
+  } else {
+    qDebug() << query.lastError().text() << query.lastQuery();
+  }
+
+  return result;
+}

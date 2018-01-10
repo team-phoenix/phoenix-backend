@@ -3,6 +3,8 @@
 #include "database.h"
 #include "gameentry.h"
 
+#include <QMutex>
+
 class LibraryDb : public Database
 {
 public:
@@ -12,6 +14,7 @@ public:
   QList<GameEntry> findAllByGameEntry();
 
   void insert(GameEntry entry);
+  void removeBySha1(QString sha1);
   void removeAllGameEntries();
 
 private:

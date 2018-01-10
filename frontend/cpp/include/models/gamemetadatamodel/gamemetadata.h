@@ -15,10 +15,12 @@ struct GameMetadata {
 
   QString gameImageSource;
   QString gameDescription;
+  QString gameSha1Checksum;
 
   GameMetadata(GameEntry gameEntry, Release release)
   {
     gameFilePath = gameEntry.absoluteFilePath;
+    gameSha1Checksum = gameEntry.sha1Checksum;
     gameImageSource = release.releaseCoverFront;
     gameDescription = release.releaseDescription;
     gameTitle = release.releaseTitleName;

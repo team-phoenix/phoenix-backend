@@ -13,7 +13,6 @@ class GameMetadataModel : public QAbstractTableModel
 {
   Q_OBJECT
 public:
-  explicit GameMetadataModel(QObject* parent = nullptr);
   ~GameMetadataModel() = default;
 
   enum Roles {
@@ -35,21 +34,19 @@ public:
 
   virtual QHash<int, QByteArray> roleNames() const override;
 
-  Q_INVOKABLE static void doSomething()
-  {
-    qDebug() << "I am a static function bitch";
-  }
-
   static GameMetadataModel &instance();
 
 public slots:
   virtual void forceUpdate();
   void importGames(QList<QUrl> urls);
+  void removeGameAt(int index);
 
 private:
   void clearCache();
 
 private:
+  explicit GameMetadataModel(QObject* parent = nullptr);
+
   QHash<int, QByteArray> roles;
   QVector<GameMetadata> gameMetadataCache;
 

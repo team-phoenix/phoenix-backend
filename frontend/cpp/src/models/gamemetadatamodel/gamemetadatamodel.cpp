@@ -81,19 +81,17 @@ void GameMetadataModel::forceUpdate()
 {
   clearCache();
 
-  QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
+  const QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
 
-  if (gameEntries.isEmpty()) {
-    return;
-  }
-
-  beginInsertRows(QModelIndex(), 0, gameEntries.size() - 1);
+  beginInsertRows(QModelIndex(), 0,
+                  gameEntries.size() == 0 ? gameEntries.size() : gameEntries.size() - 1);
 
   gameMetadataCache.resize(gameEntries.size());
 
   for (int i = 0; i < gameEntries.size(); ++i) {
     const GameEntry &entry = gameEntries.at(i);
     QList<Release> releases = openVgDb.findReleasesBySha1(entry.sha1Checksum);
+    qDebug() << i;
     Release release;
 
     if (!releases.isEmpty()) {
@@ -109,6 +107,16 @@ void GameMetadataModel::forceUpdate()
 void GameMetadataModel::importGames(QList<QUrl> urls)
 {
   gameImporter.importGames(urls);
+}
+
+void GameMetadataModel::removeGameAt(int index)
+{
+  beginRemoveRows(QModelIndex(), index, index);
+
+  const GameMetadata &gameMetadata = gameMetadataCache.at(index);
+  gameImporter.removeGameBySha1(gameMetadata.gameSha1Checksum);
+
+  endRemoveRows();
 }
 
 void GameMetadataModel::clearCache()

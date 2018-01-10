@@ -1,11 +1,11 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.3
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.3
 
 ListView {
     id: listView
 
-    model: globalGameMetadataModel;
+    model: globalGameMetadataModel
 
     orientation: ListView.Vertical
     spacing: 12
@@ -19,8 +19,28 @@ ListView {
 
         height: 200
         width: parent.width
-
         color: "red"
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.RightButton
+            onClicked: {
+                rightClickMenu.popup()
+            }
+            onPressAndHold: {
+                if (mouse.source === Qt.MouseEventNotSynthesized) {
+                    rightClickMenu.popup()
+                }
+            }
+
+            Menu {
+                id: rightClickMenu
+                MenuItem {
+                    text: qsTr("Remove")
+                    onClicked: listView.model.removeGameAt(index)
+                }
+            }
+        }
 
         RowLayout {
             anchors {
@@ -115,7 +135,6 @@ ListView {
                             Button {
                                 id: playButton
                                 text: qsTr("Play")
-                                onClicked: listView.model.doSomething();
                             }
 
                             Button {
