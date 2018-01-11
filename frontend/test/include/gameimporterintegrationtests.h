@@ -61,14 +61,19 @@ private slots:
     QCOMPARE(!entry.gameDescription.isEmpty(), false);
   }
 
-//  void a_game_cannot_be_imported_with_an_invalid_path()
-//  {
-//    QSignalSpy spyUpdateModel(gameImporter, &GameImporter::updateModel);
-//    gameImporter->importGames(QList<QString>({
-//      QString(reallyBadPath),
-//      "kalkjlfaklgfklaklga"
-//    }));
-//    spyUpdateModel.wait();
-//    QCOMPARE(spyUpdateModel.count(), 0);
-//  }
+  void a_game_cannot_be_imported_with_an_invalid_path()
+  {
+    QSignalSpy spyUpdateModel(gameImporter, &GameImporter::updateModel);
+    gameImporter->importGames(QList<QUrl>({
+      QUrl(reallyBadPath),
+      QUrl("kalkjlfaklgfklaklga")
+    }));
+    spyUpdateModel.wait();
+    QCOMPARE(spyUpdateModel.count(), 1);
+
+    LibraryDb libraryDb;
+    TempDbSession tempSession(&libraryDb);
+
+    QCOMPARE(libraryDb.findAllByGameEntry().size(), 0);
+  }
 };
