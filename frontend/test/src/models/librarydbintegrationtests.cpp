@@ -25,6 +25,8 @@ SCENARIO("LibraryDb")
       subject.insert(GameEntry(QVariantHash({
         { "absoluteFilePath", "1234" },
         { "sha1Checksum", "goodstuff" },
+        {"gameImageSource", "/path/to/image"},
+        {"gameDescription", "some description"},
       })));
 
       THEN("the database will contain the game entry uniquely") {
@@ -32,6 +34,8 @@ SCENARIO("LibraryDb")
         REQUIRE(entries.size() == 1);
         REQUIRE(entries.first().absoluteFilePath == "1234");
         REQUIRE(entries.first().sha1Checksum == "goodstuff");
+        REQUIRE(entries.first().gameImageSource == "/path/to/image");
+        REQUIRE(entries.first().gameDescription == "some description");
       }
 
       THEN("the database can be cleared") {

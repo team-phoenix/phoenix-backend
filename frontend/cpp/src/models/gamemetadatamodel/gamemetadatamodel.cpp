@@ -91,7 +91,6 @@ void GameMetadataModel::forceUpdate()
   for (int i = 0; i < gameEntries.size(); ++i) {
     const GameEntry &entry = gameEntries.at(i);
     QList<Release> releases = openVgDb.findReleasesBySha1(entry.sha1Checksum);
-    qDebug() << i;
     Release release;
 
     if (!releases.isEmpty()) {
