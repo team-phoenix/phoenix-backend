@@ -7,11 +7,15 @@ void insertTestGamesIntoDb(LibraryDb &libraryDb)
   libraryDb.insert(GameEntry(QVariantHash({
     { "absoluteFilePath", "12BuckleMyShoe" },
     { "sha1Checksum", "56FE858D1035DCE4B68520F457A0858BAE7BB16D" },
+    { "gameImageSource", "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg" },
+    { "gameDescription", "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988." },
   })));
 
   libraryDb.insert(GameEntry(QVariantHash({
     { "absoluteFilePath", "34ShutTheDoor" },
     { "sha1Checksum", "E9A8996C4FB87120D8620AB8876B90DDB48335DB" },
+    { "gameImageSource", "http://img.gamefaqs.net/box/8/1/7/162817_front.jpg" },
+    { "gameDescription", "4 in 1 Row is a Puzzle game, developed and published by Philips, which was released in Europe in 1982." },
   })));
 }
 

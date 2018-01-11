@@ -21,8 +21,8 @@ struct GameMetadata {
   {
     gameFilePath = gameEntry.absoluteFilePath;
     gameSha1Checksum = gameEntry.sha1Checksum;
-    gameImageSource = release.releaseCoverFront;
-    gameDescription = release.releaseDescription;
+    gameImageSource = gameEntry.gameImageSource;
+    gameDescription = gameEntry.gameDescription;
     gameTitle = release.releaseTitleName;
     systemName = release.TEMPsystemName;
   }
