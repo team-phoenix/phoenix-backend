@@ -1,4 +1,5 @@
 #include "gameimporter.h"
+#include "tempdbsession.h"
 
 #include <QTest>
 #include <QObject>
@@ -6,6 +7,9 @@
 #include <QThread>
 #include <QCoreApplication>
 #include <QSignalSpy>
+
+#include <QSqlDatabase>
+#include <QSqlQuery>
 
 // TODO - Not working correctly.
 class GameImporterIntegrationTests : public QObject
@@ -36,10 +40,25 @@ private slots:
   {
     QSignalSpy spyUpdateModel(gameImporter, &GameImporter::updateModel);
     gameImporter->importGames(QList<QUrl>({
-      QUrl(testFilePath)
+      QUrl("file:///" + testFilePath)
     }));
     spyUpdateModel.wait();
     QCOMPARE(spyUpdateModel.count(), 1);
+
+    LibraryDb libraryDb;
+    TempDbSession tempSession(&libraryDb);
+
+    QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
+    QCOMPARE(gameEntries.size(), 1);
+
+    GameEntry &entry = gameEntries.first();
+    QCOMPARE(entry.absoluteFilePath, testFilePath);
+    QCOMPARE(entry.sha1Checksum, "356A192B7913B04C54574D18C28D46E6395428AB");
+    QCOMPARE(entry.userSetCore, -1);
+    QCOMPARE(entry.defaultCore, -1);
+    QCOMPARE(entry.timePlayed.isValid(), false);
+    QCOMPARE(!entry.gameImageSource.isEmpty(), false);
+    QCOMPARE(!entry.gameDescription.isEmpty(), false);
   }
 
 //  void a_game_cannot_be_imported_with_an_invalid_path()

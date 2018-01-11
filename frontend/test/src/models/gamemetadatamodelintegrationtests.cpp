@@ -1,6 +1,7 @@
 #include "catch.hpp"
 #include "gamemetadatamodel.h"
 #include "librarydb.h"
+#include "tempdbsession.h"
 
 void insertTestGamesIntoDb(LibraryDb &libraryDb)
 {
@@ -34,8 +35,9 @@ SCENARIO("GameMetadataModel")
     WHEN("forceUpdate(), is called") {
 
       LibraryDb libraryDb;
-      insertTestGamesIntoDb(libraryDb);
+      TempDbSession tempDbSession(&libraryDb);
 
+      insertTestGamesIntoDb(libraryDb);
       subject.forceUpdate();
 
       THEN("The test rows were set and can be retrieved") {
@@ -76,6 +78,7 @@ SCENARIO("GameMetadataModel")
 
       WHEN("the database is reupdated") {
         LibraryDb libraryDb;
+        TempDbSession tempDbSession(&libraryDb);
         insertTestGamesIntoDb(libraryDb);
 
         THEN("a final forceUpdate() produces an non empty rowCount()") {
@@ -87,6 +90,7 @@ SCENARIO("GameMetadataModel")
 
     WHEN("a remove game by sha1 is called") {
       LibraryDb libraryDb;
+      TempDbSession tempDbSession(&libraryDb);
       insertTestGamesIntoDb(libraryDb);
 
       subject.forceUpdate();

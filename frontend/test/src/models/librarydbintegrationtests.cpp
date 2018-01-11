@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "librarydb.h"
+#include "tempdbsession.h"
 
 #include <QFile>
 #include <QDebug>
@@ -12,6 +13,7 @@ SCENARIO("LibraryDb")
 
     WHEN("the constructor is called") {
       LibraryDb subject;
+      TempDbSession tempDbSession(&subject);
 
       THEN("the database file will have been created") {
         REQUIRE(QFile::exists(subject.filePath()) == true);
@@ -20,6 +22,8 @@ SCENARIO("LibraryDb")
 
     WHEN("a game has been inserted") {
       LibraryDb subject;
+      TempDbSession tempDbSession(&subject);
+
       subject.removeAllGameEntries();
 
       subject.insert(GameEntry(QVariantHash({

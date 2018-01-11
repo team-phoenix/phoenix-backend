@@ -26,8 +26,18 @@ struct GameEntry {
     gameImageSource = hash.value("gameImageSource").toString();
     gameDescription = hash.value("gameDescription").toString();
 
-    userSetCore = hash.value("userSetCore").toInt();
-    defaultCore = hash.value("defaultCore").toInt();
+    bool ok = false;
+    userSetCore = hash.value("userSetCore").toInt(&ok);
+
+    if (!ok) {
+      userSetCore = -1;
+    }
+
+    defaultCore = hash.value("defaultCore").toInt(&ok);
+
+    if (!ok) {
+      defaultCore = -1;
+    }
   }
 
   GameEntry() = default;

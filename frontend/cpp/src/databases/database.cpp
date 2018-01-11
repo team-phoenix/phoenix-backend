@@ -1,6 +1,7 @@
 #include "database.h"
 
 #include <QSqlQuery>
+#include <QFile>
 
 Database::Database(QString databaseFilePath)
 {

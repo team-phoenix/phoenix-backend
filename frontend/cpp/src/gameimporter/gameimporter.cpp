@@ -23,7 +23,7 @@ void GameImporter::importGames(QList<QUrl> urls)
   QtConcurrent::blockingMap(urls, [this](const QUrl & url) -> QUrl {
 
     qDebug() << url.toString();
-    const QString localFile = url.toLocalFile();
+    const QString localFile = url.toString().replace("file:///", "");
 
     if (!QFile::exists(localFile))
     {
