@@ -9,7 +9,13 @@ struct System {
   System() = default;
   System(const QVariantHash &hash)
   {
-    systemID = hash.value("systemID").toInt();
+    bool ok = false;
+    systemID = hash.value("systemID").toInt(&ok);
+
+    if (!ok) {
+      systemID = -1;
+    }
+
     systemName = hash.value("systemName").toString();
     systemShortName = hash.value("systemShortName").toString();
   }

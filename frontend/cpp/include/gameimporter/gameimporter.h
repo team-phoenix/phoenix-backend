@@ -1,6 +1,7 @@
 #pragma once
 
 #include "librarydb.h"
+#include "openvgdb.h"
 
 #include <QObject>
 #include <QUrl>
@@ -24,6 +25,7 @@ public slots:
 
 private:
   LibraryDb libraryDb;
+  OpenVgDb openVgDb;
   QFutureWatcher<void> importWatcher;
 
   void mapFunction(const QUrl &url);

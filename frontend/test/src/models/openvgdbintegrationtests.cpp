@@ -31,7 +31,7 @@ SCENARIO("OpenVgDb")
     WHEN("findAllRoms(), is called") {
       QList<QVariantHash> roms = subject.findAllRoms();
       THEN("It returns a non empty list") {
-        REQUIRE(roms.size() == 2);
+        REQUIRE(roms.size() == 4);
       }
     }
 
@@ -84,6 +84,46 @@ SCENARIO("OpenVgDb")
       THEN("The returned release has a romID equal to the ROMs table sha1 row") {
         const Release &release = releases.first();
         REQUIRE(release.romID == 1);
+      }
+    }
+
+    WHEN("findReleasesByTitle(), is called with a valid title") {
+      const QList<QPair<Release, System>> releaseSystemList =
+                                         subject.findReleasesByTitle("/path/to/'89 Dennou Kyuusei Uranai (Japan).nes");
+
+      THEN("The returned releases will be 1") {
+        REQUIRE(releaseSystemList.size() == 3);
+      }
+
+      THEN("The returned release has a romID equal to the ROMs table sha1 row") {
+        const QPair<Release, System> &releaseSystemPair = releaseSystemList.first();
+        const Release release = releaseSystemPair.first;
+        const System system = releaseSystemPair.second;
+
+        REQUIRE(system.systemName == "Nintendo Entertainment System");
+
+        REQUIRE(release.releaseTitleName == "'89 Dennou Kyuusei Uranai");
+        REQUIRE(release.releaseCoverFront == "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg");
+        REQUIRE(release.releaseDescription ==
+                "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988.");
+
+      }
+    }
+
+    WHEN("findReleasesByTitleWithBestGuess(), is called with a valid title with a database that contains 3 similar entries") {
+      const QPair<Release, System> releaseSystemPair =
+        subject.findReleasesByTitleWithBestGuess("/path/to/'89 Dennou Kyuusei Uranai (Japan).nes");
+
+      THEN("The returned release is the one that matches the closest to the game") {
+        const Release release = releaseSystemPair.first;
+        const System system = releaseSystemPair.second;
+
+        REQUIRE(system.systemName == "Nintendo Entertainment System");
+
+        REQUIRE(release.releaseTitleName == "'89 Dennou Kyuusei Uranai");
+        REQUIRE(release.releaseCoverFront == "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg");
+        REQUIRE(release.releaseDescription ==
+                "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988.");
       }
     }
   }

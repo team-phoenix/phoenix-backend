@@ -47,6 +47,17 @@ void GameImporter::importGames(QList<QUrl> urls)
     GameEntry gameEntry;
     gameEntry.absoluteFilePath = localFile;
     gameEntry.sha1Checksum = hexHash;
+
+    const QPair<Release, System> releaseSystemPair = openVgDb.findReleasesByTitleWithBestGuess(gameEntry.absoluteFilePath);
+
+    const Release release = releaseSystemPair.first;
+    gameEntry.gameDescription = release.releaseDescription;
+    gameEntry.gameImageSource = release.releaseCoverFront;
+    gameEntry.gameTitle = release.releaseTitleName;
+
+    const System system = releaseSystemPair.second;
+    gameEntry.systemFullName = system.systemName;
+
     libraryDb.insert(gameEntry);
 
     return localFile;

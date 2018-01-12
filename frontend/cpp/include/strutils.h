@@ -2,6 +2,8 @@
 
 #include <QString>
 #include <QStringList>
+#include <QFileInfo>
+#include <QDebug>
 
 #include <algorithm>
 #include <limits>
@@ -9,6 +11,14 @@
 class StrUtils
 {
 public:
+
+  static QString normalizePathStr(const QString &dirtyFilePath)
+  {
+    QFileInfo fileInfo(dirtyFilePath);
+    return fileInfo.baseName().replace(fileInfo.suffix(), "").replace(QRegExp("[^a-zA-Z0-9 ]"),
+                                                                      " ").simplified();
+  }
+
   static QString findClosestMatch(QStringList phrases, QString masterPhrase)
   {
     if (phrases.isEmpty()) {

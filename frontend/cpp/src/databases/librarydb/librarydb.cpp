@@ -131,8 +131,10 @@ bool LibraryDb::createSchema(QSqlDatabase &db)
 
                  % QStringLiteral("   \n/* game info */\n")
                  % QStringLiteral("   timePlayed DATETIME,\n")
+                 % QStringLiteral("   gameTitle TEXT,\n")
                  % QStringLiteral("   gameImageSource TEXT,\n")
                  % QStringLiteral("   gameDescription TEXT,\n")
+                 % QStringLiteral("   systemFullName TEXT,\n")
 
                  % QStringLiteral("   userSetCore INTEGER,\n")
                  % QStringLiteral("   defaultCore INTEGER\n")

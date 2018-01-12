@@ -17,14 +17,14 @@ struct GameMetadata {
   QString gameDescription;
   QString gameSha1Checksum;
 
-  GameMetadata(GameEntry gameEntry, Release release)
+  GameMetadata(GameEntry gameEntry)
   {
     gameFilePath = gameEntry.absoluteFilePath;
     gameSha1Checksum = gameEntry.sha1Checksum;
     gameImageSource = gameEntry.gameImageSource;
     gameDescription = gameEntry.gameDescription;
-    gameTitle = release.releaseTitleName;
-    systemName = release.TEMPsystemName;
+    gameTitle = gameEntry.gameTitle;
+    systemName = gameEntry.systemFullName;
   }
 
   GameMetadata() = default;

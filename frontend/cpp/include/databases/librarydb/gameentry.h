@@ -12,6 +12,8 @@ struct GameEntry {
   QDateTime timePlayed;
   QString gameImageSource;
   QString gameDescription;
+  QString gameTitle;
+  QString systemFullName;
 
   int userSetCore{ -1 };
   int defaultCore{ -1 };
@@ -25,6 +27,8 @@ struct GameEntry {
     timePlayed = hash.value("timePlayed").toDateTime();
     gameImageSource = hash.value("gameImageSource").toString();
     gameDescription = hash.value("gameDescription").toString();
+    gameTitle = hash.value("gameTitle").toString();
+    systemFullName = hash.value("systemFullName").toString();
 
     bool ok = false;
     userSetCore = hash.value("userSetCore").toInt(&ok);
@@ -64,6 +68,14 @@ struct GameEntry {
 
     if (!gameDescription.isEmpty()) {
       result.insert("gameDescription", gameDescription);
+    }
+
+    if (!gameTitle.isEmpty()) {
+      result.insert("gameTitle", gameTitle);
+    }
+
+    if (!systemFullName.isEmpty()) {
+      result.insert("systemFullName", systemFullName);
     }
 
     if (userSetCore != -1) {

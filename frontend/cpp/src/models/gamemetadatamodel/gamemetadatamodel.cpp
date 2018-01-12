@@ -76,7 +76,6 @@ GameMetadataModel &GameMetadataModel::instance()
   return metadataModel;
 }
 
-// TODO - Update findReleasesBySha1 to use execBatch().
 void GameMetadataModel::forceUpdate()
 {
   clearCache();
@@ -90,14 +89,7 @@ void GameMetadataModel::forceUpdate()
 
   for (int i = 0; i < gameEntries.size(); ++i) {
     const GameEntry &entry = gameEntries.at(i);
-    QList<Release> releases = openVgDb.findReleasesBySha1(entry.sha1Checksum);
-    Release release;
-
-    if (!releases.isEmpty()) {
-      release = releases.first();
-    }
-
-    gameMetadataCache[i] = GameMetadata(entry, release);
+    gameMetadataCache[i] = GameMetadata(entry);
   }
 
   endInsertRows();

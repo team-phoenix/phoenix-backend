@@ -18,7 +18,7 @@ class GameImporterIntegrationTests : public QObject
   GameImporter* gameImporter;
 
   const QString testFilePath = QCoreApplication::applicationDirPath() +
-                               "/testFiles/test_rom.nes";
+                               "/testFiles/89 Dennou Kyuusei Uranai.nes";
 
   const QString reallyBadPath = "kkakglaklgkla/hahklaklh";
 public:
@@ -57,8 +57,12 @@ private slots:
     QCOMPARE(entry.userSetCore, -1);
     QCOMPARE(entry.defaultCore, -1);
     QCOMPARE(entry.timePlayed.isValid(), false);
-    QCOMPARE(!entry.gameImageSource.isEmpty(), false);
-    QCOMPARE(!entry.gameDescription.isEmpty(), false);
+    QCOMPARE(entry.gameImageSource, "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg");
+    QCOMPARE(entry.gameDescription,
+             "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988.");
+    QCOMPARE(entry.gameTitle, "'89 Dennou Kyuusei Uranai");
+    QCOMPARE(entry.systemFullName, "Nintendo Entertainment System");
+
   }
 
   void a_game_cannot_be_imported_with_an_invalid_path()

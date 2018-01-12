@@ -6,17 +6,21 @@
 void insertTestGamesIntoDb(LibraryDb &libraryDb)
 {
   libraryDb.insert(GameEntry(QVariantHash({
-    { "absoluteFilePath", "12BuckleMyShoe" },
+    { "absoluteFilePath", "/path/to/'89 Dennou Kyuusei Uranai" },
     { "sha1Checksum", "56FE858D1035DCE4B68520F457A0858BAE7BB16D" },
+    { "gameTitle", "'89 Dennou Kyuusei Uranai" },
     { "gameImageSource", "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg" },
     { "gameDescription", "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988." },
+    { "systemFullName", "Nintendo Entertainment System" },
   })));
 
   libraryDb.insert(GameEntry(QVariantHash({
-    { "absoluteFilePath", "34ShutTheDoor" },
+    { "absoluteFilePath", "/path/to/4 in 1 Row" },
     { "sha1Checksum", "E9A8996C4FB87120D8620AB8876B90DDB48335DB" },
+    { "gameTitle", "4 in 1 Row" },
     { "gameImageSource", "http://img.gamefaqs.net/box/8/1/7/162817_front.jpg" },
     { "gameDescription", "4 in 1 Row is a Puzzle game, developed and published by Philips, which was released in Europe in 1982." },
+    { "systemFullName", "Magnavox Odyssey2" },
   })));
 }
 
@@ -46,8 +50,9 @@ SCENARIO("GameMetadataModel")
         const int columnDoesntMatter = -1;
         const QModelIndex firstIndex = subject.createIndexAt(0, columnDoesntMatter);
 
-        REQUIRE(subject.data(firstIndex,
-                             GameMetadataModel::Title).toString() == "'89 Dennou Kyuusei Uranai");
+        const  QString c = subject.data(firstIndex,
+                                        GameMetadataModel::Title).toString();
+        REQUIRE(c == "'89 Dennou Kyuusei Uranai");
         REQUIRE(subject.data(firstIndex,
                              GameMetadataModel::System).toString() == "Nintendo Entertainment System");
         REQUIRE(subject.data(firstIndex,

@@ -5,6 +5,8 @@
 #include "system.h"
 #include "database.h"
 
+#include <QPair>
+
 class OpenVgDb : public Database
 {
 public:
@@ -25,5 +27,10 @@ public:
 
   QList<Release> findReleasesBySha1(QVariant sha1);
   QList<QList<Release>> findBatchReleasesBySha1List(QVariantList sha1List);
+
+  QList<QPair<Release, System>> findReleasesByTitle(QString title);
+
+  QPair<Release, System> findReleasesByTitleWithBestGuess(QString title);
+
 
 };

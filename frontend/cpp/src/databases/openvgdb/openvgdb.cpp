@@ -1,6 +1,7 @@
 #include "openvgdb.h"
-
+#include "strutils.h"
 #include <QCoreApplication>
+
 
 OpenVgDb::OpenVgDb()
   : Database(QCoreApplication::applicationDirPath() +
@@ -86,4 +87,71 @@ QList<QList<Release> > OpenVgDb::findBatchReleasesBySha1List(QVariantList sha1Li
   }
 
   return result;
+}
+
+QList<QPair<Release, System>> OpenVgDb::findReleasesByTitle(QString title)
+{
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query = QSqlQuery(db);
+
+  query.prepare("SELECT SYSTEMS.systemName, RELEASES.releaseCoverFront, RELEASES.releaseDescription, RELEASES.releaseTitleName "
+                "FROM RELEASES "
+                "INNER JOIN ROMs ON ROMs.romID = RELEASES.romID "
+                "INNER JOIN SYSTEMS ON SYSTEMS.systemID = ROMs.systemID "
+                "WHERE LOWER(ROMs.romExtensionlessFileName) LIKE LOWER(:cleanedTitle)");
+
+  QString cleanedTitle = StrUtils::normalizePathStr(title);
+  cleanedTitle.replace(" ", "%").prepend("%").append("%");
+  query.bindValue(":cleanedTitle", cleanedTitle);
+
+  QList<QPair<Release, System>> result;
+
+  if (query.exec()) {
+    while (query.next()) {
+
+      System system;
+      system.systemName = query.value(0).toString();
+
+      Release release;
+      release.releaseCoverFront = query.value(1).toString();
+      release.releaseDescription = query.value(2).toString();
+      release.releaseTitleName = query.value(3).toString();
+
+      result.append(QPair<Release, System>(release, system));
+    }
+  } else {
+    qDebug() << query.lastError().text() << query.lastQuery();
+  }
+
+  return result;
+}
+
+QPair<Release, System> OpenVgDb::findReleasesByTitleWithBestGuess(QString title)
+{
+  QList<QPair<Release, System>> pairs = findReleasesByTitle(title);
+
+  QPair<Release, System> bestMatchPair;
+
+  if (!pairs.isEmpty()) {
+    QStringList titleMatches;
+
+    for (const QPair<Release, System> releaseSystemPair : pairs) {
+      const Release release = releaseSystemPair.first;
+      titleMatches.append(release.releaseTitleName);
+    }
+
+    const QString bestMatchTitle = StrUtils::findClosestMatch(titleMatches, title);
+
+
+    for (const QPair<Release, System> releaseSystemPair : pairs) {
+      const Release release = releaseSystemPair.first;
+
+      if (release.releaseTitleName == bestMatchTitle) {
+        bestMatchPair = releaseSystemPair;
+        break;
+      }
+    }
+  }
+
+  return bestMatchPair;
 }

@@ -10,24 +10,23 @@ SCENARIO("GameMetadata")
     WHEN("the GameEntry / Release constructor is called") {
 
       GameEntry entry;
+
       entry.absoluteFilePath = "/path/";
       entry.sha1Checksum = "checksum";
+      entry.gameImageSource = "frontCover.img";
+      entry.gameDescription = "some description";
+      entry.gameTitle = "some title";
+      entry.systemFullName = "some system";
 
-      Release release;
-      release.releaseCoverFront = "frontCover.img";
-      release.releaseDescription = "some description";
-      release.releaseTitleName = "some title";
-      release.TEMPsystemName = "some system";
-
-      subject = GameMetadata(entry, release);
+      subject = GameMetadata(entry);
 
       THEN("the member variables are read and assigned correctly") {
         REQUIRE(subject.gameFilePath == entry.absoluteFilePath);
         REQUIRE(subject.gameSha1Checksum == entry.sha1Checksum);
         REQUIRE(subject.gameImageSource == entry.gameImageSource);
         REQUIRE(subject.gameDescription == entry.gameDescription);
-        REQUIRE(subject.gameTitle == release.releaseTitleName);
-        REQUIRE(subject.systemName == release.TEMPsystemName);
+        REQUIRE(subject.gameTitle == entry.gameTitle);
+        REQUIRE(subject.systemName == entry.systemFullName);
       }
     }
   }
