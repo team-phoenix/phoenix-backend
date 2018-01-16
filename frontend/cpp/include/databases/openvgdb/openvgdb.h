@@ -31,6 +31,4 @@ public:
   QList<QPair<Release, System>> findReleasesByTitle(QString title);
 
   QPair<Release, System> findReleasesByTitleWithBestGuess(QString title);
-
-
 };

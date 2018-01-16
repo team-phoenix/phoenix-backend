@@ -1,7 +1,11 @@
 #include "openvgdb.h"
 #include "strutils.h"
-#include <QCoreApplication>
 
+#include <QCoreApplication>
+#include <QMutex>
+#include <QMutexLocker>
+
+static QMutex* openVgDbMutex = new QMutex();
 
 OpenVgDb::OpenVgDb()
   : Database(QCoreApplication::applicationDirPath() +
@@ -12,36 +16,44 @@ OpenVgDb::OpenVgDb()
 
 QList<Release> OpenVgDb::findAllReleases()
 {
+  QMutexLocker locker(openVgDbMutex);
   return findAllBy<Release>("RELEASES", "*");
 }
 
 QList<QVariantHash> OpenVgDb::findAllRegions()
 {
+  QMutexLocker locker(openVgDbMutex);
   return findAllBy<QVariantHash>("REGIONS", "*");
 }
 
 QList<QVariantHash> OpenVgDb::findAllRoms()
 {
+  QMutexLocker locker(openVgDbMutex);
   return findAllBy<QVariantHash>("ROMs", "*");
 }
 
 QList<System> OpenVgDb::findAllSystems()
 {
+  QMutexLocker locker(openVgDbMutex);
   return findAllBy<System>("SYSTEMS", "*");
 }
 
 QList<Release> OpenVgDb::findReleasesByRomID(QVariant romID)
 {
+  QMutexLocker locker(openVgDbMutex);
   return findRowsByAndWhere<Release>("RELEASES", "romID", romID);
 }
 
 QList<Rom> OpenVgDb::findRomsBySha1(QVariant sha1)
 {
+  QMutexLocker locker(openVgDbMutex);
   return findRowsByAndWhere<Rom>("ROMs", "romHashSHA1", sha1);
 }
 
 QList<Release> OpenVgDb::findReleasesBySha1(QVariant sha1)
 {
+  QMutexLocker locker(openVgDbMutex);
+
   QSqlDatabase db = databaseConnection();
   QSqlQuery query = QSqlQuery(db);
 
@@ -64,6 +76,8 @@ QList<Release> OpenVgDb::findReleasesBySha1(QVariant sha1)
 
 QList<QList<Release> > OpenVgDb::findBatchReleasesBySha1List(QVariantList sha1List)
 {
+  QMutexLocker locker(openVgDbMutex);
+
   QSqlDatabase db = databaseConnection();
   QSqlQuery query = QSqlQuery(db);
 
@@ -91,6 +105,8 @@ QList<QList<Release> > OpenVgDb::findBatchReleasesBySha1List(QVariantList sha1Li
 
 QList<QPair<Release, System>> OpenVgDb::findReleasesByTitle(QString title)
 {
+  QMutexLocker locker(openVgDbMutex);
+
   QSqlDatabase db = databaseConnection();
   QSqlQuery query = QSqlQuery(db);
 
@@ -129,6 +145,8 @@ QList<QPair<Release, System>> OpenVgDb::findReleasesByTitle(QString title)
 QPair<Release, System> OpenVgDb::findReleasesByTitleWithBestGuess(QString title)
 {
   QList<QPair<Release, System>> pairs = findReleasesByTitle(title);
+
+  QMutexLocker locker(openVgDbMutex);
 
   QPair<Release, System> bestMatchPair;
 

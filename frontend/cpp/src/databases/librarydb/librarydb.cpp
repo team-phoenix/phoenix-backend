@@ -22,6 +22,7 @@ LibraryDb::LibraryDb()
 
 QList<GameEntry> LibraryDb::findAllByGameEntry()
 {
+  QMutexLocker locker(dbMutex);
   return findAllBy<GameEntry>("games", "*");
 }
 
@@ -33,6 +34,7 @@ QStringList LibraryDb::getTableNames() const
 void LibraryDb::insert(GameEntry entry)
 {
   QMutexLocker locker(dbMutex);
+
   QSqlDatabase db = databaseConnection();
   QSqlQuery query(db);
 

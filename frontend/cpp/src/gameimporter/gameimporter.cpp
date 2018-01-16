@@ -58,6 +58,7 @@ void GameImporter::importGames(QList<QUrl> urls)
     const System system = releaseSystemPair.second;
     gameEntry.systemFullName = system.systemName;
 
+
     libraryDb.insert(gameEntry);
 
     return localFile;
