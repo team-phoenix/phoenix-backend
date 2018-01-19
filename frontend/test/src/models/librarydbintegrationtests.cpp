@@ -31,15 +31,28 @@ SCENARIO("LibraryDb")
         { "sha1Checksum", "goodstuff" },
         {"gameImageSource", "/path/to/image"},
         {"gameDescription", "some description"},
+        {"systemFullName", "some sys name"},
       })));
 
+      SystemCoreMap systemCoreMap;
+      systemCoreMap.systemFullName = "some sys name";
+      systemCoreMap.isDefault = true;
+      systemCoreMap.coreName = "some core name";
+
+      subject.insert(systemCoreMap);
+
       THEN("the database will contain the game entry uniquely") {
-        auto entries = subject.findAllByGameEntry();
-        REQUIRE(entries.size() == 1);
-        REQUIRE(entries.first().absoluteFilePath == "1234");
-        REQUIRE(entries.first().sha1Checksum == "goodstuff");
-        REQUIRE(entries.first().gameImageSource == "/path/to/image");
-        REQUIRE(entries.first().gameDescription == "some description");
+
+        const QList<QPair<GameEntry, SystemCoreMap>> pairs = subject.findAllByGameEntry();
+        REQUIRE(pairs.size() == 1);
+
+        const QPair<GameEntry, SystemCoreMap> &firstPair = pairs.first();
+        const GameEntry gameEntry = firstPair.first;
+
+        REQUIRE(gameEntry.absoluteFilePath == "1234");
+        REQUIRE(gameEntry.sha1Checksum == "goodstuff");
+        REQUIRE(gameEntry.gameImageSource == "/path/to/image");
+        REQUIRE(gameEntry.gameDescription == "some description");
       }
 
       THEN("the database can be cleared") {

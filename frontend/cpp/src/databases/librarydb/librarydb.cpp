@@ -16,20 +16,114 @@ LibraryDb::LibraryDb()
   : Database(QCoreApplication::applicationDirPath()  + "/databases/librarydb.sqlite")
 {
   QSqlDatabase db = databaseConnection();
-  tableNames = QStringList({ "games", "collections", "collectionMappings", "defaultCores"});
+  tableNames = QStringList({ "games", "collections", "collectionMappings", "system_to_core_mapping"});
   createSchema(db);
 }
 
-QList<GameEntry> LibraryDb::findAllByGameEntry()
+QList<QPair<GameEntry, SystemCoreMap>> LibraryDb::findAllByGameEntry()
 {
   QMutexLocker locker(dbMutex);
-  return findAllBy<GameEntry>("games", "*");
+
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query = QSqlQuery(db);
+
+  QList<QPair<GameEntry, SystemCoreMap>> result;
+
+  if (query.exec(QString("SELECT DISTINCT "
+                         "games.timePlayed, "
+                         "games.gameTitle, "
+                         "games.gameImageSource, "
+                         "games.absoluteFilePath, "
+                         "games.gameDescription, "
+                         "games.systemFullName, "
+                         "games.userSetCore, "
+                         "games.sha1Checksum, "
+                         "system_to_core_mapping.systemFullName, "
+                         "system_to_core_mapping.coreName, "
+                         "system_to_core_mapping.isDefault "
+                         "FROM games "
+                         "INNER JOIN system_to_core_mapping "
+                         "ON system_to_core_mapping.systemFullName = games.systemFullName "
+                         "WHERE system_to_core_mapping.isDefault = 1"))) {
+    while (query.next()) {
+
+      GameEntry gameEntry;
+      gameEntry.timePlayed = query.value(0).toDateTime();
+      gameEntry.gameTitle = query.value(1).toString();
+      gameEntry.gameImageSource = query.value(2).toString();
+      gameEntry.absoluteFilePath = query.value(3).toString();
+      gameEntry.gameDescription = query.value(4).toString();
+      gameEntry.systemFullName = query.value(5).toString();
+      gameEntry.userSetCore = query.value(6).toString();
+      gameEntry.sha1Checksum = query.value(7).toString();
+
+      SystemCoreMap systemCoreMap;
+      systemCoreMap.systemFullName = query.value(8).toString();
+      systemCoreMap.coreName = query.value(9).toString();
+      systemCoreMap.isDefault = query.value(10).toInt() == 0 ? false : true;
+
+      result.append(QPair<GameEntry, SystemCoreMap>(gameEntry, systemCoreMap));
+    }
+  } else {
+    qDebug() << query.lastError().text();
+  }
+
+  return result;
+
 }
 
-QList<GameEntry> LibraryDb::findAllByGameEntryFilterBySystem(QString systemFullName)
+QList<QPair<GameEntry, SystemCoreMap>> LibraryDb::findAllByGameEntryFilterBySystem(
+                                      QString systemFullName)
 {
   QMutexLocker locker(dbMutex);
-  return findRowsByAndWhere<GameEntry>("games", "systemFullName", systemFullName);
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query = QSqlQuery(db);
+
+  QList<QPair<GameEntry, SystemCoreMap>> result;
+
+  query.prepare("SELECT DISTINCT "
+                "games.timePlayed, "
+                "games.gameTitle, "
+                "games.gameImageSource, "
+                "games.absoluteFilePath, "
+                "games.gameDescription, "
+                "games.systemFullName, "
+                "games.userSetCore, "
+                "games.sha1Checksum, "
+                "system_to_core_mapping.systemFullName, "
+                "system_to_core_mapping.coreName, "
+                "system_to_core_mapping.isDefault "
+                "FROM games "
+                "INNER JOIN system_to_core_mapping "
+                "ON system_to_core_mapping.systemFullName = games.systemFullName "
+                "WHERE games.systemFullName = :system "
+                "AND system_to_core_mapping.isDefault = 1");
+
+  query.bindValue(":system", systemFullName);
+
+  if (query.exec()) {
+    while (query.next()) {
+
+      GameEntry gameEntry;
+      gameEntry.timePlayed = query.value(0).toDateTime();
+      gameEntry.gameTitle = query.value(1).toString();
+      gameEntry.gameImageSource = query.value(2).toString();
+      gameEntry.absoluteFilePath = query.value(3).toString();
+      gameEntry.gameDescription = query.value(4).toString();
+      gameEntry.systemFullName = query.value(5).toString();
+      gameEntry.userSetCore = query.value(6).toString();
+      gameEntry.sha1Checksum = query.value(7).toString();
+
+      SystemCoreMap systemCoreMap;
+      systemCoreMap.systemFullName = query.value(8).toString();
+      systemCoreMap.coreName = query.value(9).toString();
+      systemCoreMap.isDefault = query.value(10).toInt() == 0 ? false : true;
+
+      result.append(QPair<GameEntry, SystemCoreMap>(gameEntry, systemCoreMap));
+    }
+  }
+
+  return result;
 }
 
 QStringList LibraryDb::getTableNames() const
@@ -47,6 +141,38 @@ void LibraryDb::insert(GameEntry entry)
   const QString table = "games";
 
   QVariantHash hash = entry.getQueryFriendlyHash();
+
+  QStringList placeholders;
+
+  for (int i = 0; i < hash.size(); ++i) {
+    placeholders.append("?");
+  }
+
+  query.prepare(
+    QString("INSERT OR IGNORE INTO %1 (%2) VALUES (%3)").arg(
+      table
+      , hash.keys().join(',')
+      , placeholders.join(',')));
+
+  for (QVariant &value : hash) {
+    query.addBindValue(value);
+  }
+
+  if (!query.exec()) {
+    qDebug() << query.lastQuery() << query.lastError().text();
+  }
+}
+
+void LibraryDb::insert(SystemCoreMap systemCoreMap)
+{
+  QMutexLocker locker(dbMutex);
+
+  QSqlDatabase db = databaseConnection();
+  QSqlQuery query(db);
+
+  const QString table = "system_to_core_mapping";
+
+  QVariantHash hash = systemCoreMap.getQueryFriendlyHash();
 
   QStringList placeholders;
 
@@ -144,9 +270,7 @@ bool LibraryDb::createSchema(QSqlDatabase &db)
                  % QStringLiteral("   gameDescription TEXT,\n")
                  % QStringLiteral("   systemFullName TEXT,\n")
 
-                 % QStringLiteral("   userSetCore INTEGER,\n")
-                 % QStringLiteral("   defaultCore INTEGER\n")
-
+                 % QStringLiteral("   userSetCore TEXT\n")
                  % QStringLiteral(")"))) {
 
     query.exec(QStringLiteral("CREATE INDEX title_index ON games (title)"));
@@ -175,10 +299,57 @@ bool LibraryDb::createSchema(QSqlDatabase &db)
 
 
   // Create default core table
-  query.exec(QStringLiteral("CREATE TABLE IF NOT EXISTS defaultCores (\n")
-             % QStringLiteral(" system TEXT UNIQUE NOT NULL,")
-             % QStringLiteral(" defaultCore TEXT")
-             % QStringLiteral(")"));
+  if (query.exec(QStringLiteral("CREATE TABLE system_to_core_mapping (\n")
+                 % QStringLiteral(" coreName TEXT,")
+                 % QStringLiteral(" systemFullName TEXT NOT NULL,")
+                 % QStringLiteral(" isDefault INTEGER NOT NULL")
+                 % QStringLiteral(")"))) {
+
+//    QList<QPair<QString, QStringList>List >> systemShortNames = {
+//      QPair<QString, QStringList>("stella_libretro", { "2600" }),
+////      QPair<QString, QStringList>("", {"32X"}),
+//      QPair<QString, QStringList>("4do_libretro", {"3DO"}),
+//      QPair<QString, QStringList>("atari800_libretro", {"5200"}),
+//      QPair<QString, QStringList>("prosystem_libretro", {"7800"}),
+//      QPair<QString, QStringList>("ColecoVision", {"bluemsx_libretro"}),
+////      QPair<QString, QStringList>("", {"FDS"}),
+////      QPair<QString, QStringList>("", {"GB"}),
+////      QPair<QString, QStringList>("", {"GBA"}),
+////      QPair<QString, QStringList>("", {"GBC"}),
+////      QPair<QString, QStringList>("", {"GG"}),
+////      QPair<QString, QStringList>("", {"Intellivision"}),
+//      QPair<QString, QStringList>("virtualjaguar_libretro", {"Jaguar"}),
+////      QPair<QString, QStringList>("", {"Jaguar CD"}),
+//      QPair<QString, QStringList>("handy_libretro", {"Lynx"}),
+//      QPair<QString, QStringList>("mame_libretro", {"MAME"}),
+////      QPair<QString, QStringList>("", {"MD"}),
+//      QPair<QString, QStringList>("mupen64plus_libretro", {"N64"}),
+////      QPair<QString, QStringList>("", {"NDS"}),
+//      QPair<QString, QStringList>("", {"NES"}),
+////      QPair<QString, QStringList>("", {"NGC"}),
+////      QPair<QString, QStringList>("", {"NGP"}),
+////      QPair<QString, QStringList>("", {"NGPC"}),
+//      QPair<QString, QStringList>("o2em_libretro", {"Odyssey2"}),
+//      QPair<QString, QStringList>("mednafen_pce_fast_libretro", {"PCE"}),
+////      QPair<QString, QStringList>("", {"PCECD"}),
+//      QPair<QString, QStringList>("mednafen_pcfx_libretro", {"PCFX"}),
+////      QPair<QString, QStringList>("", {"PSP"}),
+//      QPair<QString, QStringList>("mednafen_psx_libretro", {"PSX"}),
+////      QPair<QString, QStringList>("", {"SCD"}),
+////      QPair<QString, QStringList>("", {"SG1000"}),
+////      QPair<QString, QStringList>("", {"SMS"}),
+//      QPair<QString, QStringList>("", {"SNES"}),
+//      QPair<QString, QStringList>("yabause_libretro", {"Saturn"}),
+////      QPair<QString, QStringList>("", {"SuperGrafx"}),
+////      QPair<QString, QStringList>("", {"VB"}),
+//      QPair<QString, QStringList>("vecx_libretro", {"Vectrex"}),
+////      QPair<QString, QStringList>("", {"Wii"}),
+//      QPair<QString, QStringList>("mednafen_wswan_libretro", {"WonderSwan", "WonderSwan Color"}),
+//    };
+
+//    query.exec(QStringLiteral("INSERT INTO cores ")
+//               % QStringLiteral("(coreName, coreAbsoluteFilePath) VALUES (0, 'All')"));
+  }
 
   return db.commit();
 }

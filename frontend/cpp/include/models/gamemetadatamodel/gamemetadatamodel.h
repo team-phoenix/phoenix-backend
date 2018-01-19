@@ -20,6 +20,8 @@ public:
     System,
     Description,
     ImageSource,
+    AbsoluteGamePath,
+    AbsoluteCorePath,
   };
 
   QModelIndex createIndexAt(int row, int column) const;
@@ -44,7 +46,7 @@ public slots:
 
 private:
   void clearCache();
-  void fillCache(const QList<GameEntry> &gameEntries);
+  void fillCache(const QList<QPair<GameEntry, SystemCoreMap>> &gameEntries);
 
 private:
   explicit GameMetadataModel(QObject* parent = nullptr);

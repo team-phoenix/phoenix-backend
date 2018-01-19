@@ -136,6 +136,9 @@ ListView {
                             Button {
                                 id: playButton
                                 text: qsTr("Play")
+                                onClicked: {
+                                    globalEmulationListener.sendPlayMessage(gameAbsoluteFilePath, coreAbsoluteFilePath);
+                                }
                             }
 
                             Button {

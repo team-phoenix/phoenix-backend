@@ -1,3 +1,5 @@
+#pragma once
+
 #include "gameimporter.h"
 #include "tempdbsession.h"
 
@@ -11,7 +13,16 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
-// TODO - Not working correctly.
+static void insertSystemIntoMap(LibraryDb &libraryDb)
+{
+  SystemCoreMap systemCoreMap;
+  systemCoreMap.systemFullName = "Nintendo Entertainment System";
+  systemCoreMap.coreName = "bnes_libretro";
+  systemCoreMap.isDefault = 1;
+
+  libraryDb.insert(systemCoreMap);
+}
+
 class GameImporterIntegrationTests : public QObject
 {
   Q_OBJECT
@@ -47,15 +58,17 @@ private slots:
 
     LibraryDb libraryDb;
     TempDbSession tempSession(&libraryDb);
+    insertSystemIntoMap(libraryDb);
 
-    QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
+    QList<QPair<GameEntry, SystemCoreMap>> gameEntries = libraryDb.findAllByGameEntry();
     QCOMPARE(gameEntries.size(), 1);
 
-    GameEntry &entry = gameEntries.first();
+    const QPair<GameEntry, SystemCoreMap> &entryPair = gameEntries.first();
+    const GameEntry entry = entryPair.first;
+
     QCOMPARE(entry.absoluteFilePath, testFilePath);
     QCOMPARE(entry.sha1Checksum, "356A192B7913B04C54574D18C28D46E6395428AB");
-    QCOMPARE(entry.userSetCore, -1);
-    QCOMPARE(entry.defaultCore, -1);
+    QCOMPARE(entry.userSetCore.isEmpty(), true);
     QCOMPARE(entry.timePlayed.isValid(), false);
     QCOMPARE(entry.gameImageSource, "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg");
     QCOMPARE(entry.gameDescription,

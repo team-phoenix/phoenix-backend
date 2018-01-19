@@ -1,0 +1,137 @@
+#include "emulationlistener.h"
+
+#include <QLocalSocket>
+#include <QDebug>
+
+static const QString SERVER_NAME = "phoenixEmulatorProcess";
+
+EmulationListener::EmulationListener(QObject* parent)
+  : QObject(parent)
+{
+
+  if (!QLocalServer::removeServer(SERVER_NAME))  {
+    throw std::runtime_error(qPrintable(QString("The %1 server could not be removed, aborting...").arg(
+                                          SERVER_NAME)));
+  }
+
+  if (!localServer.listen(SERVER_NAME)) {
+    throw std::runtime_error(qPrintable(SERVER_NAME + " server could not be opened, aborting..."));
+  }
+
+  qDebug() << "Frontend server is listening...";
+
+  connect(&localServer, &QLocalServer::newConnection, this, [this] {
+    newConnectionFound();
+  });
+
+}
+
+void EmulationListener::newConnectionFound()
+{
+  QLocalSocket* newSocket = localServer.nextPendingConnection();
+
+  connect(newSocket, &QLocalSocket::readyRead, this, [this, newSocket] {
+    const QVariantHash message = socketReadWriter.readSocketMessage(*newSocket);
+    executeSocketCommands(message);
+  });
+
+  connect(newSocket, &QLocalSocket::disconnected, this, [newSocket] {
+    delete newSocket;
+  });
+}
+
+
+void EmulationListener::executeSocketCommands(const QVariantHash &jsonMessage)
+{
+  qDebug() << "Got socket command" << jsonMessage;
+}
+
+/*
+ * // Tells the sandboxed emulator process to shutdown once the frontend has quit.
+  QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, [ this ] {
+    sendProcessMessage(QJsonObject{ { "request", "killEmu" } });
+  });
+
+  const QString serverName = "phoenixExternalProcess";
+
+  // Construct a new server instance, while removing any old server files that may exist
+  // on the storage device, from a previous instance.
+  QLocalServer* server = new QLocalServer();
+  QLocalServer::removeServer(serverName);
+
+  if (!server->listen(serverName)) {
+    qDebug() << "Could not open server:" << serverName;
+    return;
+  } else {
+    qDebug() << "Opened up the frontend server";
+  }
+
+
+  // Make the new server connect to and listen to any incoming sockets, this way we can tracks all listeners.
+  // Most of the time there will only ever be one listener, the frontend, but in the future, we may get more, which could be quite handy.
+
+  connect(server, &QLocalServer::newConnection, this, [this, server] {
+    QLocalSocket* socket = server->nextPendingConnection();
+
+    connect(socket, &QLocalSocket::readyRead, this, [this, socket] {
+
+      // The first 4 bytes are reserved for the size of the message,
+      // so we can skip the readyRead signal if the buffer is < 4 bytes.
+      if (socket->bytesAvailable() > 4)
+      {
+        while (socket->bytesAvailable()) {
+
+          quint32 msgSize = 0;
+          socket->read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
+
+          if (socket->bytesAvailable() >= msgSize) {
+            QByteArray socketMsg(msgSize, '\0');
+
+            socket->read(socketMsg.data(), msgSize);
+
+            qDebug() << socketMsg;
+            QJsonObject obj = QJsonDocument::fromJson(socketMsg).object();
+            readProcessMessage(obj);
+          }
+        }
+
+      }
+    });
+
+    qDebug() << "Found a listening process";
+
+    emit newProcessConnected();
+
+  });
+
+  // Construct a socket that enables us to listen to the sandboxed emulator process by connecting to its server.
+
+  QLocalSocket* socket = new QLocalSocket(this);
+
+  connect(this, &EmulatorManager::pipeMessage, this, [this, socket](QByteArray t_request) {
+    if (socket->isOpen()) {
+      quint32 size = static_cast<quint32>(t_request.size());
+      qDebug() << "size" << size << t_request;
+      socket->write(reinterpret_cast<char*>(&size), sizeof(size));
+      socket->write(t_request);
+      socket->flush();
+    }
+  });
+
+  connect(socket, &QLocalSocket::connected, this, [this]() {
+    qDebug() << "connected";
+    const QString core = "C:/Users/lee/Desktop/bsnes_balanced_libretro.dll";
+    const QString game =
+      "C:/Users/lee/Documents/cpp/phoenix-backend/test/snes_test_roms/bsnesdemo_v1.sfc";
+    initEmu(core, game, "2d");
+    playEmu();
+  });
+  connect(socket, &QLocalSocket::connected, this, &EmulatorManager::connectedToProcess);
+  connect(socket, &QLocalSocket::disconnected, this, &EmulatorManager::disconnectedFromProcess);
+  connect(socket, &QLocalSocket::disconnected, this, [this] {
+    qDebug() << "Frontend socket disconnected";
+  });
+
+  socket->connectToServer("phoenixEmulatorProcess");
+
+ */

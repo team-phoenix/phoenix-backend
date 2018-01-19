@@ -41,7 +41,7 @@ ApplicationWindow {
                 }
 
                 ComboBox {
-                    textRole: "systemShortName"
+                    textRole: "systemFullName"
                     model: SystemModel {
                     }
                     onCurrentTextChanged: {

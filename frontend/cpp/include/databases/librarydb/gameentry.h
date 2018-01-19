@@ -15,8 +15,7 @@ struct GameEntry {
   QString gameTitle;
   QString systemFullName;
 
-  int userSetCore{ -1 };
-  int defaultCore{ -1 };
+  QString userSetCore;
 
   GameEntry(const QVariantHash &hash)
   {
@@ -30,18 +29,7 @@ struct GameEntry {
     gameTitle = hash.value("gameTitle").toString();
     systemFullName = hash.value("systemFullName").toString();
 
-    bool ok = false;
-    userSetCore = hash.value("userSetCore").toInt(&ok);
-
-    if (!ok) {
-      userSetCore = -1;
-    }
-
-    defaultCore = hash.value("defaultCore").toInt(&ok);
-
-    if (!ok) {
-      defaultCore = -1;
-    }
+    userSetCore = hash.value("userSetCore").toString();
   }
 
   GameEntry() = default;
@@ -78,12 +66,8 @@ struct GameEntry {
       result.insert("systemFullName", systemFullName);
     }
 
-    if (userSetCore != -1) {
+    if (!userSetCore.isEmpty()) {
       result.insert("userSetCore", userSetCore);
-    }
-
-    if (defaultCore != -1) {
-      result.insert("defaultCore", defaultCore);
     }
 
     return result;

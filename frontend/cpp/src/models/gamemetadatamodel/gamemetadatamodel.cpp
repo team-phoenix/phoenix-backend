@@ -11,6 +11,8 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
   { System, "gameSystem"},
   { Description, "gameDescription"},
   { ImageSource, "gameImageSource"},
+  { AbsoluteGamePath, "gameAbsoluteFilePath"},
+  { AbsoluteCorePath, "coreAbsoluteFilePath"},
 })
 {
   connect(&gameImporter, &GameImporter::updateModel, this, &GameMetadataModel::forceUpdate);
@@ -56,6 +58,12 @@ QVariant GameMetadataModel::data(const QModelIndex &index, int role) const
       case ImageSource:
         return gameMetadata.gameImageSource;
 
+      case AbsoluteGamePath:
+        return gameMetadata.gameFilePath;
+
+      case AbsoluteCorePath:
+        return gameMetadata.userSetCore.isEmpty() ? gameMetadata.defaultCore : gameMetadata.userSetCore;
+
       default:
         break;
     }
@@ -78,8 +86,8 @@ GameMetadataModel &GameMetadataModel::instance()
 void GameMetadataModel::forceUpdate()
 {
   clearCache();
-  const QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
-  fillCache(gameEntries);
+  const QList<QPair<GameEntry, SystemCoreMap>> gameEntriesSystemPair = libraryDb.findAllByGameEntry();
+  fillCache(gameEntriesSystemPair);
 }
 
 void GameMetadataModel::importGames(QList<QUrl> urls)
@@ -101,15 +109,15 @@ void GameMetadataModel::filterBySystem(QString fullSystemName)
 {
   clearCache();
 
-  QList<GameEntry> gameEntries;
+  QList<QPair<GameEntry, SystemCoreMap>> gameEntriesSystemPair;
 
   if (fullSystemName.toLower() == "all") {
-    gameEntries = libraryDb.findAllByGameEntry();
+    gameEntriesSystemPair = libraryDb.findAllByGameEntry();
   } else {
-    gameEntries = libraryDb.findAllByGameEntryFilterBySystem(fullSystemName);
+    gameEntriesSystemPair = libraryDb.findAllByGameEntryFilterBySystem(fullSystemName);
   }
 
-  fillCache(gameEntries);
+  fillCache(gameEntriesSystemPair);
 }
 
 void GameMetadataModel::clearCache()
@@ -121,7 +129,7 @@ void GameMetadataModel::clearCache()
   }
 }
 
-void GameMetadataModel::fillCache(const QList<GameEntry> &gameEntries)
+void GameMetadataModel::fillCache(const QList<QPair<GameEntry, SystemCoreMap>> &gameEntries)
 {
   if (gameEntries.isEmpty()) {
     return;
@@ -132,8 +140,11 @@ void GameMetadataModel::fillCache(const QList<GameEntry> &gameEntries)
   gameMetadataCache.resize(gameEntries.size());
 
   for (int i = 0; i < gameEntries.size(); ++i) {
-    const GameEntry &entry = gameEntries.at(i);
-    gameMetadataCache[i] = GameMetadata(entry);
+    const QPair<GameEntry, SystemCoreMap> &pair = gameEntries.at(i);
+    const GameEntry entry = pair.first;
+    const SystemCoreMap systemCoreMap = pair.second;
+
+    gameMetadataCache[i] = GameMetadata(entry, systemCoreMap);
   }
 
   endInsertRows();

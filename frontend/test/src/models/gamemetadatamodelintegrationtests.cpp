@@ -3,6 +3,17 @@
 #include "librarydb.h"
 #include "tempdbsession.h"
 
+static void insertSystemIntoMap(LibraryDb &libraryDb, QString fullSystemName, QString coreName,
+                                bool isDefault)
+{
+  SystemCoreMap systemCoreMap;
+  systemCoreMap.coreName = coreName;
+  systemCoreMap.systemFullName = fullSystemName;
+  systemCoreMap.isDefault = isDefault;
+
+  libraryDb.insert(systemCoreMap);
+}
+
 void insertTestGamesIntoDb(LibraryDb &libraryDb)
 {
   libraryDb.insert(GameEntry(QVariantHash({
@@ -12,7 +23,10 @@ void insertTestGamesIntoDb(LibraryDb &libraryDb)
     { "gameImageSource", "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg" },
     { "gameDescription", "'89 Dennou Kyuusei Uranai is a Miscellaneous game, developed by Micronics and published by Jingukan Polaris,which was released in Japan in 1988." },
     { "systemFullName", "Nintendo Entertainment System" },
+    { "coreAbsoluteFilePath", "" },
   })));
+
+  insertSystemIntoMap(libraryDb, "Nintendo Entertainment System", "bnes_libretro", true);
 
   libraryDb.insert(GameEntry(QVariantHash({
     { "absoluteFilePath", "/path/to/4 in 1 Row" },
@@ -21,7 +35,10 @@ void insertTestGamesIntoDb(LibraryDb &libraryDb)
     { "gameImageSource", "http://img.gamefaqs.net/box/8/1/7/162817_front.jpg" },
     { "gameDescription", "4 in 1 Row is a Puzzle game, developed and published by Philips, which was released in Europe in 1982." },
     { "systemFullName", "Magnavox Odyssey2" },
+    { "userSetCore", "/path/to/user core b" },
   })));
+
+  insertSystemIntoMap(libraryDb, "Magnavox Odyssey2", "o2em_libretro", true);
 }
 
 void insertAlphabticalTestGamesIntoDb(LibraryDb &libraryDb)
@@ -53,6 +70,10 @@ void insertAlphabticalTestGamesIntoDb(LibraryDb &libraryDb)
     { "gameTitle", "Game D" },
     { "systemFullName", "Magnavox Odyssey2" },
   })));
+
+  insertSystemIntoMap(libraryDb, "Nintendo Entertainment System", "bnes_libretro", true);
+  insertSystemIntoMap(libraryDb, "Magnavox Odyssey2", "o2em_libretro", true);
+
 }
 
 SCENARIO("GameMetadataModel")
@@ -63,7 +84,19 @@ SCENARIO("GameMetadataModel")
     WHEN("the constructor is called") {
       THEN("the member variables are filled in with items") {
         REQUIRE(subject.rowCount() == 0);
-        REQUIRE(subject.columnCount() == 4);
+        REQUIRE(subject.columnCount() == 6);
+      }
+
+      THEN("the role names have matching enum values") {
+        const QHash<int, QByteArray> roles = subject.roleNames();
+
+        REQUIRE(roles[GameMetadataModel::Title] == "gameTitle");
+        REQUIRE(roles[GameMetadataModel::System] == "gameSystem");
+        REQUIRE(roles[GameMetadataModel::Description] == "gameDescription");
+        REQUIRE(roles[GameMetadataModel::ImageSource] == "gameImageSource");
+        REQUIRE(roles[GameMetadataModel::AbsoluteGamePath] == "gameAbsoluteFilePath");
+        REQUIRE(roles[GameMetadataModel::AbsoluteCorePath] == "coreAbsoluteFilePath");
+
       }
     }
 
@@ -92,6 +125,12 @@ SCENARIO("GameMetadataModel")
         REQUIRE(subject.data(firstIndex,
                              GameMetadataModel::ImageSource).toString() == "http://img.gamefaqs.net/box/6/4/2/41642_front.jpg");
 
+        REQUIRE(subject.data(firstIndex,
+                             GameMetadataModel::AbsoluteGamePath).toString() == "/path/to/'89 Dennou Kyuusei Uranai");
+
+        REQUIRE(subject.data(firstIndex,
+                             GameMetadataModel::AbsoluteCorePath).toString() == "bnes_libretro");
+
         const QModelIndex secondIndex = subject.createIndexAt(1, columnDoesntMatter);
 
         REQUIRE(subject.data(secondIndex, GameMetadataModel::Title).toString() == "4 in 1 Row");
@@ -101,6 +140,12 @@ SCENARIO("GameMetadataModel")
                 "4 in 1 Row is a Puzzle game, developed and published by Philips, which was released in Europe in 1982.");
         REQUIRE(subject.data(secondIndex,
                              GameMetadataModel::ImageSource).toString() == "http://img.gamefaqs.net/box/8/1/7/162817_front.jpg");
+
+        REQUIRE(subject.data(secondIndex,
+                             GameMetadataModel::AbsoluteGamePath).toString() == "/path/to/4 in 1 Row");
+
+        REQUIRE(subject.data(secondIndex,
+                             GameMetadataModel::AbsoluteCorePath).toString() == "/path/to/user core b");
       }
 
       WHEN("the database is cleared") {
