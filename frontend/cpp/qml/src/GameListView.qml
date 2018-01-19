@@ -6,6 +6,7 @@ ListView {
     id: listView
 
     model: globalGameMetadataModel
+    clip: true;
 
     orientation: ListView.Vertical
     spacing: 12
