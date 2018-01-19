@@ -12,6 +12,7 @@ ApplicationWindow {
     minimumHeight: 480
     minimumWidth: 640
     title: qsTr("Phoenix")
+
     ColumnLayout {
         anchors {
             fill: parent
@@ -27,7 +28,7 @@ ApplicationWindow {
                 selectFolder: false
                 selectMultiple: true
                 onAccepted: {
-                    globalGameMetadataModel.importGames(findGameDialog.fileUrls);
+                    globalGameMetadataModel.importGames(findGameDialog.fileUrls)
                 }
             }
 
@@ -41,10 +42,10 @@ ApplicationWindow {
 
                 ComboBox {
                     textRole: "systemShortName"
-                    model: SystemModel {}
+                    model: SystemModel {
+                    }
                     onCurrentTextChanged: {
-                        console.log("display:", currentText);
-                        globalGameMetadataModel.filterBySystem(currentText);
+                        globalGameMetadataModel.filterBySystem(currentText)
                     }
                 }
             }
