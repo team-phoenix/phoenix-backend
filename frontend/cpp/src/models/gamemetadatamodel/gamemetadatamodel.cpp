@@ -14,7 +14,6 @@ GameMetadataModel::GameMetadataModel(QObject* parent)
 })
 {
   connect(&gameImporter, &GameImporter::updateModel, this, &GameMetadataModel::forceUpdate);
-  forceUpdate();
 }
 
 QModelIndex GameMetadataModel::createIndexAt(int row, int column) const
@@ -79,20 +78,8 @@ GameMetadataModel &GameMetadataModel::instance()
 void GameMetadataModel::forceUpdate()
 {
   clearCache();
-
   const QList<GameEntry> gameEntries = libraryDb.findAllByGameEntry();
-
-  beginInsertRows(QModelIndex(), 0,
-                  gameEntries.size() == 0 ? gameEntries.size() : gameEntries.size() - 1);
-
-  gameMetadataCache.resize(gameEntries.size());
-
-  for (int i = 0; i < gameEntries.size(); ++i) {
-    const GameEntry &entry = gameEntries.at(i);
-    gameMetadataCache[i] = GameMetadata(entry);
-  }
-
-  endInsertRows();
+  fillCache(gameEntries);
 }
 
 void GameMetadataModel::importGames(QList<QUrl> urls)
@@ -110,6 +97,21 @@ void GameMetadataModel::removeGameAt(int index)
   endRemoveRows();
 }
 
+void GameMetadataModel::filterBySystem(QString fullSystemName)
+{
+  clearCache();
+
+  QList<GameEntry> gameEntries;
+
+  if (fullSystemName.toLower() == "all") {
+    gameEntries = libraryDb.findAllByGameEntry();
+  } else {
+    gameEntries = libraryDb.findAllByGameEntryFilterBySystem(fullSystemName);
+  }
+
+  fillCache(gameEntries);
+}
+
 void GameMetadataModel::clearCache()
 {
   if (!gameMetadataCache.isEmpty()) {
@@ -117,4 +119,22 @@ void GameMetadataModel::clearCache()
     endRemoveRows();
     gameMetadataCache.clear();
   }
+}
+
+void GameMetadataModel::fillCache(const QList<GameEntry> &gameEntries)
+{
+  if (gameEntries.isEmpty()) {
+    return;
+  }
+
+  beginInsertRows(QModelIndex(), 0, gameEntries.size() - 1);
+
+  gameMetadataCache.resize(gameEntries.size());
+
+  for (int i = 0; i < gameEntries.size(); ++i) {
+    const GameEntry &entry = gameEntries.at(i);
+    gameMetadataCache[i] = GameMetadata(entry);
+  }
+
+  endInsertRows();
 }

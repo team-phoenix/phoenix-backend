@@ -24,6 +24,37 @@ void insertTestGamesIntoDb(LibraryDb &libraryDb)
   })));
 }
 
+void insertAlphabticalTestGamesIntoDb(LibraryDb &libraryDb)
+{
+  libraryDb.insert(GameEntry(QVariantHash({
+    { "absoluteFilePath", "/path/to/some_path_1" },
+    { "sha1Checksum", "hash1" },
+    { "gameTitle", "Game A" },
+    { "systemFullName", "Nintendo Entertainment System" },
+  })));
+
+  libraryDb.insert(GameEntry(QVariantHash({
+    { "absoluteFilePath", "/path/to/some_path_2" },
+    { "sha1Checksum", "hash2" },
+    { "gameTitle", "Game B" },
+    { "systemFullName", "Nintendo Entertainment System" },
+  })));
+
+  libraryDb.insert(GameEntry(QVariantHash({
+    { "absoluteFilePath", "/path/to/some_path_3" },
+    { "sha1Checksum", "hash3" },
+    { "gameTitle", "Game C" },
+    { "systemFullName", "Nintendo Entertainment System" },
+  })));
+
+  libraryDb.insert(GameEntry(QVariantHash({
+    { "absoluteFilePath", "/path/to/some_path_4" },
+    { "sha1Checksum", "hash4" },
+    { "gameTitle", "Game D" },
+    { "systemFullName", "Magnavox Odyssey2" },
+  })));
+}
+
 SCENARIO("GameMetadataModel")
 {
   GIVEN("a real subject") {
@@ -106,6 +137,34 @@ SCENARIO("GameMetadataModel")
         subject.removeGameAt(0);
         subject.forceUpdate();
         REQUIRE(subject.rowCount() == 1);
+      }
+    }
+
+    WHEN("multiple games are inserted into the model") {
+      LibraryDb libraryDb;
+      TempDbSession tempDbSession(&libraryDb);
+
+      insertAlphabticalTestGamesIntoDb(libraryDb);
+      subject.forceUpdate();
+
+      THEN("cached list defaults to returning all systems") {
+        REQUIRE(subject.rowCount() == 4);
+      }
+
+      THEN("the games can be filtered by system and alphabetically") {
+        subject.filterBySystem("Nintendo Entertainment System");
+
+        REQUIRE(subject.rowCount() == 3);
+
+        subject.filterBySystem("Magnavox Odyssey2");
+        REQUIRE(subject.rowCount() == 1);
+
+        WHEN("'All' is passed in as a system filter") {
+          subject.filterBySystem("All");
+          THEN("the cached list returns all games") {
+            REQUIRE(subject.rowCount() == 4);
+          }
+        }
       }
     }
   }

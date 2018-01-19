@@ -12,6 +12,7 @@ public:
   ~LibraryDb() = default;
 
   QList<GameEntry> findAllByGameEntry();
+  QList<GameEntry> findAllByGameEntryFilterBySystem(QString systemFullName);
   QStringList getTableNames() const;
 
   void insert(GameEntry entry);

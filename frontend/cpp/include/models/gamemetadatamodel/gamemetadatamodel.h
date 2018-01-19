@@ -40,9 +40,11 @@ public slots:
   virtual void forceUpdate();
   void importGames(QList<QUrl> urls);
   void removeGameAt(int index);
+  void filterBySystem(QString fullSystemName);
 
 private:
   void clearCache();
+  void fillCache(const QList<GameEntry> &gameEntries);
 
 private:
   explicit GameMetadataModel(QObject* parent = nullptr);

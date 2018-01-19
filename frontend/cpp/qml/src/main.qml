@@ -41,7 +41,10 @@ ApplicationWindow {
 
                 ComboBox {
                     textRole: "systemShortName"
-                    model: SystemModel {
+                    model: SystemModel {}
+                    onCurrentTextChanged: {
+                        console.log("display:", currentText);
+                        globalGameMetadataModel.filterBySystem(currentText);
                     }
                 }
             }

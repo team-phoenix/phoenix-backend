@@ -26,6 +26,12 @@ QList<GameEntry> LibraryDb::findAllByGameEntry()
   return findAllBy<GameEntry>("games", "*");
 }
 
+QList<GameEntry> LibraryDb::findAllByGameEntryFilterBySystem(QString systemFullName)
+{
+  QMutexLocker locker(dbMutex);
+  return findRowsByAndWhere<GameEntry>("games", "systemFullName", systemFullName);
+}
+
 QStringList LibraryDb::getTableNames() const
 {
   return tableNames;
