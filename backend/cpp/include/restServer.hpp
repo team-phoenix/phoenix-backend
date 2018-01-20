@@ -166,6 +166,7 @@ public:
       }
 
       currentMessageSize = 0;
+      currentReadObject = requestJsonObject;
       emit requestRecieved(requestJsonObject);
     }
 
