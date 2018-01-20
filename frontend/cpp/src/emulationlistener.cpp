@@ -1,6 +1,8 @@
 #include "emulationlistener.h"
+#include "pathcreator.h"
 
 #include <QLocalSocket>
+#include <QJsonDocument>
 #include <QDebug>
 
 static const QString SERVER_NAME = "phoenixEmulatorProcess";
@@ -14,16 +16,29 @@ EmulationListener::EmulationListener(QObject* parent)
                                           SERVER_NAME)));
   }
 
-  if (!localServer.listen(SERVER_NAME)) {
-    throw std::runtime_error(qPrintable(SERVER_NAME + " server could not be opened, aborting..."));
-  }
+//  if (!localServer.listen(SERVER_NAME)) {
+//    throw std::runtime_error(qPrintable(SERVER_NAME + " server could not be opened, aborting..."));
+//  }
 
   qDebug() << "Frontend server is listening...";
 
-  connect(&localServer, &QLocalServer::newConnection, this, [this] {
-    newConnectionFound();
+//  connect(&localServer, &QLocalServer::newConnection, this, [this] {
+//    qDebug() << "new connection found";
+
+//    newConnectionFound();
+//  });
+
+
+  connect(&socketToBackend, &QLocalSocket::connected, this, [this] {
+    qDebug() << "Connected socket to backend";
   });
 
+  connect(&socketToBackend, &QLocalSocket::readyRead, this, [this] {
+    const QVariantHash message = socketReadWriter.readSocketMessage(socketToBackend);
+    executeSocketCommands(message);
+  });
+
+  socketToBackend.connectToServer(SERVER_NAME);
 }
 
 void EmulationListener::newConnectionFound()
@@ -38,6 +53,39 @@ void EmulationListener::newConnectionFound()
   connect(newSocket, &QLocalSocket::disconnected, this, [newSocket] {
     delete newSocket;
   });
+}
+
+void EmulationListener::sendPlayMessage(QString gameFilePath, QString coreFilePath)
+{
+  const QString fullCorePath = PathCreator::addExtension(PathCreator::corePath() + coreFilePath);
+
+  if (gameFilePath.isEmpty() || coreFilePath.isEmpty()) {
+    throw std::runtime_error("Game path and core path cannot be empty! aborting...");
+  }
+
+  QVariantHash initMessage = newMessage("initEmu");
+  initMessage["core"] = fullCorePath;
+  initMessage["game"] = gameFilePath;
+
+  sendMessage(initMessage);
+
+  const QVariantHash playMessage = newMessage("playEmu");
+  sendMessage(playMessage);
+}
+
+void EmulationListener::sendMessage(QVariantHash hashedMessage)
+{
+  if (socketToBackend.isOpen()) {
+    QByteArray messageBytes = QJsonDocument::fromVariant(hashedMessage).toJson(
+                                QJsonDocument::Compact);
+
+    quint32 size = static_cast<quint32>(messageBytes.size());
+
+    socketToBackend.write(reinterpret_cast<char*>(&size), sizeof(size));
+
+    socketToBackend.write(messageBytes);
+
+  }
 }
 
 

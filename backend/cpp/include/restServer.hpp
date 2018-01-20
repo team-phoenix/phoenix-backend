@@ -112,31 +112,41 @@ public:
 
   void readCurrentSocket()
   {
-    if (currentSocket->bytesAvailable() > 4) {
-      while (currentSocket->bytesAvailable()) {
+    while (currentSocket->bytesAvailable()) {
 
-        quint32 msgSize = 0;
-        currentSocket->read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
-
-
-        if (currentSocket->bytesAvailable() >= msgSize) {
-          QByteArray socketMsg(msgSize, '\0');
-
-          currentSocket->read(socketMsg.data(), msgSize);
-
-          QJsonParseError parserError;
-          const QJsonObject obj = QJsonDocument::fromJson(socketMsg, &parserError).object();
-
-          if (parserError.error != QJsonParseError::NoError) {
-            throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
-                                                parserError.errorString()));
-          }
-
-          currentReadObject = obj;
-          emit requestRecieved(obj);
-        }
+      if (currentMessageSize == 0 && currentSocket->bytesAvailable() >= 4) {
+        currentMessageSize = readMessageSize();
       }
+
+      if (currentSocket->bytesAvailable() >= currentMessageSize) {
+
+        QByteArray incomingMessage(currentMessageSize, '\0');
+
+        currentSocket->read(incomingMessage.data(), incomingMessage.size());
+
+        currentMessageSize = 0;
+
+        QJsonParseError parserError;
+        const QJsonObject obj = QJsonDocument::fromJson(incomingMessage, &parserError).object();
+
+        if (parserError.error != QJsonParseError::NoError) {
+          throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
+                                              parserError.errorString()));
+        }
+
+        currentReadObject = obj;
+
+        emit requestRecieved(obj);
+      }
+
     }
+  }
+
+  int readMessageSize()
+  {
+    quint32 msgSize = 0;
+    currentSocket->read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
+    return msgSize;
   }
 
   QJsonObject takeCurrentRequest()
@@ -173,6 +183,7 @@ private:
   QLocalServer localServer;
   QLocalSocket* currentSocket{ nullptr };
   QJsonObject currentReadObject;
+  int currentMessageSize{0};
 
 private slots:
 
@@ -196,7 +207,7 @@ private slots:
 
     connect(currentSocket, &QLocalSocket::disconnected, this, [this] {
       qCDebug(phxCore) << "localSocket is disconnected";
-      delete currentSocket;
+      currentSocket->deleteLater();
       currentSocket = nullptr;
       emit socketDisconnected();
     });

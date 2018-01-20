@@ -234,6 +234,7 @@ public:
       case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO: {
           const struct retro_controller_info* controllerInfo =
               static_cast<const struct retro_controller_info*>(data);
+          Q_UNUSED(controllerInfo);
           return false;
         }
 

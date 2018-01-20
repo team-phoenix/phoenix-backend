@@ -31,7 +31,7 @@ SCENARIO("OpenVgDb")
     WHEN("findAllRoms(), is called") {
       QList<QVariantHash> roms = subject.findAllRoms();
       THEN("It returns a non empty list") {
-        REQUIRE(roms.size() == 4);
+        REQUIRE(roms.size() == 2);
       }
     }
 
@@ -92,7 +92,7 @@ SCENARIO("OpenVgDb")
                                          subject.findReleasesByTitle("/path/to/'89 Dennou Kyuusei Uranai (Japan).nes");
 
       THEN("The returned releases will be 1") {
-        REQUIRE(releaseSystemList.size() == 3);
+        REQUIRE(releaseSystemList.size() == 1);
       }
 
       THEN("The returned release has a romID equal to the ROMs table sha1 row") {

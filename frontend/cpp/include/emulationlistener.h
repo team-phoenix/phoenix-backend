@@ -16,17 +16,20 @@ public:
 
   void newConnectionFound();
 
+public slots:
+  void sendPlayMessage(QString gameFilePath, QString coreFilePath);
+  void sendMessage(QVariantHash hashedMessage);
 
-  Q_INVOKABLE void sendPlayMessage(QString gameFilePath, QString coreFilePath)
-  {
-    qDebug() << "got play message" << gameFilePath << coreFilePath;
-
-    if (gameFilePath.isEmpty() || coreFilePath.isEmpty()) {
-      throw std::runtime_error("Game path and core path cannot be empty! aborting...");
-    }
-
-  }
 private:
+  QVariantHash newMessage(const QString requestType)
+  {
+    return QVariantHash {
+      { "request", requestType }
+    };
+  }
+
+private:
+  QLocalSocket socketToBackend;
   QLocalServer localServer;
   SocketReadWriter socketReadWriter;
 };

@@ -6,14 +6,13 @@
 #include <QJsonObject>
 #include <QLocalSocket>
 
-template<typename SomeSocket = QLocalSocket>
-class SocketReadWriter_T
+class SocketReadWriter
 {
 public:
-  SocketReadWriter_T() = default;
-  ~SocketReadWriter_T() = default;
+  SocketReadWriter() = default;
+  ~SocketReadWriter() = default;
 
-  QVariantHash readSocketMessage(SomeSocket &socket)
+  QVariantHash readSocketMessage(QLocalSocket &socket)
   {
     QVariantHash result;
 
@@ -41,6 +40,5 @@ public:
 
     return result;
   }
-};
 
-using SocketReadWriter = SocketReadWriter_T<>;
+};

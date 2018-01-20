@@ -11,33 +11,48 @@ class EmulationLoop : public QObject
 {
   Q_OBJECT
 public:
+
+
+  enum LoopState {
+    Uninitialized,
+    Initialized,
+    Playing,
+    Paused,
+  };
+
+
   EmulationLoop()
   {
     connect(&messageServer, &RestServer::requestRecieved, this, &EmulationLoop::parseRequest);
-    connect(&messageServer, &RestServer::socketDisconnected, this, &EmulationLoop::stop);
+    connect(&messageServer, &RestServer::socketDisconnected, this, &EmulationLoop::stopTimer);
     connect(&emulationTimer, &QTimer::timeout, this, &EmulationLoop::loop);
   }
 
   void startTimerWithInterval(int miliseconds)
   {
-    stop();
+    stopTimer();
     emulationTimer.setTimerType(Qt::PreciseTimer);
     emulationTimer.setInterval(miliseconds);
-    start();
+    startTimer();
   }
 
   ~EmulationLoop() = default;
 
+private:
+  LoopState looperState{ Uninitialized };
+
 private slots:
 
-  void stop()
+  void stopTimer()
   {
     emulationTimer.stop();
+    looperState = Paused;
     qCDebug(phxLoop) << "timer was stopped";
   }
 
-  void start()
+  void startTimer()
   {
+    looperState = Playing;
     emulationTimer.start();
   }
 
@@ -52,20 +67,32 @@ private slots:
     qCDebug(phxLoop, "request %s", qPrintable(requestType));
 
     if (requestType == "initEmu") {
-      const QString corePath = request[ "core" ].toString();
-      const QString gamePath = request[ "game" ].toString();
-      coreController.init(corePath, gamePath);
-      qCDebug(phxLoop) << "initialized emulation";
-
+      if (looperState == Uninitialized) {
+        const QString corePath = request[ "core" ].toString();
+        const QString gamePath = request[ "game" ].toString();
+        coreController.init(corePath, gamePath);
+        looperState = Initialized;
+        qCDebug(phxLoop) << "initialized emulation";
+      } else {
+        qCDebug(phxLoop) << "The emulator is already initialized, rejecting initialize request";
+      }
     } else if (requestType == "playEmu") {
 
-      const int miliseconds = 16;
-      startTimerWithInterval(miliseconds);
-      qCDebug(phxLoop) << "started emulation";
+      if (looperState == Initialized) {
+        const int miliseconds = 16;
+        startTimerWithInterval(miliseconds);
+        qCDebug(phxLoop) << "started emulation";
+      } else {
+        qCDebug(phxLoop) << "The emulator is already playing, rejecting play request";
+      }
 
     } else if (requestType == "pauseEmu") {
-      stop();
-      qCDebug(phxLoop) << "paused emulation";
+      if (looperState != Playing) {
+        stopTimer();
+        qCDebug(phxLoop) << "paused emulation";
+      } else {
+        qCDebug(phxLoop) << "The emulator is not running, rejecting pause request";
+      }
     }
 
   }

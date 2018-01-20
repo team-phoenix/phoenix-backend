@@ -33,7 +33,7 @@ QtApplication {
 
         var qmlFiles = ["qml/*.qrc", "qml/icons/*.qrc"]
 
-        var sources = ["src/*.cpp", "src/models/*.cpp", "src/models/gamemetadatamodel/*.cpp", "src/models/systemlistmodel/*.cpp", "src/databases/*.cpp", "src/databases/librarydb/*.cpp", "src/databases/openvgdb/*.cpp", "src/gameimporter/*.cpp"]
+        var sources = ["src/*.cpp", "src/main/*.cpp", "src/models/*.cpp", "src/models/gamemetadatamodel/*.cpp", "src/models/systemlistmodel/*.cpp", "src/databases/*.cpp", "src/databases/librarydb/*.cpp", "src/databases/openvgdb/*.cpp", "src/gameimporter/*.cpp"]
 
         return headers.concat(sources).concat(qmlFiles)
     }

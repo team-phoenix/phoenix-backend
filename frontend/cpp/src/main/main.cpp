@@ -6,11 +6,14 @@
 #include "systemlistmodel.h"
 #include "gameimporter.h"
 #include "emulationlistener.h"
+#include "pathcreator.h"
 
 int main(int argc, char* argv[])
 {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QGuiApplication app(argc, argv);
+
+  PathCreator::createAllAppPaths();
 
   qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
   qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");

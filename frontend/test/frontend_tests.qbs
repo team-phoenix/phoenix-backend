@@ -60,6 +60,7 @@ QtApplication {
 
         var sources = ["src/*.cpp"
                        , "src/models/*.cpp"
+                       , "../cpp/src/*.cpp"
                        , "../cpp/src/logging.cpp"
                        , "../cpp/src/databases/*.cpp"
                        , "../cpp/src/databases/librarydb/*.cpp"
