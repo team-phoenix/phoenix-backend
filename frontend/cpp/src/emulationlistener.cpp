@@ -16,26 +16,17 @@ EmulationListener::EmulationListener(QObject* parent)
                                           SERVER_NAME)));
   }
 
-//  if (!localServer.listen(SERVER_NAME)) {
-//    throw std::runtime_error(qPrintable(SERVER_NAME + " server could not be opened, aborting..."));
-//  }
-
   qDebug() << "Frontend server is listening...";
 
-//  connect(&localServer, &QLocalServer::newConnection, this, [this] {
-//    qDebug() << "new connection found";
-
-//    newConnectionFound();
-//  });
-
+  connect(&socketReadWriter, &SocketReadWriter::newReplyFound, this,
+          &EmulationListener::executeSocketCommands);
 
   connect(&socketToBackend, &QLocalSocket::connected, this, [this] {
     qDebug() << "Connected socket to backend";
   });
 
   connect(&socketToBackend, &QLocalSocket::readyRead, this, [this] {
-    const QVariantHash message = socketReadWriter.readSocketMessage(socketToBackend);
-    executeSocketCommands(message);
+    socketReadWriter.readSocketMessage(socketToBackend);
   });
 
   socketToBackend.connectToServer(SERVER_NAME);
@@ -46,8 +37,7 @@ void EmulationListener::newConnectionFound()
   QLocalSocket* newSocket = localServer.nextPendingConnection();
 
   connect(newSocket, &QLocalSocket::readyRead, this, [this, newSocket] {
-    const QVariantHash message = socketReadWriter.readSocketMessage(*newSocket);
-    executeSocketCommands(message);
+    socketReadWriter.readSocketMessage(*newSocket);
   });
 
   connect(newSocket, &QLocalSocket::disconnected, this, [newSocket] {
@@ -55,12 +45,23 @@ void EmulationListener::newConnectionFound()
   });
 }
 
-void EmulationListener::sendPlayMessage(QString gameFilePath, QString coreFilePath)
+EmulationListener &EmulationListener::instance()
+{
+  static EmulationListener emulationListener;
+  return emulationListener;
+}
+
+bool EmulationListener::sendPlayMessage(QString gameFilePath, QString coreFilePath)
 {
   const QString fullCorePath = PathCreator::addExtension(PathCreator::corePath() + coreFilePath);
 
   if (gameFilePath.isEmpty() || coreFilePath.isEmpty()) {
     throw std::runtime_error("Game path and core path cannot be empty! aborting...");
+  }
+
+  if (!QFile::exists(fullCorePath)) {
+    qDebug() << fullCorePath << "doesn't exist, not sending play message";
+    return false;
   }
 
   QVariantHash initMessage = newMessage("initEmu");
@@ -71,6 +72,7 @@ void EmulationListener::sendPlayMessage(QString gameFilePath, QString coreFilePa
 
   const QVariantHash playMessage = newMessage("playEmu");
   sendMessage(playMessage);
+  return true;
 }
 
 void EmulationListener::sendMessage(QVariantHash hashedMessage)
@@ -89,9 +91,21 @@ void EmulationListener::sendMessage(QVariantHash hashedMessage)
 }
 
 
-void EmulationListener::executeSocketCommands(const QVariantHash &jsonMessage)
+void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
 {
-  qDebug() << "Got socket command" << jsonMessage;
+  qDebug() << "Got socket command" << replyMessage;
+  const QString replyType = replyMessage.value("reply").toString().simplified();
+
+  if (replyType == "initEmu") {
+
+    const double aspectRatio = replyMessage.value("aspectRatio").toDouble();
+    const int height = replyMessage.value("height").toInt();
+    const int width = replyMessage.value("width").toInt();
+    const double frameRate = replyMessage.value("frameRate").toDouble();
+    const int pixelFormat = replyMessage.value("pixelFormat").toInt();
+
+    emit videoInfoChanged(aspectRatio, height, width, frameRate, pixelFormat);
+  }
 }
 
 /*

@@ -5,40 +5,20 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocalSocket>
+#include <QObject>
 
-class SocketReadWriter
+class SocketReadWriter : public QObject
 {
+  Q_OBJECT
 public:
-  SocketReadWriter() = default;
+  explicit SocketReadWriter(QObject* parent = nullptr);
   ~SocketReadWriter() = default;
 
-  QVariantHash readSocketMessage(QLocalSocket &socket)
-  {
-    QVariantHash result;
+  void readSocketMessage(QLocalSocket &socket);
 
-    // The first 4 bytes are reserved for the size of the message,
-    // so we can skip the readyRead signal if the buffer is < 4 bytes.
-    if (socket.bytesAvailable() > 4) {
-      while (socket.bytesAvailable()) {
+signals:
+  void newReplyFound(QVariantHash reply);
 
-        quint32 msgSize = 0;
-        socket.read(reinterpret_cast<char*>(&msgSize), sizeof(msgSize));
-
-        if (socket.bytesAvailable() >= msgSize) {
-          QByteArray socketMsg(msgSize, '\0');
-
-          socket.read(socketMsg.data(), msgSize);
-
-          qDebug() << socketMsg;
-          QJsonObject obj = QJsonDocument::fromJson(socketMsg).object();
-          result = obj.toVariantHash();
-          break;
-        }
-      }
-
-    }
-
-    return result;
-  }
-
+private:
+  quint32 replySize{0};
 };

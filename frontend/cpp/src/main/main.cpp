@@ -6,6 +6,7 @@
 #include "systemlistmodel.h"
 #include "gameimporter.h"
 #include "emulationlistener.h"
+#include "emulationvideoscreen.h"
 #include "pathcreator.h"
 
 int main(int argc, char* argv[])
@@ -17,13 +18,12 @@ int main(int argc, char* argv[])
 
   qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
   qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
+  qmlRegisterType<EmulationVideoScreen>("vg.phoenix.emulation", 1, 0, "EmulationVideoScreen");
 
   QQmlApplicationEngine engine;
   QQmlContext* context = engine.rootContext();
   context->setContextProperty("globalGameMetadataModel", &GameMetadataModel::instance());
-
-  EmulationListener emulationListener;
-  context->setContextProperty("globalEmulationListener", &emulationListener);
+  context->setContextProperty("globalEmulationListener", &EmulationListener::instance());
 
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
 

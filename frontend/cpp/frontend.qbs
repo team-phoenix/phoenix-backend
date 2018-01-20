@@ -6,7 +6,7 @@ QtApplication {
     name: "frontend"
     Depends {
         name: "Qt"
-        submodules: ["core", "multimedia", "gui", "qml", "sql", "concurrent"]
+        submodules: ["core", "multimedia", "gui", "qml", "quick", "sql", "concurrent"]
     }
 
     cpp.includePaths: {

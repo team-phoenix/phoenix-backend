@@ -2,7 +2,8 @@
     <qresource prefix="/">
         <file>src/main.qml</file>
         <file>src/GameListView.qml</file>
-		
-		<file>test/Test_GameListView.qml</file>
+        <file>test/Test_GameListView.qml</file>
+        <file>src/RootPage.qml</file>
+        <file>src/GamePage.qml</file>
     </qresource>
 </RCC>

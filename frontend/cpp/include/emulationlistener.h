@@ -10,17 +10,19 @@ class EmulationListener : public QObject
 {
   Q_OBJECT
 public:
-  explicit EmulationListener(QObject*  parent = nullptr);
 
-  void executeSocketCommands(const QVariantHash &jsonMessage);
-
-  void newConnectionFound();
+  static EmulationListener &instance();
 
 public slots:
-  void sendPlayMessage(QString gameFilePath, QString coreFilePath);
+  bool sendPlayMessage(QString gameFilePath, QString coreFilePath);
   void sendMessage(QVariantHash hashedMessage);
 
+private slots:
+  void executeSocketCommands(QVariantHash jsonMessage);
+
 private:
+  void newConnectionFound();
+
   QVariantHash newMessage(const QString requestType)
   {
     return QVariantHash {
@@ -28,8 +30,14 @@ private:
     };
   }
 
+signals:
+  void videoInfoChanged(double, int, int, double, int);
+
 private:
   QLocalSocket socketToBackend;
   QLocalServer localServer;
   SocketReadWriter socketReadWriter;
+
+  explicit EmulationListener(QObject*  parent = nullptr);
+
 };

@@ -63,15 +63,19 @@ private slots:
 
   void parseRequest(QJsonObject request)
   {
-    const QString requestType = request[ "request" ].toString().simplified();
+    const QString requestType = request.value("request").toString().simplified();
     qCDebug(phxLoop, "request %s", qPrintable(requestType));
 
     if (requestType == "initEmu") {
       if (looperState == Uninitialized) {
         const QString corePath = request[ "core" ].toString();
         const QString gamePath = request[ "game" ].toString();
-        coreController.init(corePath, gamePath);
+        const CoreController::SystemInfo systemInfo = coreController.init(corePath,
+                                                                          gamePath);
         looperState = Initialized;
+
+        messageServer.sendInitReply(systemInfo);
+
         qCDebug(phxLoop) << "initialized emulation";
       } else {
         qCDebug(phxLoop) << "The emulator is already initialized, rejecting initialize request";

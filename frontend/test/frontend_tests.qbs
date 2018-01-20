@@ -4,7 +4,7 @@ import qbs.File
 QtApplication {
     id: app;
     name: "frontend_tests"
-    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "sql", "concurrent", "test"] }
+    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "quick", "sql", "concurrent", "test"] }
 
     cpp.includePaths: {
         var dirs = ["include"

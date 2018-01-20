@@ -1,5 +1,6 @@
 #pragma once
 #include "logging.h"
+#include "corecontroller.hpp"
 
 #include <QObject>
 #include <QLocalServer>
@@ -34,6 +35,29 @@ public:
       currentSocket->deleteLater();
       currentSocket = nullptr;
     }
+  }
+
+  void sendInitReply(CoreController::SystemInfo systemInfo)
+  {
+    const retro_system_av_info systemAvInfo = systemInfo.avInfo;
+    int pixelFormat = static_cast<int>(systemInfo.pixelFormat);
+
+    QJsonObject replyObject {
+      { "reply", "initEmu" },
+      { "aspectRatio", systemAvInfo.geometry.aspect_ratio },
+      { "height", static_cast<int>(systemAvInfo.geometry.base_height)},
+      { "width", static_cast<int>(systemAvInfo.geometry.base_width)},
+      { "frameRate", systemAvInfo.timing.fps},
+      { "pixelFormat", pixelFormat}
+    };
+
+    sendReply(replyObject);
+  }
+
+  void sendReply(QJsonObject replyObject)
+  {
+    const QByteArray replyBuffer = JSONObjectToByteArray(replyObject);
+    waitForDataWrite(replyBuffer);
   }
 
   void sendRequest(QJsonObject request)
@@ -112,34 +136,39 @@ public:
 
   void readCurrentSocket()
   {
-    while (currentSocket->bytesAvailable()) {
 
-      if (currentMessageSize == 0 && currentSocket->bytesAvailable() >= 4) {
-        currentMessageSize = readMessageSize();
-      }
-
-      if (currentSocket->bytesAvailable() >= currentMessageSize) {
-
-        QByteArray incomingMessage(currentMessageSize, '\0');
-
-        currentSocket->read(incomingMessage.data(), incomingMessage.size());
-
-        currentMessageSize = 0;
-
-        QJsonParseError parserError;
-        const QJsonObject obj = QJsonDocument::fromJson(incomingMessage, &parserError).object();
-
-        if (parserError.error != QJsonParseError::NoError) {
-          throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
-                                              parserError.errorString()));
-        }
-
-        currentReadObject = obj;
-
-        emit requestRecieved(obj);
-      }
-
+    if (currentSocket->bytesAvailable() < 4) {
+      return;
     }
+
+    if (currentMessageSize == 0) {
+      currentSocket->read(reinterpret_cast<char*>(&currentMessageSize), sizeof(currentMessageSize));
+    }
+
+    if (currentMessageSize != 0 && currentSocket->bytesAvailable() >= currentMessageSize) {
+
+      QByteArray incomingMessage(currentMessageSize, '\0');
+
+      int bytesRead = 0;
+
+      while (bytesRead < incomingMessage.size()) {
+        bytesRead += currentSocket->read(incomingMessage.data() + bytesRead,
+                                         incomingMessage.size() - bytesRead);
+      }
+
+      QJsonParseError parserError;
+      const QJsonObject requestJsonObject = QJsonDocument::fromJson(incomingMessage,
+                                                                    &parserError).object();
+
+      if (parserError.error != QJsonParseError::NoError) {
+        throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
+                                            parserError.errorString()));
+      }
+
+      currentMessageSize = 0;
+      emit requestRecieved(requestJsonObject);
+    }
+
   }
 
   int readMessageSize()

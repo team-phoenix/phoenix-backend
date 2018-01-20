@@ -12,6 +12,7 @@
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QObject>
+#include <QImage>
 
 template<typename Memory = SharedMemoryBuffer,
          typename DylibCore = Core,
@@ -25,8 +26,11 @@ public:
 
   struct SystemInfo {
     SystemInfo() = default;
+
     retro_system_info systemInfo{};
     retro_system_av_info avInfo{};
+    QImage::Format pixelFormat{ QImage::Format_Invalid };
+
     bool isEmpty{ true };
   };
 
@@ -63,6 +67,7 @@ public:
     game.clear();
     dylibCore.unload();
     memory.clear();
+    systemInfo = SystemInfo();
   }
 
   void reset()
@@ -98,6 +103,11 @@ public:
     dylibCore.retro_load_game(&gameInfo);
 
     return gameInfo;
+  }
+
+  void setPixelFormat(QImage::Format pixelFormat)
+  {
+    systemInfo.pixelFormat = pixelFormat;
   }
 
   void fillSystemInfo(SystemInfo &info)
@@ -160,6 +170,7 @@ private:
   DylibCore dylibCore;
   GameRom game;
   InputStateManager inputManager;
+  SystemInfo systemInfo;
   QHash<const char*, RetroVariableValue> retroVariableMap;
 
 public:
@@ -245,7 +256,32 @@ public:
         }
 
       case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: {
-          return false;
+
+          retro_pixel_format* retroPixelFormat = static_cast<retro_pixel_format*>(data);
+
+          switch (*retroPixelFormat) {
+            case RETRO_PIXEL_FORMAT_0RGB1555:
+              instance().setPixelFormat(QImage::Format_RGB555);
+              qCDebug(phxCore) << "\t\tPixel format: 0RGB1555 aka QImage::Format_RGB555";
+              return true;
+
+            case RETRO_PIXEL_FORMAT_RGB565:
+              instance().setPixelFormat(QImage::Format_RGB16);
+              qCDebug(phxCore) << "\t\tPixel format: RGB565 aka QImage::Format_RGB16";
+              return true;
+
+            case RETRO_PIXEL_FORMAT_XRGB8888:
+              instance().setPixelFormat(QImage::Format_RGB32);
+              qCDebug(phxCore) << "\t\tPixel format: XRGB8888 aka QImage::Format_RGB32";
+              return true;
+
+            default:
+              qCCritical(phxCore) << "\t\tError: Pixel format is not supported. ("
+                                  << *retroPixelFormat << ")";
+              break;
+          }
+
+          return true;
         }
 
       case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: {

@@ -137,7 +137,12 @@ ListView {
                                 id: playButton
                                 text: qsTr("Play")
                                 onClicked: {
-                                    globalEmulationListener.sendPlayMessage(gameAbsoluteFilePath, coreAbsoluteFilePath);
+                                    if (globalEmulationListener.sendPlayMessage(
+                                                gameAbsoluteFilePath,
+                                                coreAbsoluteFilePath)) {
+                                        rootStackView.push(gamePage)
+                                        root.title = "Phoenix: " + gameTitle
+                                    }
                                 }
                             }
 
