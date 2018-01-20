@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sharedmemorylistener.h"
+
 #include <QQuickItem>
 #include <QImage>
 
@@ -26,4 +28,6 @@ private slots:
 private:
   QImage currentVideoFrame;
   VideoInfo currentVideoInfo;
+  SharedMemoryListener sharedMemoryListener;
+  QVector<uchar> currentVideoFrameBuffer;
 };

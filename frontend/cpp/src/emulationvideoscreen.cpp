@@ -16,6 +16,16 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
   connect(&EmulationListener::instance(), &EmulationListener::videoInfoChanged, this,
           &EmulationVideoScreen::prepareVideoFrame);
 
+  connect(&EmulationListener::instance(), &EmulationListener::startReadingFrames, this,
+  [this] {
+    qDebug() << "start reading frames";
+  });
+
+  connect(&EmulationListener::instance(), &EmulationListener::pauseReadingFrames, this,
+  [this] {
+    qDebug() << "pause reading frames, stop timers";
+  });
+
 }
 
 QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::UpdatePaintNodeData*)
@@ -56,5 +66,6 @@ void EmulationVideoScreen::prepareVideoFrame(double aspectRatio, int height, int
   currentVideoInfo.width = width;
   currentVideoInfo.frameRate = frameRate;
   currentVideoInfo.pixelFormat = static_cast<QImage::Format>(pixelFormat);
+
 }
 

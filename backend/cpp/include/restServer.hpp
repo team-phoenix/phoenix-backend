@@ -54,6 +54,22 @@ public:
     sendReply(replyObject);
   }
 
+  void sendPlayReply()
+  {
+    QJsonObject replyObject{
+      { "reply", "playEmu" },
+    };
+    sendReply(replyObject);
+  }
+
+  void sendPausedReply()
+  {
+    QJsonObject replyObject{
+      { "reply", "pausedEmu" },
+    };
+    sendReply(replyObject);
+  }
+
   void sendReply(QJsonObject replyObject)
   {
     const QByteArray replyBuffer = JSONObjectToByteArray(replyObject);
@@ -137,39 +153,41 @@ public:
   void readCurrentSocket()
   {
 
-    if (currentSocket->bytesAvailable() < 4) {
-      return;
-    }
-
-    if (currentMessageSize == 0) {
-      currentSocket->read(reinterpret_cast<char*>(&currentMessageSize), sizeof(currentMessageSize));
-    }
-
-    if (currentMessageSize != 0 && currentSocket->bytesAvailable() >= currentMessageSize) {
-
-      QByteArray incomingMessage(currentMessageSize, '\0');
-
-      int bytesRead = 0;
-
-      while (bytesRead < incomingMessage.size()) {
-        bytesRead += currentSocket->read(incomingMessage.data() + bytesRead,
-                                         incomingMessage.size() - bytesRead);
+    while (currentSocket->bytesAvailable()) {
+      if (currentSocket->bytesAvailable() < 4) {
+        return;
       }
 
-      QJsonParseError parserError;
-      const QJsonObject requestJsonObject = QJsonDocument::fromJson(incomingMessage,
-                                                                    &parserError).object();
-
-      if (parserError.error != QJsonParseError::NoError) {
-        throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
-                                            parserError.errorString()));
+      if (currentMessageSize == 0) {
+        currentSocket->read(reinterpret_cast<char*>(&currentMessageSize), sizeof(currentMessageSize));
       }
 
-      currentMessageSize = 0;
-      currentReadObject = requestJsonObject;
-      emit requestRecieved(requestJsonObject);
-    }
+      if (currentMessageSize != 0 && currentSocket->bytesAvailable() >= currentMessageSize) {
 
+        QByteArray incomingMessage(currentMessageSize, '\0');
+
+        int bytesRead = 0;
+
+        while (bytesRead < incomingMessage.size()) {
+          bytesRead += currentSocket->read(incomingMessage.data() + bytesRead,
+                                           incomingMessage.size() - bytesRead);
+        }
+
+        QJsonParseError parserError;
+        const QJsonObject requestJsonObject = QJsonDocument::fromJson(incomingMessage,
+                                                                      &parserError).object();
+
+        if (parserError.error != QJsonParseError::NoError) {
+          throw std::runtime_error(qPrintable(QString("Could not parse the JSON request: ") +
+                                              parserError.errorString()));
+        }
+
+        currentMessageSize = 0;
+        currentReadObject = requestJsonObject;
+        emit requestRecieved(requestJsonObject);
+      }
+
+    }
   }
 
   int readMessageSize()

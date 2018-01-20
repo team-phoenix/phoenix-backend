@@ -105,6 +105,10 @@ void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
     const int pixelFormat = replyMessage.value("pixelFormat").toInt();
 
     emit videoInfoChanged(aspectRatio, height, width, frameRate, pixelFormat);
+  } else if (replyType == "playEmu") {
+    emit startReadingFrames();
+  } else if (replyType == "pausedEmu") {
+    emit pauseReadingFrames();
   }
 }
 

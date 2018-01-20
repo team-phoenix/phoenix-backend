@@ -83,6 +83,8 @@ private slots:
     } else if (requestType == "playEmu") {
 
       if (looperState == Initialized) {
+        messageServer.sendPlayReply();
+
         const int miliseconds = 16;
         startTimerWithInterval(miliseconds);
         qCDebug(phxLoop) << "started emulation";
@@ -93,6 +95,7 @@ private slots:
     } else if (requestType == "pauseEmu") {
       if (looperState != Playing) {
         stopTimer();
+        messageServer.sendPausedReply();
         qCDebug(phxLoop) << "paused emulation";
       } else {
         qCDebug(phxLoop) << "The emulator is not running, rejecting pause request";
