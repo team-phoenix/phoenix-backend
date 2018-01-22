@@ -5,6 +5,8 @@
 #include <QSGTexture>
 #include <QQuickWindow>
 
+#include <QTimer>
+
 EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
   : QQuickItem(parent)
 {
@@ -19,6 +21,26 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
   connect(&EmulationListener::instance(), &EmulationListener::startReadingFrames, this,
   [this] {
     qDebug() << "start reading frames";
+
+    QTimer* timer = new QTimer(this);
+    timer->setInterval(16);
+
+    connect(timer, &QTimer::timeout, this, [this] {
+      sharedMemoryListener.readVideoFrame(currentVideoFrameBuffer, currentVideoFrame, currentVideoInfo.pixelFormat);
+
+      if (currentVideoFrame.isNull())
+      {
+        qDebug() << "video texture is null";
+        Q_ASSERT(false);
+      } else
+      {
+        update();
+      }
+
+    });
+
+    timer->start();
+
   });
 
   connect(&EmulationListener::instance(), &EmulationListener::pauseReadingFrames, this,

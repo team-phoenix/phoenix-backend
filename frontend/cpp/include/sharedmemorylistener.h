@@ -2,6 +2,9 @@
 
 #include <QObject>
 #include <QSharedMemory>
+#include <QVector>
+#include <QImage>
+#include <QDebug>
 
 static const QString MEMORY_KEY = QStringLiteral("PHX_FUR_LYFE_BABY!");
 static const int MEMORY_KEY_STATES_OFFSET = 0;
@@ -33,8 +36,11 @@ public:
     }
   }
 
-  void readVideoFrame(char* dest, size_t destSize)
+  void readVideoFrame(QVector<uchar> &dest, QImage &destFrame, QImage::Format pixelFormat)
   {
+    if (!isOpened()) {
+      open();
+    }
 
     memory.lock();
 
@@ -56,17 +62,23 @@ public:
 
       const int bufferSize = (vidHeight * vidPitch) * sizeof(char);
 
-      Q_ASSERT(destSize == bufferSize);
+      if (dest.size() < bufferSize) {
+        dest.resize(bufferSize);
+      }
 
-      for (int i = 0; i < destSize; ++i) {
+      Q_ASSERT(dest.size() >= bufferSize);
+
+      for (int i = 0; i < bufferSize; ++i) {
         dest[ i ] = vidBytes[ i ];
       }
 
+      destFrame = QImage(dest.data()
+                         , vidWidth, vidHeight, vidPitch
+                         , pixelFormat);
 
       offset = 16;
-      static const bool droppedFrame = false;
+      const bool droppedFrame = false;
       memcpy(rawMemoryBuffer + offset, &droppedFrame, sizeof(droppedFrame));
-
     }
 
     memory.unlock();
@@ -113,7 +125,13 @@ public:
       throw std::runtime_error("memory is attached, cannot open");
     }
 
-    opened = true;
+    if (!attach()) {
+      qDebug() << "Error string" << memory.errorString();
+      throw std::runtime_error("could not attached memory, abort...");
+      opened = false;
+    } else {
+      opened = true;
+    }
   }
 
   int keyboardStatesMemoryOffset() const
