@@ -16,14 +16,21 @@ struct VideoInfo {
 class EmulationVideoScreen : public QQuickItem
 {
   Q_OBJECT
+  Q_PROPERTY(qreal aspectRatio READ aspectRatio NOTIFY aspectRatioChanged)
+
 public:
   explicit EmulationVideoScreen(QQuickItem* parent = nullptr);
 
   QSGNode* updatePaintNode(QSGNode* node, UpdatePaintNodeData*) override;
 
+  qreal aspectRatio() const;
+
 private slots:
   void prepareVideoFrame(double aspectRatio, int height, int width, double frameRate,
                          int pixelFormat);
+
+signals:
+  void aspectRatioChanged();
 
 private:
   QImage currentVideoFrame;

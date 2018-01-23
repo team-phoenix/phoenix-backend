@@ -45,7 +45,6 @@ public:
 
       dylibCore.retro_init();
 
-      SystemInfo systemInfo;
       fillSystemInfo(systemInfo);
 
       // We need to flush stderr, because some cores write to it, even though
@@ -135,6 +134,7 @@ public:
   }
 
 private:
+
   void setCallbacks()
   {
     dylibCore.retro_set_environment(CoreController_T::environmentCallback);
@@ -281,7 +281,7 @@ public:
               break;
           }
 
-          return true;
+          return false;
         }
 
       case RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL: {

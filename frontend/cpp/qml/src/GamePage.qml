@@ -12,54 +12,55 @@ Rectangle {
     }
 
     EmulationVideoScreen {
-        id: emulationVideoScreen;
-        anchors {
-            left: parent.left;
-            right: parent.right;
-            top: parent.top;
-        }
+        id: emulationVideoScreen
 
-        height: 100;
-    }
-
-    Rectangle {
         anchors {
+            top: parent.top
             bottom: parent.bottom
-            left: parent.left
-            right: parent.right
-            margins: 24
+            horizontalCenter: parent.horizontalCenter
         }
 
-        height: 36
+        width: height * aspectRatio
 
-        color: "black"
+        Rectangle {
+            anchors {
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+                margins: 24
+            }
 
-        RowLayout {
-            anchors.fill: parent
-            Button {
-                text: qsTr("Quit!")
-                onClicked: {
-                    if (root.visibility === ApplicationWindow.FullScreen) {
-                        root.visibility = ApplicationWindow.Windowed
+            height: 36
+
+            color: "pink"
+
+            RowLayout {
+                anchors.fill: parent
+                Button {
+                    text: qsTr("Quit!")
+                    onClicked: {
+                        if (root.visibility === ApplicationWindow.FullScreen) {
+                            root.visibility = ApplicationWindow.Windowed
+                        }
+                        rootStackView.pop()
                     }
-                    rootStackView.pop()
                 }
-            }
 
-            Button {
-                text: qsTr("Pause")
-                onClicked: {
-                    console.log("Doesnt do anything, should pause")
+                Button {
+                    text: qsTr("Pause")
+                    onClicked: {
+                        console.log("Doesnt do anything, should pause")
+                    }
                 }
-            }
 
-            Button {
-                text: qsTr("Full Screen")
-                onClicked: {
-                    if (root.visibility === ApplicationWindow.FullScreen) {
-                        root.visibility = ApplicationWindow.Windowed
-                    } else {
-                        root.visibility = ApplicationWindow.FullScreen
+                Button {
+                    text: qsTr("Full Screen")
+                    onClicked: {
+                        if (root.visibility === ApplicationWindow.FullScreen) {
+                            root.visibility = ApplicationWindow.Windowed
+                        } else {
+                            root.visibility = ApplicationWindow.FullScreen
+                        }
                     }
                 }
             }

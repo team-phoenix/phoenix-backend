@@ -26,7 +26,6 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
     timer->setInterval(16);
 
     connect(timer, &QTimer::timeout, this, [this] {
-      qDebug() << "reading";
       sharedMemoryListener.readVideoFrame(currentVideoFrameBuffer, currentVideoFrame, currentVideoInfo.pixelFormat);
 
       if (currentVideoFrame.isNull())
@@ -55,11 +54,9 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
 {
 
   if (!window() || currentVideoFrame.isNull()) {
-    qDebug() << "currentVideoFrame is null" << currentVideoFrame.isNull();
     return node;
   }
 
-  qDebug() << "should be valid";
   QSGSimpleTextureNode* textureNode = static_cast<QSGSimpleTextureNode*>(node);
 
   if (!textureNode) {
@@ -69,16 +66,16 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
   QSGTexture* sgTexture = window()->createTextureFromImage(currentVideoFrame);
 
   QRectF rect = boundingRect();
-
-  if (currentVideoInfo.aspectRatio != 1.0) {
-    rect.setWidth(rect.height() * currentVideoInfo.aspectRatio);
-  }
-
   textureNode->setTexture(sgTexture);
   textureNode->setRect(rect);
   textureNode->setFiltering(QSGTexture::Nearest);
 
   return textureNode;
+}
+
+qreal EmulationVideoScreen::aspectRatio() const
+{
+  return currentVideoInfo.aspectRatio;
 }
 
 void EmulationVideoScreen::prepareVideoFrame(double aspectRatio, int height, int width,
@@ -89,6 +86,5 @@ void EmulationVideoScreen::prepareVideoFrame(double aspectRatio, int height, int
   currentVideoInfo.width = width;
   currentVideoInfo.frameRate = frameRate;
   currentVideoInfo.pixelFormat = static_cast<QImage::Format>(pixelFormat);
-
 }
 

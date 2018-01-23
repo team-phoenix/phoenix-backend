@@ -11,7 +11,7 @@ SCENARIO("SharedMemoryListener")
     static char padding = 0xAA;
     static uint pitch = (sizeof(padding) * 2) + width;
 
-    static const int inputBlockOffset = 16;
+    static const int inputBlockOffset = MEMORY_VIDEO_FRAME_OFFSET;
     static const int videoBlockSize = (pitch * height) * sizeof(char);
     static const int fakeVideoSize =        inputBlockOffset
                                             + sizeof(updateFlag)

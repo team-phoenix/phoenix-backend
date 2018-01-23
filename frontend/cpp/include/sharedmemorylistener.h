@@ -6,9 +6,9 @@
 #include <QImage>
 #include <QDebug>
 
-static const QString MEMORY_KEY = QStringLiteral("PHX_FUR_LYFE_BABY!");
-static const int MEMORY_KEY_STATES_OFFSET = 0;
-static const int MEMORY_VIDEO_FRAME_OFFSET = (15 + 1) * sizeof(qint16);
+const QString MEMORY_KEY = QStringLiteral("PHX_FUR_LYFE_BABY!");
+const int MEMORY_KEY_STATES_OFFSET = 0;
+const int MEMORY_VIDEO_FRAME_OFFSET = (15 + 1) * sizeof(qint16);
 
 template<typename T, typename R>
 static T read(R* src, size_t &offset)
@@ -44,13 +44,11 @@ public:
 
     memory.lock();
 
-    size_t offset = 16;
+    size_t offset = MEMORY_VIDEO_FRAME_OFFSET;
 
     char* rawMemoryBuffer = static_cast<char*>(memory.data());
 
     const bool updateFlag = read<bool>(rawMemoryBuffer, offset);
-
-    qDebug() << "updateFlag" << updateFlag;
 
     if (updateFlag) {
 
@@ -62,15 +60,13 @@ public:
 
       const uchar* vidBytes = reinterpret_cast<uchar*>(rawMemoryBuffer) + offset;
 
-      qDebug() << vidWidth << vidHeight << vidPitch;
-
       const int bufferSize = (vidHeight * vidPitch) * sizeof(char);
 
       if (dest.size() < bufferSize) {
         dest.resize(bufferSize);
       }
 
-      Q_ASSERT(dest.size() >= bufferSize);
+      Q_ASSERT(dest.size() == bufferSize);
 
       for (int i = 0; i < bufferSize; ++i) {
         dest[ i ] = vidBytes[ i ];
@@ -80,7 +76,7 @@ public:
                          , vidWidth, vidHeight, vidPitch
                          , pixelFormat);
 
-      offset = 16;
+      offset = MEMORY_VIDEO_FRAME_OFFSET;
       const bool droppedFrame = false;
       memcpy(rawMemoryBuffer + offset, &droppedFrame, sizeof(droppedFrame));
     }

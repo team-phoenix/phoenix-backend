@@ -38,6 +38,7 @@ public:
 
 private:
   LoopState looperState{ Uninitialized };
+  CoreController::SystemInfo cachedInitSystemInfo;
 
 private slots:
 
@@ -56,7 +57,7 @@ private slots:
 
   void loop()
   {
-    coreController.run();
+    CoreController::instance().run();
   }
 
   void parseRequest(QJsonObject request)
@@ -69,15 +70,16 @@ private slots:
         const QString corePath = request[ "core" ].toString();
         const QString gamePath = request[ "game" ].toString();
 
-        const CoreController::SystemInfo systemInfo = coreController.init(corePath,
-                                                                          gamePath);
+        cachedInitSystemInfo = CoreController::instance().init(corePath,
+                                                               gamePath);
         looperState = Initialized;
 
-        messageServer.sendInitReply(systemInfo);
+        messageServer.sendInitReply(cachedInitSystemInfo);
 
         qCDebug(phxLoop) << "initialized emulation";
       } else {
         qCDebug(phxLoop) << "The emulator is already initialized, rejecting initialize request";
+        messageServer.sendInitReply(cachedInitSystemInfo);
       }
     } else if (requestType == "playEmu") {
 
@@ -113,6 +115,5 @@ private slots:
 
 private:
   RestServer messageServer;
-  CoreController coreController;
   QTimer emulationTimer;
 };
