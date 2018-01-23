@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sharedmemorybuffer.h"
+#include "sharedmemorybuffer.hpp"
 #include "core.hpp"
 #include "game.hpp"
 #include "inputmanager.hpp"

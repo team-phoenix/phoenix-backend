@@ -50,6 +50,8 @@ public:
 
     const bool updateFlag = read<bool>(rawMemoryBuffer, offset);
 
+    qDebug() << "updateFlag" << updateFlag;
+
     if (updateFlag) {
 
       unsigned vidWidth = read<unsigned>(rawMemoryBuffer, offset);
@@ -59,6 +61,8 @@ public:
       unsigned vidPitch = read<unsigned>(rawMemoryBuffer, offset);
 
       const uchar* vidBytes = reinterpret_cast<uchar*>(rawMemoryBuffer) + offset;
+
+      qDebug() << vidWidth << vidHeight << vidPitch;
 
       const int bufferSize = (vidHeight * vidPitch) * sizeof(char);
 

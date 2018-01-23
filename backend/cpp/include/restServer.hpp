@@ -207,6 +207,7 @@ public:
 signals:
   void requestRecieved(QJsonObject);
   void socketDisconnected();
+  void socketConnected();
 
 //signals:
 //  void broadcastMessage(const QByteArray &t_message, bool waitUntilFinished = false);
@@ -248,6 +249,8 @@ private slots:
     qDebug() << "Connected to a new process.";
 
     connect(currentSocket, &QLocalSocket::readyRead, this, &RestServer::readCurrentSocket);
+
+    connect(currentSocket, &QLocalSocket::connected, this, &RestServer::socketConnected);
 
     connect(currentSocket, &QLocalSocket::connected, this, [this] {
       qCDebug(phxCore) << "localSocket is connected";

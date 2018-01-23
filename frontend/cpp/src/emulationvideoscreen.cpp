@@ -26,6 +26,7 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
     timer->setInterval(16);
 
     connect(timer, &QTimer::timeout, this, [this] {
+      qDebug() << "reading";
       sharedMemoryListener.readVideoFrame(currentVideoFrameBuffer, currentVideoFrame, currentVideoInfo.pixelFormat);
 
       if (currentVideoFrame.isNull())
@@ -54,9 +55,11 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
 {
 
   if (!window() || currentVideoFrame.isNull()) {
+    qDebug() << "currentVideoFrame is null" << currentVideoFrame.isNull();
     return node;
   }
 
+  qDebug() << "should be valid";
   QSGSimpleTextureNode* textureNode = static_cast<QSGSimpleTextureNode*>(node);
 
   if (!textureNode) {
@@ -64,7 +67,6 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
   }
 
   QSGTexture* sgTexture = window()->createTextureFromImage(currentVideoFrame);
-
 
   QRectF rect = boundingRect();
 
@@ -75,7 +77,6 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
   textureNode->setTexture(sgTexture);
   textureNode->setRect(rect);
   textureNode->setFiltering(QSGTexture::Nearest);
-
 
   return textureNode;
 }

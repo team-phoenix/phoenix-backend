@@ -12,14 +12,12 @@ class EmulationLoop : public QObject
   Q_OBJECT
 public:
 
-
   enum LoopState {
     Uninitialized,
     Initialized,
     Playing,
     Paused,
   };
-
 
   EmulationLoop()
   {
@@ -70,6 +68,7 @@ private slots:
       if (looperState == Uninitialized) {
         const QString corePath = request[ "core" ].toString();
         const QString gamePath = request[ "game" ].toString();
+
         const CoreController::SystemInfo systemInfo = coreController.init(corePath,
                                                                           gamePath);
         looperState = Initialized;
@@ -83,11 +82,19 @@ private slots:
     } else if (requestType == "playEmu") {
 
       if (looperState == Initialized) {
-        messageServer.sendPlayReply();
 
+        loop();
+        messageServer.sendPlayReply();
+        qCDebug(phxLoop) << "started emulation";
+
+        looperState = Playing;
         const int miliseconds = 16;
         startTimerWithInterval(miliseconds);
-        qCDebug(phxLoop) << "started emulation";
+
+      } else if (looperState == Paused) {
+        qCDebug(phxLoop) << "The paused game will resume playing...";
+        messageServer.sendPlayReply();
+        startTimer();
       } else {
         qCDebug(phxLoop) << "The emulator is already playing, rejecting play request";
       }

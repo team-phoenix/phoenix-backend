@@ -3,7 +3,7 @@
 #include <QtGlobal>
 #include <QVector>
 
-#include "sharedmemorybuffer.h"
+#include "sharedmemorybuffer.hpp"
 
 template<typename T, typename R>
 T read(R* src, size_t offset)

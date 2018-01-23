@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "sharedmemorybuffer.h"
+#include "sharedmemorybuffer.hpp"
 
 #include <limits>
 

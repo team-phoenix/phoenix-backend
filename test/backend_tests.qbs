@@ -20,7 +20,6 @@ QtApplication {
                 ]
 
         var sources = [
-                    "../backend/cpp/src/sharedmemorybuffer.cpp",
                     "../backend/cpp/src/logging.cpp",
 //                    "../backend/cpp/src/input/*.cpp",
                     "cpp/src/*.cpp",

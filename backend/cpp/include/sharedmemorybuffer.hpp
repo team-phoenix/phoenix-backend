@@ -4,6 +4,7 @@
 
 #include <QtGlobal>
 #include <QSharedMemory>
+#include <QDebug>
 
 static const QString MEMORY_KEY = QStringLiteral("PHX_FUR_LYFE_BABY!");
 static const int MEMORY_KEY_STATES_OFFSET = 0;
@@ -24,6 +25,7 @@ public:
   const char* writeVideoFrame(const char* data, uint width, uint height, uint pitch)
   {
     const bool flag = true;
+
     const int bufferSize = (height * pitch) * sizeof(char);
 
     checkSize(bufferSize);
