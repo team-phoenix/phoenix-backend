@@ -29,7 +29,10 @@ public:
 
     retro_system_info systemInfo{};
     retro_system_av_info avInfo{};
-    QImage::Format pixelFormat{ QImage::Format_Invalid };
+
+    // pixel format defaults to QImage::Format_RGB555, unl;ess changed,
+    // check the libretro.h docs to see this being true.
+    QImage::Format pixelFormat{ QImage::Format_RGB555 };
 
     bool isEmpty{ true };
   };

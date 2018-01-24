@@ -5,7 +5,7 @@ import vg.phoenix.emulation 1.0
 
 Rectangle {
     id: gamePage
-    color: "violet"
+    color: "black"
 
     Component.onDestruction: {
         root.title = "Phoenix"

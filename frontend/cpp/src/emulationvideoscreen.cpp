@@ -6,14 +6,12 @@
 #include <QQuickWindow>
 
 #include <QTimer>
+#include <QMutexLocker>
 
 EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
   : QQuickItem(parent)
 {
   setFlag(QQuickItem::ItemHasContents, true);
-
-  currentVideoFrame = QImage(250, 250, QImage::Format_RGB32);
-  currentVideoFrame.fill(Qt::yellow);
 
   connect(&EmulationListener::instance(), &EmulationListener::videoInfoChanged, this,
           &EmulationVideoScreen::prepareVideoFrame);
@@ -26,12 +24,12 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
     timer->setInterval(16);
 
     connect(timer, &QTimer::timeout, this, [this] {
-      sharedMemoryListener.readVideoFrame(currentVideoFrameBuffer, currentVideoFrame, currentVideoInfo.pixelFormat);
+      sharedMemoryListener.fillVideoFrame(currentVideoFrame, currentVideoInfo.pixelFormat);
 
       if (currentVideoFrame.isNull())
       {
         qDebug() << "video texture is null";
-        Q_ASSERT(false);
+//        Q_ASSERT(false);
       } else
       {
         update();
@@ -53,6 +51,8 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
 QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::UpdatePaintNodeData*)
 {
 
+  QMutexLocker locker(&videoFrameMutex);
+
   if (!window() || currentVideoFrame.isNull()) {
     return node;
   }
@@ -63,7 +63,7 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
     textureNode = new QSGSimpleTextureNode;
   }
 
-  QSGTexture* sgTexture = window()->createTextureFromImage(currentVideoFrame);
+  QSGTexture* sgTexture = window()->createTextureFromImage(currentVideoFrame.getQImage());
 
   QRectF rect = boundingRect();
   textureNode->setTexture(sgTexture);
@@ -81,7 +81,7 @@ qreal EmulationVideoScreen::aspectRatio() const
 void EmulationVideoScreen::prepareVideoFrame(double aspectRatio, int height, int width,
                                              double frameRate, int pixelFormat)
 {
-  currentVideoInfo.aspectRatio = aspectRatio;
+  currentVideoInfo.aspectRatio = aspectRatio == 0 ? 1 : aspectRatio;
   currentVideoInfo.height = height;
   currentVideoInfo.width = width;
   currentVideoInfo.frameRate = frameRate;

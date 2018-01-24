@@ -4,6 +4,7 @@
 
 #include <QQuickItem>
 #include <QImage>
+#include <QMutex>
 
 struct VideoInfo {
   double aspectRatio{ 1.0 };
@@ -33,8 +34,8 @@ signals:
   void aspectRatioChanged();
 
 private:
-  QImage currentVideoFrame;
+  VideoFrame currentVideoFrame;
   VideoInfo currentVideoInfo;
   SharedMemoryListener sharedMemoryListener;
-  QVector<uchar> currentVideoFrameBuffer;
+  QMutex videoFrameMutex;
 };

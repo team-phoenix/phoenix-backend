@@ -100,13 +100,12 @@ SCENARIO("SharedMemoryListener")
 
     WHEN("readVideoFrame(), is called") {
 
-      QVector<uchar> imageBuffer(fakeVideoBlockSize);
-      QImage image;
+      VideoFrame videoFrame;
       const QImage::Format anyFormat = QImage::Format_RGB32;
-      subject.readVideoFrame(imageBuffer, image, anyFormat);
+      subject.fillVideoFrame(videoFrame, anyFormat);
 
       THEN("The video frame could be read from the shared memory buffer correctly") {
-        REQUIRE(imageBuffer == fakeVideoBlockVector);
+        REQUIRE(videoFrame.getFrameBuffer() == fakeVideoBlockVector);
 
         THEN("The first index at the video block offset has the updateFlag set to false") {
           bool droppedFrame = true;

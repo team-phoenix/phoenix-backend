@@ -1,5 +1,7 @@
 #pragma once
 
+#include "videoframe.h"
+
 #include <QObject>
 #include <QSharedMemory>
 #include <QVector>
@@ -36,7 +38,7 @@ public:
     }
   }
 
-  void readVideoFrame(QVector<uchar> &dest, QImage &destFrame, QImage::Format pixelFormat)
+  void fillVideoFrame(VideoFrame &videoFrame, QImage::Format pixelFormat)
   {
     if (!isOpened()) {
       open();
@@ -62,19 +64,7 @@ public:
 
       const int bufferSize = (vidHeight * vidPitch) * sizeof(char);
 
-      if (dest.size() < bufferSize) {
-        dest.resize(bufferSize);
-      }
-
-      Q_ASSERT(dest.size() == bufferSize);
-
-      for (int i = 0; i < bufferSize; ++i) {
-        dest[ i ] = vidBytes[ i ];
-      }
-
-      destFrame = QImage(dest.data()
-                         , vidWidth, vidHeight, vidPitch
-                         , pixelFormat);
+      videoFrame.fillBuffer(vidBytes, bufferSize, vidWidth, vidHeight, vidPitch, pixelFormat);
 
       offset = MEMORY_VIDEO_FRAME_OFFSET;
       const bool droppedFrame = false;
