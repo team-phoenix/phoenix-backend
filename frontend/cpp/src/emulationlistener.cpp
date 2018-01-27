@@ -51,13 +51,17 @@ EmulationListener &EmulationListener::instance()
   return emulationListener;
 }
 
-bool EmulationListener::sendPlayMessage(QString gameFilePath, QString coreFilePath)
+bool EmulationListener::sendPlayMessage(QString gameFilePath, QString gameSystem)
 {
-  const QString fullCorePath = PathCreator::addExtension(PathCreator::corePath() + coreFilePath);
 
-  if (gameFilePath.isEmpty() || coreFilePath.isEmpty()) {
-    throw std::runtime_error("Game path and core path cannot be empty! aborting...");
+  if (gameFilePath.isEmpty() || gameSystem.isEmpty()) {
+    throw std::runtime_error("Game path and system cannot be empty! aborting...");
   }
+
+  const QString core = systemDb.findCoreWhereSystemFullNameIs(gameSystem);
+
+  const QString fullCorePath = PathCreator::addExtension(PathCreator::corePath() + core);
+
 
   if (!QFile::exists(fullCorePath)) {
     qDebug() << fullCorePath << "doesn't exist, not sending play message";

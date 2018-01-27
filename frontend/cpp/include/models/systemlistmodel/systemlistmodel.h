@@ -1,4 +1,4 @@
-#include "openvgdb.h"
+#include "systemdb.h"
 
 #include <QAbstractListModel>
 #include <QList>
@@ -19,15 +19,12 @@ public:
 
   int rowCount(const QModelIndex &) const;
 
-  QHash<int, QByteArray> roleNames() const
-  {
-    return roles;
-  }
+  QHash<int, QByteArray> roleNames() const;
 
   void forceUpdate();
 
 private:
-  QList<System> systemCache;
-  OpenVgDb openVgDb;
+  QList<SystemEntity> systemCache;
+  SystemDb systemDb;
   QHash<int, QByteArray> roles;
 };

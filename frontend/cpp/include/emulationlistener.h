@@ -1,6 +1,7 @@
 #pragma once
 
 #include "socketreadwriter.h"
+#include "systemdb.h"
 
 #include <QObject>
 #include <QLocalServer>
@@ -14,7 +15,7 @@ public:
   static EmulationListener &instance();
 
 public slots:
-  bool sendPlayMessage(QString gameFilePath, QString coreFilePath);
+  bool sendPlayMessage(QString gameFilePath, QString gameSystem);
   void sendMessage(QVariantHash hashedMessage);
 
 private slots:
@@ -39,6 +40,7 @@ private:
   QLocalSocket socketToBackend;
   QLocalServer localServer;
   SocketReadWriter socketReadWriter;
+  SystemDb systemDb;
 
   explicit EmulationListener(QObject*  parent = nullptr);
 

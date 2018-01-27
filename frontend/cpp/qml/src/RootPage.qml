@@ -6,7 +6,8 @@ import vg.phoenix.models 1.0
 
 Item {
     ColumnLayout {
-        anchors.fill: parent;
+        anchors.fill: parent
+        spacing: 0
 
         Rectangle {
             Layout.fillWidth: true

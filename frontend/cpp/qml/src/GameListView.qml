@@ -11,6 +11,7 @@ ListView {
     orientation: ListView.Vertical
     spacing: 12
 
+
     ScrollBar.vertical: ScrollBar {
         policy: ScrollBar.AlwaysOn
     }
@@ -139,7 +140,7 @@ ListView {
                                 onClicked: {
                                     if (globalEmulationListener.sendPlayMessage(
                                                 gameAbsoluteFilePath,
-                                                coreAbsoluteFilePath)) {
+                                                gameSystem)) {
                                         rootStackView.push(gamePage)
                                         root.title = "Phoenix: " + gameTitle
                                     }

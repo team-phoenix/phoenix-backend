@@ -15,11 +15,11 @@ SystemModel::SystemModel(QObject* parent)
 QVariant SystemModel::data(const QModelIndex &index, int role) const
 {
   if (index.isValid() && index.row() < systemCache.size()) {
-    const System &system = systemCache.at(index.row());
+    const SystemEntity &system = systemCache.at(index.row());
 
     switch (role) {
       case FullSystemName:
-        return system.systemName;
+        return system.systemFullName;
 
       case ShortSystemName:
         return system.systemShortName;
@@ -37,12 +37,17 @@ int SystemModel::rowCount(const QModelIndex &) const
   return systemCache.size();
 }
 
+QHash<int, QByteArray> SystemModel::roleNames() const
+{
+  return roles;
+}
+
 void SystemModel::forceUpdate()
 {
-  QList<System> systems = openVgDb.findAllSystems();
+  QList<SystemEntity> systems = systemDb.findAllBySystem();
 
-  System allSystem;
-  allSystem.systemName = "All";
+  SystemEntity allSystem;
+  allSystem.systemFullName = "All";
   allSystem.systemShortName = "All";
   systems.prepend(allSystem);
 
