@@ -5,30 +5,50 @@
 #include <QThread>
 
 AudioPlayer::AudioPlayer(QObject* parent) : QObject(parent),
-  ioTimer(this),
-  chunkBuffer(2046 * 60, 0x0),
-  circularChunkBuffer(chunkBuffer.size() * 10 * 2)
+  ioTimer(this)
 {
-  audioOutput = new QAudioOutput(getWavAudioFormat(), this);
-
-  connect(audioOutput, &QAudioOutput::stateChanged, this, &AudioPlayer::onAudioStateChanged);
-
-//  connect(&audioSource, &AudioSource::fullChunkProduced, this, &AudioPlayer::onFullChunkProduced);
-
-//  audioSource.setCircularBuffer(&circularChunkBuffer);
-
   ioTimer.setTimerType(Qt::PreciseTimer);
-
   connect(&ioTimer, &QTimer::timeout, this, &AudioPlayer::onPushModeTimeout);
+}
+
+void AudioPlayer::setRingBuffer(CircularChunkBuffer* ringBuffer)
+{
+  circularChunkBuffer = ringBuffer;
 }
 
 void AudioPlayer::play()
 {
   ioOutput = audioOutput->start();
-  ioTimer.setInterval(8);
+  currentChunk = QByteArray(audioOutput->bufferSize(), 0x0);
 
-  onPushModeTimeout();
+  qDebug() << "BUF SIZE" << audioOutput->bufferSize();
+  ioTimer.setInterval(0);
   ioTimer.start();
+}
+
+void AudioPlayer::stop()
+{
+  ioTimer.stop();
+}
+
+void AudioPlayer::init(double sampleRate)
+{
+  audioFormat.setSampleRate(sampleRate);
+  audioFormat.setChannelCount(2);
+  audioFormat.setSampleSize(16);
+  audioFormat.setCodec("audio/pcm");
+  audioFormat.setByteOrder(QAudioFormat::LittleEndian);
+  audioFormat.setSampleType(QAudioFormat::SignedInt);
+
+  QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
+
+  if (!info.isFormatSupported(audioFormat)) {
+    qFatal("Raw audio format not supported by backend, cannot play audio.");
+  }
+
+  audioOutput = new QAudioOutput(audioFormat, this);
+
+  connect(audioOutput, &QAudioOutput::stateChanged, this, &AudioPlayer::onAudioStateChanged);
 }
 
 void AudioPlayer::onAudioStateChanged(QAudio::State state)
@@ -45,40 +65,26 @@ void AudioPlayer::onAudioStateChanged(QAudio::State state)
 void AudioPlayer::onPushModeTimeout()
 {
 
-  int chunks = audioOutput->bytesFree() / audioOutput->periodSize();
+  int periodSize = audioOutput->periodSize();
+  int bytesFree = audioOutput->bytesFree();
 
-  QByteArray buffer(chunks * audioOutput->periodSize(), 0);
+  int chunks = bytesFree / periodSize;
+
+//  qDebug() << size << sizeDeviation << sizeRatio << circularChunkBuffer->capacity();
 
   while (chunks) {
 
-    const qint64 len = circularChunkBuffer.read(buffer.data(), audioOutput->periodSize());
+    const qint64 len = circularChunkBuffer->read(currentChunk.data(), periodSize);
 
-    if (len)
-    { ioOutput->write(buffer.data(), len); }
+    if (len) {
+      ioOutput->write(currentChunk.data(), len);
+    }
 
-    if (len != audioOutput->periodSize())
-    { break; }
+    if (len != periodSize) {
+      break;
+    }
 
     --chunks;
   }
 
-}
-
-QAudioFormat AudioPlayer::getWavAudioFormat()
-{
-  QAudioFormat format;
-  format.setSampleRate(44100);
-  format.setChannelCount(2);
-  format.setSampleSize(16);
-  format.setCodec("audio/pcm");
-  format.setByteOrder(QAudioFormat::LittleEndian);
-  format.setSampleType(QAudioFormat::UnSignedInt);
-
-  QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
-
-  if (!info.isFormatSupported(format)) {
-    qFatal("Raw audio format not supported by backend, cannot play audio.");
-  }
-
-  return format;
 }

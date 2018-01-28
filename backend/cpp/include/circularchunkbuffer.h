@@ -1,4 +1,7 @@
 #pragma once
+
+#include <QtGlobal>
+
 #include <atomic>
 #include <cstddef>
 
@@ -17,22 +20,29 @@ class CircularChunkBuffer
   size_t size_impl(size_t head, size_t tail) const;
 
 public:
-  CircularChunkBuffer(size_t size = 4096 * 4);
+  CircularChunkBuffer(size_t size = 4096 * 8);
   ~CircularChunkBuffer();
 
   size_t write(const char* data, size_t size);
+  size_t write(const qint16* data, size_t size)
+  {
+
+    for (size_t i = 0; i < size; ++i) {
+      char c = static_cast<char>(data[i]);
+      write(&c, sizeof(char));
+    }
+
+    return size;
+  }
 
   size_t read(char* object, size_t size);
 
-  size_t readAll(char* object)
-  {
-    return read(object, size());
-  }
 
   size_t size() const;
 
   size_t capacity() const;
 
   void clear();
+
 };
 

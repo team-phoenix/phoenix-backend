@@ -6,6 +6,7 @@
 #include "inputmanager.hpp"
 #include "logging.h"
 #include "retrovariablevalue.hpp"
+#include "audioplayercontroller.h"
 
 #include <QVarLengthArray>
 #include <QHash>
@@ -49,6 +50,7 @@ public:
       dylibCore.retro_init();
 
       fillSystemInfo(systemInfo);
+      audioController.setSampleRate(systemInfo.avInfo.timing.sample_rate);
 
       // We need to flush stderr, because some cores write to it, even though
       // the log callback exists; it's complete madness!!!.
@@ -175,6 +177,7 @@ private:
   InputStateManager inputManager;
   SystemInfo systemInfo;
   QHash<const char*, RetroVariableValue> retroVariableMap;
+  AudioController audioController;
 
 public:
 
@@ -192,9 +195,12 @@ public:
 
   static size_t audioSampleBatchCallback(const int16_t* data, size_t frames)
   {
-    Q_UNUSED(data);
-    Q_UNUSED(frames);
-    return 0;
+    if (!instance().audioController.isListening()) {
+      instance().audioController.play();
+    }
+
+    instance().audioController.write(reinterpret_cast<const char*>(data), frames * sizeof(int16_t) * 2);
+    return frames;
   }
 
   static bool environmentCallback(unsigned cmd, void* data)

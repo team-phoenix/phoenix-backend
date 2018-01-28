@@ -31,9 +31,9 @@ size_t CircularChunkBuffer::write(const char* data, size_t size)
       // clocked right) or audio backend stopped reading frames.
       // In the first case, it might cause audio to skip a bit.
       qDebug("Buffer full, dropping samples");
-      qDebug() << "bufferSize" << this->size() << head << tail;
       clear();
     }
+
 
     m_buffer[head] = data[wrote++];
     m_head.store(nextHead, std::memory_order_release);
@@ -52,20 +52,13 @@ size_t CircularChunkBuffer::read(char* data, size_t size)
     head = m_head.load(std::memory_order_acquire);
 
     if (tail == head) {
-      qDebug() << "overrun detected";
+//      qDebug() << "overrun detected";
       break;
     }
 
     data[read++] = m_buffer[tail];
     m_tail.store(next(tail), std::memory_order_release);
   }
-
-//  if (read == 0) {
-//    size_t head = m_head.load(std::memory_order_relaxed);
-//    size_t tail = m_tail.load(std::memory_order_relaxed);
-//    int s = this->size();
-//    bool b = true;
-//  }
 
   return read;
 }

@@ -8,7 +8,7 @@ QtApplication {
     files: {
 
         var headers = [
-//                    "../backend/cpp/include/*.h",
+                    "../backend/cpp/include/*.h",
 //                    "../backend/cpp/include/audio/*.h",
 //                    "../backend/cpp/include/input/*.h",
                       "../backend/cpp/include/*.hpp",
@@ -20,6 +20,7 @@ QtApplication {
                 ]
 
         var sources = [
+                    "../backend/cpp/src/*.cpp",
                     "../backend/cpp/src/logging.cpp",
 //                    "../backend/cpp/src/input/*.cpp",
                     "cpp/src/*.cpp",
@@ -54,6 +55,7 @@ QtApplication {
 
     cpp.cxxLanguageVersion: "c++14";
     cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
+    cpp.staticLibraries: [ "samplerate" ]
     cpp.libraryPaths: {
         var paths = []
 

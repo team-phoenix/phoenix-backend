@@ -1,6 +1,7 @@
 #pragma once
 
 #include "circularchunkbuffer.h"
+#include <samplerate.h>
 
 #include <QObject>
 #include <QAudioFormat>
@@ -14,10 +15,13 @@ class AudioPlayer : public QObject
 public:
   explicit AudioPlayer(QObject* parent = nullptr);
 
+  void setRingBuffer(CircularChunkBuffer* ringBuffer);
 signals:
 
 public slots:
   void play();
+  void stop();
+  void init(double sampleRate);
 
 private slots:
   void onAudioStateChanged(QAudio::State state);
@@ -28,11 +32,10 @@ private:
   QIODevice* ioOutput{nullptr};
 
   QTimer ioTimer;
+  QByteArray currentChunk;
 
-  QByteArray chunkBuffer;
-  int chunkBufferIndex{0};
-
-  CircularChunkBuffer circularChunkBuffer;
+  CircularChunkBuffer* circularChunkBuffer;
+  QAudioFormat audioFormat;
 
 private:
   QAudioFormat getWavAudioFormat();

@@ -37,6 +37,7 @@ QtApplication {
 
     cpp.cxxLanguageVersion: "c++14";
     cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
+    cpp.staticLibraries: [ "samplerate" ]
     cpp.libraryPaths: {
         var paths = []
 
