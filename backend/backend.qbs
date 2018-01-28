@@ -51,12 +51,13 @@ QtApplication {
 
         var headers = [
                     "cpp/include/*.hpp",
+                    "cpp/include/*.h",
 //                    "cpp/include/audio/*.h",
 //                    "cpp/include/input/*.h",
                 ]
 
         var sources = [
-//                    "cpp/src/*.cpp",
+                    "cpp/src/*.cpp",
 //                    "cpp/src/audio/*.cpp",
 //                    "cpp/src/input/*.cpp",
                     "cpp/src/main/*.cpp",

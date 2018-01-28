@@ -11,10 +11,41 @@ ListView {
     orientation: ListView.Vertical
     spacing: 12
 
-
     ScrollBar.vertical: ScrollBar {
         policy: ScrollBar.AlwaysOn
+//        onPositionChanged: {
+//            var scaledHeight = visibleArea.heightRatio + position
+//            console.log(scaledHeight)
+//            if (scaledHeight === 1.0) {
+//                listViewBottomShadow.visible = false
+//            } else {
+//                if (!listViewBottomShadow.visible) {
+//                    listViewBottomShadow.visible = true
+//                }
+//            }
+//        }
     }
+
+//    Rectangle {
+//        id: listViewBottomShadow
+//        anchors {
+//            bottom: parent.bottom
+//            left: parent.left
+//            right: parent.right
+//        }
+
+//        height: 12
+//        gradient: Gradient {
+//            GradientStop {
+//                position: 0.0
+//                color: "transparent"
+//            }
+//            GradientStop {
+//                position: 1.0
+//                color: "#292928"
+//            }
+//        }
+//    }
 
     delegate: Rectangle {
         id: listViewDelegate
