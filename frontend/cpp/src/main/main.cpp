@@ -8,6 +8,7 @@
 #include "emulationlistener.h"
 #include "emulationvideoscreen.h"
 #include "pathcreator.h"
+#include "globalinputdevice.h"
 
 int main(int argc, char* argv[])
 {
@@ -24,6 +25,7 @@ int main(int argc, char* argv[])
   QQmlContext* context = engine.rootContext();
   context->setContextProperty("globalGameMetadataModel", &GameMetadataModel::instance());
   context->setContextProperty("globalEmulationListener", &EmulationListener::instance());
+  context->setContextProperty("globalInputDevice", &GlobalInputDevice::instance());
 
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
 

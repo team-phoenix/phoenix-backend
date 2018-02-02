@@ -84,6 +84,11 @@ public:
     dylibCore.retro_run();
   }
 
+  int numberOfConnectedControllers()
+  {
+    return inputManager.numberOfConnectedControllers();
+  }
+
   retro_game_info openGame(const retro_system_info &systemInfo)
   {
     retro_game_info gameInfo = {};

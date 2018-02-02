@@ -35,6 +35,7 @@ signals:
   void videoInfoChanged(double, int, int, double, int);
   void startReadingFrames();
   void pauseReadingFrames();
+  void inputStateUpdated(int port, int id, int state);
 
 private:
   QLocalSocket socketToBackend;

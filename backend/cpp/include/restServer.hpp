@@ -70,6 +70,17 @@ public:
     sendReply(replyObject);
   }
 
+  void sendInputStateUpdate(int port, int id, int state)
+  {
+    QJsonObject replyObject{
+      { "reply", "inputStateUpdate" },
+      { "port", port},
+      { "id", id},
+      { "state", state},
+    };
+    sendReply(replyObject);
+  }
+
   void sendReply(QJsonObject replyObject)
   {
     const QByteArray replyBuffer = JSONObjectToByteArray(replyObject);
@@ -114,6 +125,10 @@ public:
 
   void waitForDataWrite(const QByteArray &buffer)
   {
+    if (!currentSocket) {
+      return;
+    }
+
     quint32 size = static_cast<quint32>(buffer.size());
     const size_t writeSize = sizeof(size);
 
@@ -204,6 +219,11 @@ public:
     return readObject;
   }
 
+  bool getSocketIsConnected() const
+  {
+    return socketIsConnected;
+  }
+
 signals:
   void requestRecieved(QJsonObject);
   void socketDisconnected();
@@ -233,6 +253,7 @@ private:
   QLocalSocket* currentSocket{ nullptr };
   QJsonObject currentReadObject;
   int currentMessageSize{0};
+  bool socketIsConnected{ false };
 
 private slots:
 
@@ -244,22 +265,19 @@ private slots:
       return;
     }
 
-    currentSocket = localServer.nextPendingConnection();
-
     qDebug() << "Connected to a new process.";
 
+    currentSocket = localServer.nextPendingConnection();
+
+    socketIsConnected = true;
+
     connect(currentSocket, &QLocalSocket::readyRead, this, &RestServer::readCurrentSocket);
-
-    connect(currentSocket, &QLocalSocket::connected, this, &RestServer::socketConnected);
-
-    connect(currentSocket, &QLocalSocket::connected, this, [this] {
-      qCDebug(phxCore) << "localSocket is connected";
-    });
 
     connect(currentSocket, &QLocalSocket::disconnected, this, [this] {
       qCDebug(phxCore) << "localSocket is disconnected";
       currentSocket->deleteLater();
       currentSocket = nullptr;
+      socketIsConnected = false;
       emit socketDisconnected();
     });
 

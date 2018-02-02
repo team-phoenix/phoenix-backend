@@ -92,7 +92,6 @@ public:
 
   void setDigitalState(quint8 button, quint8 state)
   {
-    qDebug() << button << state;
     digitalStates[button] = state;
   }
 

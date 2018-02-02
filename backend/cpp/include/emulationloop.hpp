@@ -29,12 +29,21 @@ public:
     connect(&emulationTimer, &QTimer::timeout, this, &EmulationLoop::loop);
 
     connect(&standbyModeTimer, &QTimer::timeout, this, &EmulationLoop::pollInputManager);
-
   }
 
   void pollInputManager()
   {
-    CoreController::inputPollCallback();
+    if (messageServer.getSocketIsConnected()) {
+      const int numOfControllersConnected = CoreController::instance().numberOfConnectedControllers();
+      CoreController::inputPollCallback();
+
+      for (int port = 0; port < numOfControllersConnected; ++port) {
+        for (int id = RETRO_DEVICE_ID_JOYPAD_B; id < RETRO_DEVICE_ID_JOYPAD_R3; ++id) {
+          qint16 state = CoreController::inputStateCallback(port, RETRO_DEVICE_JOYPAD, -1, id);
+          messageServer.sendInputStateUpdate(port, id, state);
+        }
+      }
+    }
   }
 
   void enterStandbyMode()
@@ -69,9 +78,11 @@ private slots:
 
   void stopTimer()
   {
-    emulationTimer.stop();
-    looperState = Paused;
-    qCDebug(phxLoop) << "timer was stopped";
+    if (emulationTimer.isActive()) {
+      emulationTimer.stop();
+      looperState = Paused;
+      qCDebug(phxLoop) << "timer was stopped";
+    }
   }
 
   void startTimer()

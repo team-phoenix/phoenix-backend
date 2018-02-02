@@ -97,7 +97,6 @@ void EmulationListener::sendMessage(QVariantHash hashedMessage)
 
 void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
 {
-  qDebug() << "Got socket command" << replyMessage;
   const QString replyType = replyMessage.value("reply").toString().simplified();
 
   if (replyType == "initEmu") {
@@ -109,10 +108,25 @@ void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
     const int pixelFormat = replyMessage.value("pixelFormat").toInt();
 
     emit videoInfoChanged(aspectRatio, height, width, frameRate, pixelFormat);
+
   } else if (replyType == "playEmu") {
+
     emit startReadingFrames();
+
   } else if (replyType == "pausedEmu") {
+
     emit pauseReadingFrames();
+
+  } else if (replyType == "inputStateUpdate") {
+
+    const int port = replyMessage.value("port").toInt();
+    const int id = replyMessage.value("id").toInt();
+    const int state = replyMessage.value("state").toInt();
+
+    emit inputStateUpdated(port, id, state);
+
+  } else {
+    qDebug() << "Unhandled socket command" << replyMessage;
   }
 }
 
