@@ -5,6 +5,28 @@ import QtQuick.Controls 2.3
 ListView {
     id: listView
 
+    Connections {
+        id: globalInputDeviceConnection
+        target: globalInputDevice
+        onButtonUpChanged: {
+            if (globalInputDevice.buttonUp) {
+                listView.decrementCurrentIndex()
+            }
+        }
+
+        onButtonDownChanged: {
+            if (globalInputDevice.buttonDown) {
+                listView.incrementCurrentIndex()
+            }
+        }
+
+        onButtonAChanged: {
+            if ( globalInputDevice.buttonA) {
+                listView.currentItem.listItemPlayButton.clicked();
+            }
+        }
+    }
+
     model: globalGameMetadataModel
     clip: true
 
@@ -13,46 +35,48 @@ ListView {
 
     ScrollBar.vertical: ScrollBar {
         policy: ScrollBar.AlwaysOn
-//        onPositionChanged: {
-//            var scaledHeight = visibleArea.heightRatio + position
-//            console.log(scaledHeight)
-//            if (scaledHeight === 1.0) {
-//                listViewBottomShadow.visible = false
-//            } else {
-//                if (!listViewBottomShadow.visible) {
-//                    listViewBottomShadow.visible = true
-//                }
-//            }
-//        }
+        //        onPositionChanged: {
+        //            var scaledHeight = visibleArea.heightRatio + position
+        //            console.log(scaledHeight)
+        //            if (scaledHeight === 1.0) {
+        //                listViewBottomShadow.visible = false
+        //            } else {
+        //                if (!listViewBottomShadow.visible) {
+        //                    listViewBottomShadow.visible = true
+        //                }
+        //            }
+        //        }
     }
 
-//    Rectangle {
-//        id: listViewBottomShadow
-//        anchors {
-//            bottom: parent.bottom
-//            left: parent.left
-//            right: parent.right
-//        }
 
-//        height: 12
-//        gradient: Gradient {
-//            GradientStop {
-//                position: 0.0
-//                color: "transparent"
-//            }
-//            GradientStop {
-//                position: 1.0
-//                color: "#292928"
-//            }
-//        }
-//    }
+    //    Rectangle {
+    //        id: listViewBottomShadow
+    //        anchors {
+    //            bottom: parent.bottom
+    //            left: parent.left
+    //            right: parent.right
+    //        }
 
+    //        height: 12
+    //        gradient: Gradient {
+    //            GradientStop {
+    //                position: 0.0
+    //                color: "transparent"
+    //            }
+    //            GradientStop {
+    //                position: 1.0
+    //                color: "#292928"
+    //            }
+    //        }
+    //    }
     delegate: Rectangle {
         id: listViewDelegate
 
         height: 200
         width: parent.width
-        color: "red"
+        color: index === listView.currentIndex ? "white" : "black";
+
+        property alias listItemPlayButton: playButton;
 
         MouseArea {
             anchors.fill: parent

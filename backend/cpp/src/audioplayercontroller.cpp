@@ -9,6 +9,7 @@ AudioController::AudioController()
 
 void AudioController::play()
 {
+  ringBuffer.clear();
   audioPlayer.moveToThread(&audioThread);
   Q_ASSERT(audioPlayer.thread() == &audioThread);
   Q_ASSERT(audioPlayer.thread() != QThread::currentThread());
@@ -20,7 +21,6 @@ void AudioController::play()
 void AudioController::stop()
 {
   QMetaObject::invokeMethod(&audioPlayer, "stop");
-
 }
 
 void AudioController::setSampleRate(double sampleRate)

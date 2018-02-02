@@ -11,11 +11,6 @@ ApplicationWindow {
     minimumWidth: 640
     title: qsTr("Phoenix")
 
-    Connections {
-        id: globalInputDeviceConnection;
-        target: globalInputDevice;
-    }
-
     Component {
         id: rootPage
 
