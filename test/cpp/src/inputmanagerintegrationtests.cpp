@@ -160,6 +160,13 @@ SCENARIO("The user has their gamepad buffer updated when there are new input eve
                                                            which,
                                                            SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0));
 
+    WHEN("The core asks for input device states") {
+      const int port = 9999999;
+      THEN("the input manager can handle ports >= the number of devices connected") {
+        REQUIRE(subject.getInputState(port, RETRO_DEVICE_JOYPAD, 0, 0) == 0);
+      }
+    }
+
     WHEN("all button down events are fired") {
       addController(which);
       pushEvents(sdlButtonDownEvents);

@@ -316,7 +316,7 @@ public:
 
   static void inputPollCallback(void)
   {
-//    instance().inputManager.poll();
+    instance().inputManager.updateControllerStates();
 //    instance().readKeyStatesInputManager();
   }
 
@@ -326,12 +326,7 @@ public:
 
   static int16_t inputStateCallback(unsigned port, unsigned device, unsigned index, unsigned id)
   {
-    Q_UNUSED(port);
-    Q_UNUSED(device);
-    Q_UNUSED(index);
-    Q_UNUSED(id);
-
-    return 0;
+    return instance().inputManager.getInputState(port, device, index, id);
   }
 
   static void videoRefreshCallback(const void* data, unsigned width, unsigned height, size_t pitch)

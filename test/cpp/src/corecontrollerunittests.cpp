@@ -114,6 +114,8 @@ SCENARIO("The core controller can handle loading a game and core")
       void poll() {}
       qint16* getKeyboardBuffer() const { return nullptr; }
       int getKeyboardBufferSize() const { return 0; }
+      void updateControllerStates() {}
+      qint16 getInputState(unsigned, unsigned, unsigned, unsigned) { return 0; }
     };
 
     using Subject = CoreController_T<MockMemory, MockCore, MockGame, MockInputManager>;

@@ -27,7 +27,6 @@ public:
       const QString message = "Unable to initialize SDL2: " + QString(SDL_GetError());
       throw std::runtime_error(message.toStdString());
     }
-
   }
 
   ~InputManager_T()
@@ -112,7 +111,7 @@ public:
     qint16 state = 0;
 
     if (device == RETRO_DEVICE_JOYPAD) {
-      if (static_cast<int>(port) < MAX_DEVICE_SIZE) {
+      if (static_cast<int>(port) < MAX_DEVICE_SIZE && static_cast<int>(port) < inputDevices.size()) {
         return inputDevices.at(port).getInputStateForRetroID(id);
       }
     }
@@ -129,7 +128,10 @@ private:
     SDL_Joystick* joystick = SDL_GameControllerGetJoystick(controller);
 //    const SDL_JoystickID id = SDL_JoystickInstanceID(joystick);
 
-    joystickIDToIndexMap[ joystickID ] = inputDevices.size() - 1;
+    const int joystickIndex = inputDevices.size() - 1;
+    qCDebug(phxInput) << "GameController added at index" << joystickID;
+
+    joystickIDToIndexMap[ joystickID ] = joystickIndex;
   }
 
   void removeController(qint32 joystickID)
@@ -139,6 +141,8 @@ private:
     if (index != -1) {
       inputDevices.removeAt(index);
       joystickIDToIndexMap.remove(joystickID);
+
+      qCDebug(phxInput) << "GameController removed at index" << joystickID;
 
       SDL_GameController* controller = SDL_GameControllerFromInstanceID(joystickID);
       SDL_GameControllerClose(controller);

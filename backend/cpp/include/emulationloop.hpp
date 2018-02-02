@@ -12,8 +12,11 @@ class EmulationLoop : public QObject
   Q_OBJECT
 public:
 
+  static const int EMULATION_TIMER_INTERVAL_MILISECONDS = 16;
+  static const int STANDBY_MODE_TIMER_INTERVAL_MILISECONDS = 32;
+
   enum LoopState {
-    Uninitialized,
+    Standby,
     Initialized,
     Playing,
     Paused,
@@ -24,6 +27,28 @@ public:
     connect(&messageServer, &RestServer::requestRecieved, this, &EmulationLoop::parseRequest);
     connect(&messageServer, &RestServer::socketDisconnected, this, &EmulationLoop::stopTimer);
     connect(&emulationTimer, &QTimer::timeout, this, &EmulationLoop::loop);
+
+    connect(&standbyModeTimer, &QTimer::timeout, this, &EmulationLoop::pollInputManager);
+
+  }
+
+  void pollInputManager()
+  {
+    CoreController::inputPollCallback();
+  }
+
+  void enterStandbyMode()
+  {
+    if (looperState == Standby) {
+      standbyModeTimer.start(STANDBY_MODE_TIMER_INTERVAL_MILISECONDS);
+      qCDebug(phxLoop) << "The standbyMode timer has been activated";
+    }
+  }
+
+  void stopStandbyMode()
+  {
+    standbyModeTimer.stop();
+    qCDebug(phxLoop) << "The standbyMode timer has stopped";
   }
 
   void startTimerWithInterval(int miliseconds)
@@ -37,7 +62,7 @@ public:
   ~EmulationLoop() = default;
 
 private:
-  LoopState looperState{ Uninitialized };
+  LoopState looperState{ Standby };
   CoreController::SystemInfo cachedInitSystemInfo;
 
 private slots:
@@ -66,7 +91,10 @@ private slots:
     qCDebug(phxLoop, "request %s", qPrintable(requestType));
 
     if (requestType == "initEmu") {
-      if (looperState == Uninitialized) {
+      if (looperState == Standby) {
+
+        stopStandbyMode();
+
         const QString corePath = request[ "core" ].toString();
         const QString gamePath = request[ "game" ].toString();
 
@@ -84,7 +112,6 @@ private slots:
     } else if (requestType == "playEmu") {
 
       if (looperState == Initialized) {
-
         loop();
         messageServer.sendPlayReply();
         qCDebug(phxLoop) << "started emulation";
@@ -116,4 +143,5 @@ private slots:
 private:
   RestServer messageServer;
   QTimer emulationTimer;
+  QTimer standbyModeTimer;
 };

@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
   QCoreApplication app(argc, argv);
 
   EmulationLoop emulationLoop;
-  Q_UNUSED(emulationLoop);
+  emulationLoop.enterStandbyMode();
 
   return app.exec();
 }
