@@ -192,6 +192,14 @@ public:
     return controller;
   }
 
+  static QList<InputDeviceInfo> getInputDeviceInfoList()
+  {
+    return instance().inputManager.getInputDeviceInfoList();
+  }
+
+// Callbacks
+public:
+
   static void audioSampleCallback(int16_t left, int16_t right)
   {
     Q_UNUSED(left);

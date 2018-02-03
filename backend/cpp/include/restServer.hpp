@@ -7,6 +7,7 @@
 #include <QLocalSocket>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonArray>
 
 static const QString SERVER_NAME = "phoenixEmulatorProcess";
 
@@ -49,6 +50,26 @@ public:
       { "width", static_cast<int>(systemAvInfo.geometry.base_width)},
       { "frameRate", systemAvInfo.timing.fps},
       { "pixelFormat", pixelFormat}
+    };
+
+    sendReply(replyObject);
+  }
+
+  void sendInputDeviceInfoListReply(QList<InputDeviceInfo> infoList)
+  {
+
+    QJsonArray replyArray;
+
+    for (const InputDeviceInfo &deviceInfo : infoList) {
+      replyArray.append(QJsonObject {
+        { "deviceName", deviceInfo.inputDeviceName },
+        { "devicePort", deviceInfo.inputDevicePort },
+      });
+    }
+
+    QJsonObject replyObject{
+      { "reply", "inputDeviceInfoList" },
+      { "deviceInfoList", replyArray },
     };
 
     sendReply(replyObject);

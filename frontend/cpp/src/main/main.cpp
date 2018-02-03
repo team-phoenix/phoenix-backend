@@ -9,6 +9,20 @@
 #include "emulationvideoscreen.h"
 #include "pathcreator.h"
 #include "globalinputdevice.h"
+#include "inputdevicesmodel.h"
+
+void registerQmlTypes(QQmlApplicationEngine &engine)
+{
+  qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
+  qmlRegisterType<InputDeviceInfoModel>("vg.phoenix.models", 1, 0, "InputDeviceInfoModel");
+  qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
+  qmlRegisterType<EmulationVideoScreen>("vg.phoenix.emulation", 1, 0, "EmulationVideoScreen");
+
+  QQmlContext* context = engine.rootContext();
+  context->setContextProperty("globalGameMetadataModel", &GameMetadataModel::instance());
+  context->setContextProperty("globalEmulationListener", &EmulationListener::instance());
+  context->setContextProperty("globalInputDevice", &GlobalInputDevice::instance());
+}
 
 int main(int argc, char* argv[])
 {
@@ -17,15 +31,9 @@ int main(int argc, char* argv[])
 
   PathCreator::createAllAppPaths();
 
-  qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
-  qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
-  qmlRegisterType<EmulationVideoScreen>("vg.phoenix.emulation", 1, 0, "EmulationVideoScreen");
-
   QQmlApplicationEngine engine;
-  QQmlContext* context = engine.rootContext();
-  context->setContextProperty("globalGameMetadataModel", &GameMetadataModel::instance());
-  context->setContextProperty("globalEmulationListener", &EmulationListener::instance());
-  context->setContextProperty("globalInputDevice", &GlobalInputDevice::instance());
+
+  registerQmlTypes(engine);
 
   engine.load(QUrl(QLatin1String("qrc:/src/main.qml")));
 

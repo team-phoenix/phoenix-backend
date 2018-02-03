@@ -1,3 +1,5 @@
+#pragma once
+
 #include "systemdb.h"
 
 #include <QAbstractListModel>
@@ -13,7 +15,7 @@ public:
     ShortSystemName,
   };
 
-  SystemModel(QObject* parent = nullptr);
+  explicit SystemModel(QObject* parent = nullptr);
 
   QVariant data(const QModelIndex &index, int role) const;
 

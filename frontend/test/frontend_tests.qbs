@@ -16,6 +16,7 @@ QtApplication {
                     , "../cpp/include/models"
                     , "../cpp/include/models/systemlistmodel"
                     , "../cpp/include/models/gamemetadatamodel"
+                    , "../cpp/include/models/inputdevicesmodel"
                     , "../cpp/include/gameimporter"
                 ];
         dirs.push( "include")
@@ -57,6 +58,7 @@ QtApplication {
                        , "../cpp/include/models/*.h"
                        , "../cpp/include/models/systemlistmodel/*.h"
                        , "../cpp/include/models/gamemetadatamodel/*.h"
+                       , "../cpp/include/models/inputdevicesmodel/*.h"
                        , "../cpp/include/gameimporter/*.h"
                 ]
 
@@ -71,6 +73,7 @@ QtApplication {
                        , "../cpp/src/models/*.cpp"
                        , "../cpp/src/models/systemlistmodel/*.cpp"
                        , "../cpp/src/models/gamemetadatamodel/*.cpp"
+                       , "../cpp/src/models/inputdevicesmodel/*.cpp"
                        , "../cpp/src/gameimporter/*.cpp"
                        ];
 

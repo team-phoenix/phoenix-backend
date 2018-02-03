@@ -1,6 +1,7 @@
 #include "libretro.h"
 #include "logging.h"
 #include "inputdevice.hpp"
+#include "inputdeviceinfo.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
@@ -64,6 +65,20 @@ public:
   int numberOfConnectedControllers() const
   {
     return joystickIDToIndexMap.size();
+  }
+
+  QList<InputDeviceInfo> getInputDeviceInfoList()
+  {
+    QList<InputDeviceInfo> infoList;
+
+    for (auto iter = joystickIDToIndexMap.begin(); iter != joystickIDToIndexMap.end(); ++iter) {
+
+      const SDL_JoystickID joystickID = iter.key();
+      InputDeviceInfo deviceInfo(QString(SDL_GameControllerNameForIndex(joystickID)), joystickID);
+      infoList.append(deviceInfo);
+    }
+
+    return infoList;
   }
 
   void updateControllerStates()

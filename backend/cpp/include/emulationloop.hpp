@@ -147,6 +147,9 @@ private slots:
       } else {
         qCDebug(phxLoop) << "The emulator is not running, rejecting pause request";
       }
+    } else if (requestType == "getInputDeviceInfoList") {
+      const QList<InputDeviceInfo> infoList = CoreController::instance().getInputDeviceInfoList();
+      messageServer.sendInputDeviceInfoListReply(infoList);
     }
 
   }

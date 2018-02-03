@@ -3,6 +3,7 @@
 
 #include <QLocalSocket>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QDebug>
 
 static const QString SERVER_NAME = "phoenixEmulatorProcess";
@@ -45,10 +46,23 @@ void EmulationListener::newConnectionFound()
   });
 }
 
+QVariantHash EmulationListener::newMessage(const QString requestType)
+{
+  return QVariantHash {
+    { "request", requestType }
+  };
+}
+
 EmulationListener &EmulationListener::instance()
 {
   static EmulationListener emulationListener;
   return emulationListener;
+}
+
+void EmulationListener::getInputInfoList()
+{
+  const QVariantHash inputInfoMessage = newMessage("getInputDeviceInfoList");
+  sendMessage(inputInfoMessage);
 }
 
 bool EmulationListener::sendPlayMessage(QString gameFilePath, QString gameSystem)
@@ -124,6 +138,20 @@ void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
     const int state = replyMessage.value("state").toInt();
 
     emit inputStateUpdated(port, id, state);
+
+  } else if (replyType == "inputDeviceInfoList") {
+    const QJsonArray devices = replyMessage.value("deviceInfoList").toJsonArray();
+
+    QList<InputDeviceInfo> deviceInfo;
+
+    for (const QJsonValue &val : devices) {
+      QJsonObject deviceObject = val.toObject();
+
+      deviceInfo.append(InputDeviceInfo(deviceObject.value("deviceName").toString(),
+                                        deviceObject.value("devicePort").toInt()));
+    }
+
+    emit inputInfoListRecieved(deviceInfo);
 
   } else {
     qDebug() << "Unhandled socket command" << replyMessage;

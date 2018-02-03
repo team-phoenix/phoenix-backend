@@ -28,8 +28,15 @@ Item {
                 anchors.centerIn: parent
 
                 Button {
-                    text: "Add Game"
+                    text: qsTr("Add Game")
                     onClicked: findGameDialog.open()
+                }
+
+                Button {
+                    text: qsTr("Remap Input")
+                    onClicked: {
+                        rootStackView.push(inputRemappingPage)
+                    }
                 }
 
                 ComboBox {

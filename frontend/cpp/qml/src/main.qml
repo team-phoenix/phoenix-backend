@@ -12,6 +12,13 @@ ApplicationWindow {
     title: qsTr("Phoenix")
 
     Component {
+        id: inputRemappingPage
+
+        InputRemappingPage {
+        }
+    }
+
+    Component {
         id: rootPage
 
         RootPage {

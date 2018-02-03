@@ -30,6 +30,7 @@ QString SystemDb::findCoreWhereSystemFullNameIs(QString systemFullName)
     }
   }
 
+  return QString();
 }
 
 QList<SystemEntity> SystemDb::findAllBySystem()

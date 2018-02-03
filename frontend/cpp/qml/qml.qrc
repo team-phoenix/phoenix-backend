@@ -5,5 +5,6 @@
         <file>test/Test_GameListView.qml</file>
         <file>src/RootPage.qml</file>
         <file>src/GamePage.qml</file>
+        <file>src/InputRemappingPage.qml</file>
     </qresource>
 </RCC>
