@@ -6,6 +6,7 @@ InputDeviceInfoModel::InputDeviceInfoModel(QObject* parent)
     roles {
   { InputDeviceName, "inputDeviceName"},
   { InputDevicePort, "inputDevicePort"},
+  { InputDeviceDisplayName, "inputDeviceDisplayName"},
 }
 {
   connect(&EmulationListener::instance(), &EmulationListener::inputInfoListRecieved, this,
@@ -25,6 +26,10 @@ QVariant InputDeviceInfoModel::data(const QModelIndex &index, int role) const
 
       case InputDeviceName:
         return deviceInfo.inputDeviceName;
+
+      case InputDeviceDisplayName:
+        return QString("%1 %2").arg(deviceInfo.inputDeviceName,
+                                    QString::number(deviceInfo.inputDevicePort));
 
       default:
         break;
@@ -47,6 +52,21 @@ int InputDeviceInfoModel::rowCount(const QModelIndex &) const
 QHash<int, QByteArray> InputDeviceInfoModel::roleNames() const
 {
   return roles;
+}
+
+QVariantHash InputDeviceInfoModel::getInputMapping(int index) const
+{
+  return inputInfoCache.at(index).inputMapping;
+}
+
+int InputDeviceInfoModel::getInputDevicePort(int index) const
+{
+  return inputInfoCache.at(index).inputDevicePort;
+}
+
+QString InputDeviceInfoModel::getInputDeviceName(int index) const
+{
+  return inputInfoCache.at(index).inputDeviceName;
 }
 
 void InputDeviceInfoModel::onInputInfoListRecieved(QList<InputDeviceInfo> inputInfoList)

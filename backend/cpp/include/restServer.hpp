@@ -64,6 +64,7 @@ public:
       replyArray.append(QJsonObject {
         { "deviceName", deviceInfo.inputDeviceName },
         { "devicePort", deviceInfo.inputDevicePort },
+        { "deviceMapping", QJsonObject::fromVariantHash(deviceInfo.inputMapping) },
       });
     }
 

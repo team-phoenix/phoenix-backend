@@ -10,11 +10,13 @@
 #include "pathcreator.h"
 #include "globalinputdevice.h"
 #include "inputdevicesmodel.h"
+#include "inputmappingmodel.h"
 
 void registerQmlTypes(QQmlApplicationEngine &engine)
 {
   qmlRegisterType<SystemModel>("vg.phoenix.models", 1, 0, "SystemModel");
   qmlRegisterType<InputDeviceInfoModel>("vg.phoenix.models", 1, 0, "InputDeviceInfoModel");
+  qmlRegisterType<InputMappingModel>("vg.phoenix.models", 1, 0, "InputMappingModel");
   qmlRegisterType<GameImporter>("vg.phoenix.importer", 1, 0, "GameImporter");
   qmlRegisterType<EmulationVideoScreen>("vg.phoenix.emulation", 1, 0, "EmulationVideoScreen");
 

@@ -67,6 +67,44 @@ public:
     return joystickIDToIndexMap.size();
   }
 
+  QString getSDLControllerMapping(SDL_JoystickID joystickID)
+  {
+    QString result;
+
+    SDL_GameController* gameController = SDL_GameControllerFromInstanceID(joystickID);
+    char* rawControllerMappingStr = SDL_GameControllerMapping(gameController);
+
+    result = rawControllerMappingStr;
+    SDL_free(rawControllerMappingStr);
+
+    return result;
+  }
+
+  QVariantHash getInputMapping(SDL_JoystickID joystickID)
+  {
+    const QString sdlControllerMapping = getSDLControllerMapping(joystickID);
+    QStringList splitMappingStr = sdlControllerMapping.split(",");
+
+    QVariantHash inputMapping;
+
+    if (splitMappingStr.size() > 2) {
+      const QString controllerGUID = splitMappingStr.takeFirst();
+      const QString controllerName = splitMappingStr.takeFirst();
+
+      for (const QString &item : splitMappingStr) {
+        const QStringList splitMapEntry = item.split(":");
+
+        if (splitMapEntry.size() == 2) {
+          const QString sdlButtonName = splitMapEntry.first();
+          const QString sdlButtonMapValue = splitMapEntry.last();
+          inputMapping.insert(sdlButtonName, sdlButtonMapValue);
+        }
+      }
+    }
+
+    return inputMapping;
+  }
+
   QList<InputDeviceInfo> getInputDeviceInfoList()
   {
     QList<InputDeviceInfo> infoList;
@@ -74,7 +112,14 @@ public:
     for (auto iter = joystickIDToIndexMap.begin(); iter != joystickIDToIndexMap.end(); ++iter) {
 
       const SDL_JoystickID joystickID = iter.key();
-      InputDeviceInfo deviceInfo(QString(SDL_GameControllerNameForIndex(joystickID)), joystickID);
+
+
+      const QVariantHash inputMapping = getInputMapping(joystickID);
+
+      InputDeviceInfo deviceInfo(QString(SDL_GameControllerNameForIndex(joystickID))
+                                 , joystickID
+                                 , inputMapping);
+
       infoList.append(deviceInfo);
     }
 

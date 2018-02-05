@@ -13,6 +13,7 @@ public:
   enum Roles {
     InputDeviceName = Qt::UserRole + 1,
     InputDevicePort,
+    InputDeviceDisplayName,
   };
 
   explicit InputDeviceInfoModel(QObject* parent = nullptr);
@@ -24,6 +25,11 @@ public:
   int rowCount(const QModelIndex &) const;
 
   QHash<int, QByteArray> roleNames() const;
+
+public slots:
+  QVariantHash getInputMapping(int index) const;
+  int getInputDevicePort(int index) const;
+  QString getInputDeviceName(int index) const;
 
 private slots:
   void onInputInfoListRecieved(QList<InputDeviceInfo> inputInfoList);

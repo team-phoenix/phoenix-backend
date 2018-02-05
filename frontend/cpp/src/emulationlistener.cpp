@@ -145,10 +145,13 @@ void EmulationListener::executeSocketCommands(QVariantHash replyMessage)
     QList<InputDeviceInfo> deviceInfo;
 
     for (const QJsonValue &val : devices) {
+
       QJsonObject deviceObject = val.toObject();
+      const QVariantHash deviceMapping = deviceObject.value("deviceMapping").toVariant().toHash();
 
       deviceInfo.append(InputDeviceInfo(deviceObject.value("deviceName").toString(),
-                                        deviceObject.value("devicePort").toInt()));
+                                        deviceObject.value("devicePort").toInt()
+                                        , deviceMapping));
     }
 
     emit inputInfoListRecieved(deviceInfo);

@@ -36,12 +36,18 @@ Item {
         }
 
         ComboBox {
-            id: inputDeviceComboBox;
-            textRole: "inputDeviceName"
+            id: inputDeviceComboBox
+            textRole: "inputDeviceDisplayName"
+            implicitWidth: 200
             model: InputDeviceInfoModel {
             }
 
-            onCountChanged: inputDeviceComboBox.currentIndex = 0;
+            onCountChanged: inputDeviceComboBox.currentIndex = 0
+            onCurrentIndexChanged: {
+                var currentMapping = inputDeviceComboBox.model.getInputMapping(
+                            currentIndex)
+                inputMappingListView.model.setCurrentMapping(currentMapping)
+            }
         }
 
         ListView {
@@ -54,7 +60,8 @@ Item {
                 z: parent.z - 1
             }
 
-            model: ["hello", "baby", "woo"]
+            model: InputMappingModel {
+            }
 
             Layout.fillHeight: true
             Layout.fillWidth: true
@@ -69,9 +76,47 @@ Item {
                     anchors.fill: parent
                     color: isSelected ? "violet" : "teal"
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: modelData
+                    RowLayout {
+
+                        width: 200
+
+                        anchors {
+                            centerIn: parent
+                        }
+
+                        Rectangle {
+                            anchors {
+                                fill: parent
+                            }
+
+                            z: parent.z - 1
+                            color: "orange"
+                        }
+
+                        Text {
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+                            anchors {
+                                verticalCenter: parent.verticalCenter
+                                left: parent.left
+                            }
+
+                            text: mappingKey
+                        }
+
+                        Rectangle {
+                            width: 100
+                            Layout.fillHeight: true
+                            color: "yellow"
+
+                            Text {
+                                anchors {
+                                    centerIn: parent
+                                }
+
+                                text: mappingValue
+                            }
+                        }
                     }
                 }
             }
