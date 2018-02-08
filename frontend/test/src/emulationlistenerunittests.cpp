@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 #include "emulationlistener.h"
 #include "socketreadwriter.h"
 

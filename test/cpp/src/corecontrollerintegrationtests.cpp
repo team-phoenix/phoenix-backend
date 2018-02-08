@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 
 #include "corecontroller.hpp"
 
@@ -36,6 +36,8 @@ SCENARIO("core controller can handle loading games and cores with real dependenc
       REQUIRE(subject.init(workingCorePath, workingGamePath).isEmpty == false);
       subject.fini();
     }
+
+    CoreController::detachSharedMemory();
   }
 }
 
@@ -97,8 +99,8 @@ SCENARIO("The core environment GET callbacks should be all handled properly")
                                                     &logCallback) == true);
         REQUIRE(logCallback.log == CoreController::logCallback);
       }
-
-
     }
+
+    CoreController::detachSharedMemory();
   }
 }

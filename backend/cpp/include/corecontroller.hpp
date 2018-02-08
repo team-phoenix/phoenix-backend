@@ -143,6 +143,13 @@ public:
     info.isEmpty = false;
   }
 
+public:
+
+  static void detachSharedMemory()
+  {
+    instance().memory.close();
+  }
+
 private:
 
   void setCallbacks()

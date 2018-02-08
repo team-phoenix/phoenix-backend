@@ -7,7 +7,7 @@ QtApplication {
     Depends { name: "Qt"; submodules: ["core", "multimedia", "gui", "qml", "quick", "sql", "concurrent", "test"] }
 
     cpp.includePaths: {
-        var dirs = ["include"
+        var dirs = ["./include"
                     , "../cpp/include"
                     , "../cpp/include/databases"
                     , "../cpp/include/databases/librarydb"
@@ -33,7 +33,7 @@ QtApplication {
      qbs.installDir: "databases";
      qbs.installPrefix: app.name;
      files: [
-            "externals/*.sqlite",
+            "externals/*.sqlite"
         ]
     }
 

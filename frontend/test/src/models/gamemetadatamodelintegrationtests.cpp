@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 #include "gamemetadatamodel.h"
 #include "librarydb.h"
 #include "tempdbsession.h"
@@ -90,12 +90,12 @@ SCENARIO("GameMetadataModel")
       THEN("the role names have matching enum values") {
         const QHash<int, QByteArray> roles = subject.roleNames();
 
-        REQUIRE(roles[GameMetadataModel::Title] == "gameTitle");
-        REQUIRE(roles[GameMetadataModel::System] == "gameSystem");
-        REQUIRE(roles[GameMetadataModel::Description] == "gameDescription");
-        REQUIRE(roles[GameMetadataModel::ImageSource] == "gameImageSource");
-        REQUIRE(roles[GameMetadataModel::AbsoluteGamePath] == "gameAbsoluteFilePath");
-        REQUIRE(roles[GameMetadataModel::AbsoluteCorePath] == "coreAbsoluteFilePath");
+        REQUIRE(roles[GameMetadataModel::Title].toStdString() == "gameTitle");
+        REQUIRE(roles[GameMetadataModel::System].toStdString()  == "gameSystem");
+        REQUIRE(roles[GameMetadataModel::Description].toStdString()  == "gameDescription");
+        REQUIRE(roles[GameMetadataModel::ImageSource].toStdString()  == "gameImageSource");
+        REQUIRE(roles[GameMetadataModel::AbsoluteGamePath].toStdString()  == "gameAbsoluteFilePath");
+        REQUIRE(roles[GameMetadataModel::AbsoluteCorePath].toStdString()  == "coreAbsoluteFilePath");
 
       }
     }

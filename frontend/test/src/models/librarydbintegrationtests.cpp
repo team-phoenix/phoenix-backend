@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 #include "librarydb.h"
 #include "tempdbsession.h"
 

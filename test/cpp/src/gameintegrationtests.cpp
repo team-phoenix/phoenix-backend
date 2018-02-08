@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 
 #include "game.hpp"
 
@@ -37,7 +37,7 @@ SCENARIO("A game can handle opening valid and invalid game paths")
         REQUIRE(game.size() == workingGameBuffer.size());
 
         const QByteArray gameData = QByteArray(game.constData(), game.size());
-        REQUIRE(gameData == workingGameBuffer);
+        REQUIRE(gameData.toStdString() == workingGameBuffer.toStdString());
       }
     }
 
@@ -51,7 +51,7 @@ SCENARIO("A game can handle opening valid and invalid game paths")
       THEN("copyToRam() throws a runtime error") {
         REQUIRE_THROWS_AS(game.copyToRam(), std::runtime_error);
         REQUIRE(game.size() == 0);
-        REQUIRE(QByteArray(game.constData()) == QByteArray(""));
+        REQUIRE(QByteArray(game.constData()).toStdString() == QByteArray("").toStdString());
       }
 
     }

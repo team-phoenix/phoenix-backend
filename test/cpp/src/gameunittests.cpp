@@ -1,10 +1,10 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 
 #include "game.hpp"
 
 #include <QByteArray>
 
-SCENARIO("A game file can respond to valid and invalid game paths", "[Game]")
+SCENARIO("A game file can respond to valid and invalid game paths")
 {
   GIVEN("A game with mocked out dependencies") {
 

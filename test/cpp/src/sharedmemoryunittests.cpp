@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 
 #include <QtGlobal>
 #include <QVector>
@@ -19,7 +19,7 @@ T read(R* src, size_t offset)
   return *reinterpret_cast<T*>(array);
 }
 
-SCENARIO("Video data can be written to and read from mocked shared memory", "[SharedMemoryBuffer]")
+SCENARIO("Video data can be written to and read from mocked shared memory")
 {
   GIVEN("a buffer with some data") {
     const int bufferSize = 100;
@@ -156,7 +156,7 @@ SCENARIO("Video data can be written to and read from mocked shared memory", "[Sh
   }
 }
 
-SCENARIO("Keyboard states can be read from a mocked memory buffer", "[SharedMemoryBuffer]")
+SCENARIO("Keyboard states can be read from a mocked memory buffer")
 {
   GIVEN("A valid memory region that contains keyboard states") {
 
@@ -202,7 +202,7 @@ SCENARIO("Keyboard states can be read from a mocked memory buffer", "[SharedMemo
   }
 }
 
-SCENARIO("The shared memory buffer can opened and closed", "[SharedMemoryBuffer]")
+SCENARIO("The shared memory buffer can opened and closed")
 {
   GIVEN("a region of detached memory is used") {
 

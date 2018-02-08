@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "doctest.hpp"
 
 #include "restserver.hpp"
 
@@ -90,7 +90,7 @@ SCENARIO("The separate process can send messages to the local server")
       const auto actualResponse = waitForSocketReadAll(stubSocket);
 
       THEN("the response can be read back") {
-        REQUIRE(actualResponse == expectedResponse);
+        REQUIRE(actualResponse.toStdString() == expectedResponse.toStdString());
       }
     }
 
