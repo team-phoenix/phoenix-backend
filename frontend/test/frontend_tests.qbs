@@ -33,7 +33,12 @@ QtApplication {
      qbs.installDir: "databases";
      qbs.installPrefix: app.name;
      files: [
-            "externals/*.sqlite"
+            "externals/*.sqlite",
+            "include/doctest.cpp",
+            "include/doctest.h",
+            "include/doctestrunner.h",
+            "src/GameImporterIntegrationTests.cpp",
+            "src/doctestrunner.cpp",
         ]
     }
 

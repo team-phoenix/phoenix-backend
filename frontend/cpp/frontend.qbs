@@ -22,7 +22,11 @@ QtApplication {
         qbs.installDir: "databases"
         qbs.installPrefix: app.name
 
-        files: ["externals/*.sqlite"]
+        files: [
+            "externals/*.sqlite",
+            "include/gameimporter/Importer.h",
+            "src/gameimporter/Importer.cpp",
+        ]
     }
 
     cpp.cxxLanguageVersion: "c++14"
