@@ -14,6 +14,7 @@ SystemModel::SystemModel(QObject* parent)
 
 QVariant SystemModel::data(const QModelIndex &index, int role) const
 {
+
   if (index.isValid() && index.row() < systemCache.size()) {
     const SystemEntity &system = systemCache.at(index.row());
 

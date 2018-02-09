@@ -3,14 +3,13 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.2
 
-import vg.phoenix.models 1.0
-
 Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
         Rectangle {
+            id: headerBar
             Layout.fillWidth: true
             height: 50
             color: "cyan"
@@ -29,7 +28,10 @@ Item {
 
                 Button {
                     text: qsTr("Add Game")
-                    onClicked: findGameDialog.open()
+                    onClicked: {
+                        console.log("cli")
+                        findGameDialog.open()
+                    }
                 }
 
                 Button {
@@ -38,22 +40,33 @@ Item {
                         rootStackView.push(inputRemappingPage)
                     }
                 }
-
-                ComboBox {
-                    textRole: "systemFullName"
-                    model: SystemModel {
-                    }
-                    onCurrentTextChanged: {
-                        globalGameMetadataModel.filterBySystem(currentText)
-                    }
-                }
             }
         }
 
-        GameListView {
-            id: gameListView
+        RowLayout {
+
             Layout.fillHeight: true
             Layout.fillWidth: true
+
+            spacing: 0
+
+            SystemListView {
+                id: systemListView
+                Layout.fillHeight: true
+
+                width: 200
+            }
+            GameListView {
+                id: gameListView
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+
+                Rectangle {
+                    anchors.fill: parent
+                    z: parent.z - 1
+                    color: "yellow"
+                }
+            }
         }
     }
 }
