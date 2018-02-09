@@ -7,6 +7,12 @@ import vg.phoenix.models 1.0
 ListView {
     id: systemListView
 
+    clip: true
+
+    ScrollBar.vertical: ScrollBar {
+        policy: ScrollBar.AsNeeded
+    }
+
     Rectangle {
         anchors.fill: parent
         z: parent.z - 1
@@ -32,7 +38,7 @@ ListView {
             color: isSelectedItem ? "pink" : "gray"
 
             Text {
-                text: qsTr(systemFullName)
+                text: qsTr(systemShortName)
                 anchors {
                     verticalCenter: parent.verticalCenter
                     left: parent.left

@@ -24,15 +24,6 @@ Item {
 
             height: 50
             color: "red"
-
-            Button {
-                anchors {
-                    verticalCenter: parent.verticalCenter
-                }
-
-                text: qsTr("Back")
-                onClicked: rootStackView.pop()
-            }
         }
 
         ComboBox {

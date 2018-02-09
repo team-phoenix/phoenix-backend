@@ -21,8 +21,8 @@ ListView {
         }
 
         onButtonAChanged: {
-            if ( globalInputDevice.buttonA) {
-                listView.currentItem.listItemPlayButton.clicked();
+            if (globalInputDevice.buttonA) {
+                listView.currentItem.listItemPlayButton.clicked()
             }
         }
     }
@@ -47,7 +47,6 @@ ListView {
         //            }
         //        }
     }
-
 
     //    Rectangle {
     //        id: listViewBottomShadow
@@ -74,9 +73,9 @@ ListView {
 
         height: 200
         width: parent.width
-        color: index === listView.currentIndex ? "white" : "black";
+        color: index === listView.currentIndex ? "white" : "black"
 
-        property alias listItemPlayButton: playButton;
+        property alias listItemPlayButton: playButton
 
         MouseArea {
             anchors.fill: parent
@@ -196,7 +195,7 @@ ListView {
                                     if (globalEmulationListener.sendPlayMessage(
                                                 gameAbsoluteFilePath,
                                                 gameSystem)) {
-                                        rootStackView.push(gamePage)
+                                        rootStackView.setCurrentItem(gamePage)
                                         root.title = "Phoenix: " + gameTitle
                                     }
                                 }

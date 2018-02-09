@@ -7,5 +7,6 @@
         <file>src/GamePage.qml</file>
         <file>src/InputRemappingPage.qml</file>
         <file>src/SystemListView.qml</file>
+        <file>src/HeaderBar.qml</file>
     </qresource>
 </RCC>

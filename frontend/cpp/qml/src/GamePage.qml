@@ -8,7 +8,11 @@ Rectangle {
     color: "black"
 
     Component.onDestruction: {
+        if (root.visibility === ApplicationWindow.FullScreen) {
+            root.visibility = ApplicationWindow.Windowed
+        }
         root.title = "Phoenix"
+        rootStackView.setCurrentItem(rootPage)
     }
 
     EmulationVideoScreen {
@@ -36,15 +40,6 @@ Rectangle {
 
             RowLayout {
                 anchors.fill: parent
-                Button {
-                    text: qsTr("Quit!")
-                    onClicked: {
-                        if (root.visibility === ApplicationWindow.FullScreen) {
-                            root.visibility = ApplicationWindow.Windowed
-                        }
-                        rootStackView.pop()
-                    }
-                }
 
                 Button {
                     text: qsTr("Pause")

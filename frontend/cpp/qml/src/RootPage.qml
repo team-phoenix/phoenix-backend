@@ -8,41 +8,6 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        Rectangle {
-            id: headerBar
-            Layout.fillWidth: true
-            height: 50
-            color: "cyan"
-
-            FileDialog {
-                id: findGameDialog
-                selectFolder: false
-                selectMultiple: true
-                onAccepted: {
-                    globalGameMetadataModel.importGames(findGameDialog.fileUrls)
-                }
-            }
-
-            RowLayout {
-                anchors.centerIn: parent
-
-                Button {
-                    text: qsTr("Add Game")
-                    onClicked: {
-                        console.log("cli")
-                        findGameDialog.open()
-                    }
-                }
-
-                Button {
-                    text: qsTr("Remap Input")
-                    onClicked: {
-                        rootStackView.push(inputRemappingPage)
-                    }
-                }
-            }
-        }
-
         RowLayout {
 
             Layout.fillHeight: true
@@ -50,12 +15,48 @@ Item {
 
             spacing: 0
 
-            SystemListView {
-                id: systemListView
+            ColumnLayout {
                 Layout.fillHeight: true
-
                 width: 200
+                spacing: 0
+
+                SystemListView {
+                    id: systemListView
+                    Layout.fillHeight: true
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                    }
+                }
+
+                Rectangle {
+                    color: "violet"
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                    }
+                    height: 75
+
+                    FileDialog {
+                        id: findGameDialog
+                        selectFolder: false
+                        selectMultiple: true
+                        onAccepted: {
+                            globalGameMetadataModel.importGames(findGameDialog.fileUrls)
+                        }
+                    }
+
+                    Button {
+                        anchors.centerIn: parent
+                        text: qsTr("Add Game")
+                        onClicked: {
+                            console.log("cli")
+                            findGameDialog.open()
+                        }
+                    }
+                }
             }
+
             GameListView {
                 id: gameListView
                 Layout.fillHeight: true
