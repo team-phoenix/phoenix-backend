@@ -29,7 +29,7 @@ public:
 
   size_t read(char* object, size_t size);
 
-  size_t readToShortArray(qint16* dest, size_t size)
+  size_t readFramesToShortArray(qint16* dest, size_t size)
   {
     return read(reinterpret_cast<char*>(dest), size * sizeof(qint16));
   }
