@@ -5,7 +5,7 @@
 CircularChunkBuffer::CircularChunkBuffer(size_t size)
   : m_head(0),
     m_tail(0),
-    m_size(size)
+    m_size(size + 1)
 {
   m_buffer = new char[m_size];
 }
