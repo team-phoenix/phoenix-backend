@@ -42,6 +42,12 @@ size_t CircularChunkBuffer::write(const char* data, size_t size)
   return wrote;
 }
 
+size_t CircularChunkBuffer::writeFramesFromShortArray(const qint16* src, size_t frames,
+                                                      int channelCount)
+{
+  return write(reinterpret_cast<const char*>(src), frames * sizeof(qint16) * channelCount);
+}
+
 size_t CircularChunkBuffer::read(char* data, size_t size)
 {
   size_t read = 0;

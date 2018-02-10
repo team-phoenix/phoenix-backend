@@ -25,8 +25,14 @@ public:
 
   size_t write(const char* data, size_t size);
 
+  size_t writeFramesFromShortArray(const qint16* src, size_t frames, int channelCount = 2);
+
   size_t read(char* object, size_t size);
 
+  size_t readToShortArray(qint16* dest, size_t size)
+  {
+    return read(reinterpret_cast<char*>(dest), size * sizeof(qint16));
+  }
 
   size_t size() const;
 

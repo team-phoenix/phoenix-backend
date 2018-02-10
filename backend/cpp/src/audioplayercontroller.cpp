@@ -28,9 +28,9 @@ void AudioController::setSampleRate(double sampleRate)
   audioPlayer.init(sampleRate);
 }
 
-void AudioController::write(const char* data, size_t frames)
+void AudioController::writeFramesFromShortArray(const qint16* data, size_t frames)
 {
-  ringBuffer.write(data, frames);
+  ringBuffer.writeFramesFromShortArray(data, frames);
 }
 
 bool AudioController::isListening() const

@@ -219,7 +219,7 @@ public:
       instance().audioController.play();
     }
 
-    instance().audioController.write(reinterpret_cast<const char*>(data), frames * sizeof(int16_t) * 2);
+    instance().audioController.writeFramesFromShortArray(data, frames);
     return frames;
   }
 

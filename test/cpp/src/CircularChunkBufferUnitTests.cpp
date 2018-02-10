@@ -7,12 +7,8 @@ SCENARIO("CircularChunkBufferUnitTests")
 {
   GIVEN("a real subject") {
 
-    const QVector<char> src = { 0, 0, 1, 2, 4, 8 };
+    const QVector<char> src = {1, 2, 4, 8};
     QVector<char> dest(src.size());
-
-    const QVector<qint16> shortSrc = { 3, 6, 9, 27, 89, 0};
-
-    REQUIRE(shortSrc.size() == src.size());
 
     CircularChunkBuffer subject(src.size());
 

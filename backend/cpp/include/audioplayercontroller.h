@@ -14,7 +14,7 @@ public:
   void stop();
 
   void setSampleRate(double sampleRate);
-  void write(const char* data, size_t frames);
+  void writeFramesFromShortArray(const qint16* data, size_t frames);
 
   bool isListening() const;
 
