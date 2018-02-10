@@ -40,6 +40,8 @@ void AudioPlayer::init(double sampleRate)
   audioFormat.setByteOrder(QAudioFormat::LittleEndian);
   audioFormat.setSampleType(QAudioFormat::SignedInt);
 
+  audioResampler.init(audioFormat.channelCount());
+
   QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
 
   if (!info.isFormatSupported(audioFormat)) {
@@ -88,6 +90,11 @@ void AudioPlayer::onPushModeTimeout()
     --chunks;
   }
 
+}
+
+const AudioResampler &AudioPlayer::getAudioResampler() const
+{
+  return this->audioResampler;
 }
 
 void AudioPlayer::printUsefulTimingStatements()

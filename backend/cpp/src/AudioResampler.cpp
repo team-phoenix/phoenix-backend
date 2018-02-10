@@ -19,7 +19,7 @@ void AudioResampler::resample(SRC_DATA* srcData)
   checkForError(error);
 }
 
-SRC_STATE* AudioResampler::getSrcState()
+SRC_STATE* AudioResampler::getSrcState() const
 {
   return srcState;
 }

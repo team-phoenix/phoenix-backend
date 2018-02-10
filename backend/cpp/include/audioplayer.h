@@ -27,6 +27,10 @@ private slots:
   void onAudioStateChanged(QAudio::State state);
   void onPushModeTimeout();
 
+  // Test case getters
+public:
+  const AudioResampler &getAudioResampler() const;
+
 private:
   QAudioOutput* audioOutput{nullptr};
   QIODevice* ioOutput{nullptr};

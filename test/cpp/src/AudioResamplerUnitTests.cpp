@@ -7,20 +7,21 @@
 SCENARIO("AudioResampler")
 {
   GIVEN("a subject") {
-    AudioResampler audioResampler;
+    AudioResampler subject;
 
-    REQUIRE(audioResampler.getSrcState() == nullptr);
+    REQUIRE(subject.getSrcState() == nullptr);
 
     WHEN("init() is called with a valid channel count") {
       const int channelCount = 2;
-      audioResampler.init(channelCount);
+      subject.init(channelCount);
 
-      REQUIRE(audioResampler.getSrcState() != nullptr);
+      REQUIRE(subject.getSrcState() != nullptr);
     }
 
     WHEN("init() is called with an invalid channel count it should throw") {
       const int channelCount = 999999;
-      REQUIRE_THROWS_AS(audioResampler.init(channelCount), std::runtime_error);
+      REQUIRE_THROWS_AS(subject.init(channelCount), std::runtime_error);
     }
+
   }
 }

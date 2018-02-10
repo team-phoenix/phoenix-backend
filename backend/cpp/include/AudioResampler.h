@@ -14,7 +14,7 @@ public:
 
 public:
 
-  SRC_STATE* getSrcState();
+  SRC_STATE* getSrcState() const ;
 
 private:
   SRC_STATE* srcState{ nullptr };
