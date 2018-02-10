@@ -39,5 +39,6 @@ private:
 
 private:
   QAudioFormat getWavAudioFormat();
+  void printUsefulTimingStatements();
 //  AudioSource audioSource;
 };

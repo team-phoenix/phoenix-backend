@@ -70,7 +70,8 @@ void AudioPlayer::onPushModeTimeout()
 
   int chunks = bytesFree / periodSize;
 
-//  qDebug() << size << sizeDeviation << sizeRatio << circularChunkBuffer->capacity();
+  // Call printUsefulTimingStatements here for debug info
+//  printUsefulTimingStatements();
 
   while (chunks) {
 
@@ -87,4 +88,11 @@ void AudioPlayer::onPushModeTimeout()
     --chunks;
   }
 
+}
+
+void AudioPlayer::printUsefulTimingStatements()
+{
+  const qreal chunkBufferRemainingRatio =  circularChunkBuffer->size() / static_cast<qreal>
+                                           (circularChunkBuffer->capacity());
+  qDebug() << chunkBufferRemainingRatio * 100.0 << "%";
 }
