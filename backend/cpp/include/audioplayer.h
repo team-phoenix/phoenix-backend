@@ -1,7 +1,7 @@
 #pragma once
 
 #include "circularchunkbuffer.h"
-#include <samplerate.h>
+#include "AudioResampler.h"
 
 #include <QObject>
 #include <QAudioFormat>
@@ -36,6 +36,7 @@ private:
 
   CircularChunkBuffer* circularChunkBuffer;
   QAudioFormat audioFormat;
+  AudioResampler audioResampler;
 
 private:
   QAudioFormat getWavAudioFormat();
