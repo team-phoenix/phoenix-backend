@@ -18,6 +18,7 @@ GameImporter::GameImporter(QObject* parent)
     qDebug() << "import progress" << progress;
   });
   connect(&importer, &Importer::importCompleted, this, &GameImporter::updateModel);
+  connect(&importer, &Importer::gameRemoved, this, &GameImporter::updateModel);
   connect(this, &GameImporter::updateModel, this, [] {qDebug() << "should update model now";});
 
   importer.moveToThread(&importerThread);

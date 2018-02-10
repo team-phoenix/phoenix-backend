@@ -62,4 +62,5 @@ void Importer::importFiles(QList<QUrl> files)
 void Importer::removeGameBySha1(QString sha1)
 {
   libraryDb.removeBySha1(sha1);
+  emit gameRemoved();
 }

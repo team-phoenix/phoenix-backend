@@ -3,6 +3,8 @@
 #include "librarydb.h"
 #include "tempdbsession.h"
 
+#include <QSignalSpy>
+
 static void insertSystemIntoMap(LibraryDb &libraryDb, QString fullSystemName, QString coreName,
                                 bool isDefault)
 {
@@ -178,10 +180,21 @@ SCENARIO("GameMetadataModel")
 
       REQUIRE(subject.rowCount() == 2);
 
+      QSignalSpy spyRowsInserted(&subject, &GameMetadataModel::rowsInserted);
+
       THEN("the games cache is reduced by one") {
         subject.removeGameAt(0);
-        subject.forceUpdate();
+        spyRowsInserted.wait();
+
         REQUIRE(subject.rowCount() == 1);
+        REQUIRE(spyRowsInserted.count() == 1);
+
+        const QVariantList spyArgs = spyRowsInserted.takeFirst();
+        const int firstRowIndex = spyArgs.at(1).toInt();
+        const int lastRowIndex = spyArgs.at(2).toInt();
+
+        REQUIRE(firstRowIndex == 0);
+        REQUIRE(lastRowIndex == 0);
       }
     }
 

@@ -20,6 +20,7 @@ public slots:
 signals:
   void importProgressChanged(qreal progress);
   void importCompleted();
+  void gameRemoved();
 
 private:
   LibraryDb libraryDb;
