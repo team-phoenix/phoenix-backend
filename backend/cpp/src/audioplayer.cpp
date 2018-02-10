@@ -1,4 +1,5 @@
 #include "audioplayer.h"
+#include "logging.h"
 
 #include <QDebug>
 #include <QFile>
@@ -21,7 +22,6 @@ void AudioPlayer::play()
   ioOutput = audioOutput->start();
   currentChunk = QByteArray(audioOutput->bufferSize(), 0x0);
 
-  qDebug() << "BUF SIZE" << audioOutput->bufferSize();
   ioTimer.setInterval(0);
   ioTimer.start();
 }
@@ -53,7 +53,7 @@ void AudioPlayer::init(double sampleRate)
 
 void AudioPlayer::onAudioStateChanged(QAudio::State state)
 {
-  qDebug() << "state:" << state << audioOutput->error();
+  qCDebug(phxAudioOutput) << state << audioOutput->error();
 
   if (state == QAudio::IdleState) {
     if (audioOutput->error() == QAudio::UnderrunError) {
@@ -65,8 +65,8 @@ void AudioPlayer::onAudioStateChanged(QAudio::State state)
 void AudioPlayer::onPushModeTimeout()
 {
 
-  int periodSize = audioOutput->periodSize();
-  int bytesFree = audioOutput->bytesFree();
+  const int periodSize = audioOutput->periodSize();
+  const int bytesFree = audioOutput->bytesFree();
 
   int chunks = bytesFree / periodSize;
 
