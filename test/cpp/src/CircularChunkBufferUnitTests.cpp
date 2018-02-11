@@ -12,10 +12,9 @@ SCENARIO("CircularChunkBufferUnitTests")
 
     CircularChunkBuffer subject(src.size());
 
-    THEN("There is always one more element is the circular buffer than created with") {
-      REQUIRE(subject.capacity() == src.size() + 1);
+    THEN("The capacity is equal to the set size") {
+      REQUIRE(subject.capacity() == src.size());
     }
-
 
     WHEN("write() is called on the src buffer") {
 
@@ -25,6 +24,29 @@ SCENARIO("CircularChunkBufferUnitTests")
         REQUIRE(wrote == src.size());
         REQUIRE(subject.size() == wrote);
       }
+    }
+
+    WHEN("") {
+      char a[2] = {1, 1};
+      subject.write(a, 2);
+
+      REQUIRE(subject.size() == 2);
+
+      qint16 b = 0;
+      int wrote = subject.readFramesToShortArray(&b, 1);
+
+      REQUIRE(subject.size() == 0);
+      REQUIRE(wrote == 2);
+
+      REQUIRE(subject.writeFramesFromShortArray(&b, 1, 1) == 2);
+      char c[2] = {0, 0};
+
+      REQUIRE(subject.read(c, 2) == 2);
+
+      REQUIRE(c[0] == a[0]);
+      REQUIRE(c[1] == a[1]);
+
+
     }
 
     WHEN("read() is called without writting anything to the buffer") {

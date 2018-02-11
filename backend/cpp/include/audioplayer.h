@@ -16,6 +16,7 @@ public:
   explicit AudioPlayer(QObject* parent = nullptr);
 
   void setRingBuffer(CircularChunkBuffer* ringBuffer);
+
 signals:
 
 public slots:

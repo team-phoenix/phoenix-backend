@@ -92,7 +92,7 @@ size_t CircularChunkBuffer::size() const
 
 size_t CircularChunkBuffer::capacity() const
 {
-  return m_size;
+  return m_size - 1;
 }
 
 void CircularChunkBuffer::clear()

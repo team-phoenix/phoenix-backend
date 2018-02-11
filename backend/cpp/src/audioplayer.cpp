@@ -40,15 +40,19 @@ void AudioPlayer::init(double sampleRate)
   audioFormat.setByteOrder(QAudioFormat::LittleEndian);
   audioFormat.setSampleType(QAudioFormat::SignedInt);
 
-  audioResampler.init(audioFormat.channelCount());
+  const int bufferSize = 1024 * 60;
+  audioResampler.init(audioFormat, bufferSize);
 
   QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
 
-  if (!info.isFormatSupported(audioFormat)) {
+  const QAudioFormat outputAudioFormat = audioFormat; /*audioResampler.getOutputAudioFormat();*/
+
+  if (!info.isFormatSupported(outputAudioFormat)) {
     qFatal("Raw audio format not supported by backend, cannot play audio.");
+    throw std::runtime_error("Raw audio format not supported by backend, cannot play audio.");
   }
 
-  audioOutput = new QAudioOutput(audioFormat, this);
+  audioOutput = new QAudioOutput(outputAudioFormat, this);
 
   connect(audioOutput, &QAudioOutput::stateChanged, this, &AudioPlayer::onAudioStateChanged);
 }
@@ -77,6 +81,7 @@ void AudioPlayer::onPushModeTimeout()
 
   while (chunks) {
 
+//    const qint64 len  = audioResampler.resample(*circularChunkBuffer, currentChunk, periodSize);
     const qint64 len = circularChunkBuffer->read(currentChunk.data(), periodSize);
 
     if (len) {
