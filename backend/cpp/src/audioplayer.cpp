@@ -6,10 +6,13 @@
 #include <QThread>
 
 AudioPlayer::AudioPlayer(QObject* parent) : QObject(parent),
-  ioTimer(this)
+  audioTimer(this)
 {
-  ioTimer.setTimerType(Qt::PreciseTimer);
-  connect(&ioTimer, &QTimer::timeout, this, &AudioPlayer::onPushModeTimeout);
+  audioTimer.setTimerType(Qt::PreciseTimer);
+  audioTimer.setInterval(0);
+
+  currentChunk.fill('\0');
+  connect(&audioTimer, &QTimer::timeout, this, &AudioPlayer::onPushModeTimeout);
 }
 
 void AudioPlayer::setRingBuffer(CircularChunkBuffer* ringBuffer)
@@ -20,15 +23,14 @@ void AudioPlayer::setRingBuffer(CircularChunkBuffer* ringBuffer)
 void AudioPlayer::play()
 {
   ioOutput = audioOutput->start();
-  currentChunk = QByteArray(audioOutput->bufferSize(), 0x0);
+  audioTimer.start();
 
-  ioTimer.setInterval(0);
-  ioTimer.start();
+  qCDebug(phxAudioOutput) << "The audio output buffer size is" << audioOutput->bufferSize();
 }
 
 void AudioPlayer::stop()
 {
-  ioTimer.stop();
+  audioOutput->stop();
 }
 
 void AudioPlayer::init(double sampleRate)
@@ -41,7 +43,6 @@ void AudioPlayer::init(double sampleRate)
   audioFormat.setSampleType(QAudioFormat::SignedInt);
 
   const int bufferSize = 1024 * 60;
-  audioResampler.init(audioFormat, bufferSize);
 
   QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
 
@@ -61,27 +62,33 @@ void AudioPlayer::onAudioStateChanged(QAudio::State state)
 {
   qCDebug(phxAudioOutput) << state << audioOutput->error();
 
-  if (state == QAudio::IdleState) {
-    if (audioOutput->error() == QAudio::UnderrunError) {
 
-    }
-  }
+//  if (state == QAudio::IdleState) {
+
+//  } else if (state == QAudio::StoppedState) {
+//    circularChunkBuffer->clear();
+//    ioOutput = audioOutput->start();
+//  }
 }
 
 void AudioPlayer::onPushModeTimeout()
 {
 
-  const int periodSize = audioOutput->periodSize();
+  const size_t periodSize = audioOutput->periodSize();
   const int bytesFree = audioOutput->bytesFree();
 
   int chunks = bytesFree / periodSize;
 
   // Call printUsefulTimingStatements here for debug info
+
+//  if (periodSize > circularChunkBuffer->size()) {
+//    return;
+//  }
+
 //  printUsefulTimingStatements();
 
   while (chunks) {
 
-//    const qint64 len  = audioResampler.resample(*circularChunkBuffer, currentChunk, periodSize);
     const qint64 len = circularChunkBuffer->read(currentChunk.data(), periodSize);
 
     if (len) {
@@ -97,14 +104,10 @@ void AudioPlayer::onPushModeTimeout()
 
 }
 
-const AudioResampler &AudioPlayer::getAudioResampler() const
-{
-  return this->audioResampler;
-}
-
 void AudioPlayer::printUsefulTimingStatements()
 {
   const qreal chunkBufferRemainingRatio =  circularChunkBuffer->size() / static_cast<qreal>
                                            (circularChunkBuffer->capacity());
+
   qDebug() << chunkBufferRemainingRatio * 100.0 << "%";
 }

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "circularchunkbuffer.h"
-#include "AudioResampler.h"
 
 #include <QObject>
 #include <QAudioFormat>
 #include <QAudioOutput>
 #include <QIODevice>
 #include <QTimer>
+
+#include <array>
 
 class AudioPlayer : public QObject
 {
@@ -18,6 +19,8 @@ public:
   void setRingBuffer(CircularChunkBuffer* ringBuffer);
 
 signals:
+  void audioBufferMayOverrun();
+  void audioBufferWillUnderflow();
 
 public slots:
   void play();
@@ -28,20 +31,23 @@ private slots:
   void onAudioStateChanged(QAudio::State state);
   void onPushModeTimeout();
 
-  // Test case getters
-public:
-  const AudioResampler &getAudioResampler() const;
-
 private:
   QAudioOutput* audioOutput{nullptr};
   QIODevice* ioOutput{nullptr};
 
-  QTimer ioTimer;
-  QByteArray currentChunk;
+  std::array<char, 1024 * 30> currentChunk;
 
   CircularChunkBuffer* circularChunkBuffer;
   QAudioFormat audioFormat;
-  AudioResampler audioResampler;
+
+  bool trendingUpwards{ false };
+  bool trendingDownwards{ false };
+  bool passedHalfwayMark{ false };
+  bool passedThirdQuarterMark{ false };
+  bool passedFirstQuarterMark{ false };
+
+  qint64 underrunCount{ 0 };
+  QTimer audioTimer;
 
 private:
   QAudioFormat getWavAudioFormat();

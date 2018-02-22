@@ -58,7 +58,7 @@ size_t CircularChunkBuffer::read(char* data, size_t size)
     head = m_head.load(std::memory_order_acquire);
 
     if (tail == head) {
-//      qDebug() << "overrun detected";
+      qDebug() << "overrun detected";
       break;
     }
 

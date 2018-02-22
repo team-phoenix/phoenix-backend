@@ -4,11 +4,13 @@
 #include "circularchunkbuffer.h"
 
 #include <QThread>
+#include <QObject>
 
-class AudioController
+class AudioController : public QObject
 {
+  Q_OBJECT
 public:
-  AudioController();
+  explicit AudioController(QObject* parent = nullptr);
 
   void play();
   void stop();

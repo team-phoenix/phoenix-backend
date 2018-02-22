@@ -21,7 +21,7 @@ EmulationVideoScreen::EmulationVideoScreen(QQuickItem* parent)
     qDebug() << "start reading frames";
 
     QTimer* timer = new QTimer(this);
-    timer->setInterval(16);
+    timer->setInterval(0);
 
     connect(timer, &QTimer::timeout, this, [this] {
       sharedMemoryListener.fillVideoFrame(currentVideoFrame, currentVideoInfo.pixelFormat);
@@ -69,6 +69,7 @@ QSGNode* EmulationVideoScreen::updatePaintNode(QSGNode* node, QQuickItem::Update
   textureNode->setTexture(sgTexture);
   textureNode->setRect(rect);
   textureNode->setFiltering(QSGTexture::Nearest);
+  textureNode->setOwnsTexture(true);
 
   return textureNode;
 }

@@ -4,6 +4,8 @@
 #include "restServer.hpp"
 #include "logging.h"
 
+#include "SuperTimer.h"
+
 #include <QObject>
 #include <QTimer>
 
@@ -26,7 +28,7 @@ public:
   {
     connect(&messageServer, &RestServer::requestRecieved, this, &EmulationLoop::parseRequest);
     connect(&messageServer, &RestServer::socketDisconnected, this, &EmulationLoop::stopTimer);
-    connect(&emulationTimer, &QTimer::timeout, this, &EmulationLoop::loop);
+    connect(&emulationTimer, &SuperTimer::timeout, this, &EmulationLoop::loop);
 
     connect(&standbyModeTimer, &QTimer::timeout, this, &EmulationLoop::pollInputManager);
   }
@@ -60,11 +62,10 @@ public:
     qCDebug(phxLoop) << "The standbyMode timer has stopped";
   }
 
-  void startTimerWithInterval(int miliseconds)
+  void startTimerWithFPS(qreal miliseconds)
   {
     stopTimer();
-    emulationTimer.setTimerType(Qt::PreciseTimer);
-    emulationTimer.setInterval(miliseconds);
+    emulationTimer.setTargetFPS(miliseconds);
     startTimer();
   }
 
@@ -73,6 +74,7 @@ public:
 private:
   LoopState looperState{ Standby };
   CoreController::SystemInfo cachedInitSystemInfo;
+  qreal targetFPS{ 0.0 };
 
 private slots:
 
@@ -111,11 +113,13 @@ private slots:
 
         cachedInitSystemInfo = CoreController::instance().init(corePath,
                                                                gamePath);
+
+        targetFPS = cachedInitSystemInfo.avInfo.timing.fps;
         looperState = Initialized;
 
         messageServer.sendInitReply(cachedInitSystemInfo);
 
-        qCDebug(phxLoop) << "initialized emulation";
+        qCDebug(phxLoop) << "initialized emulation at" << targetFPS << "fps";
       } else {
         qCDebug(phxLoop) << "The emulator is already initialized, rejecting initialize request";
         messageServer.sendInitReply(cachedInitSystemInfo);
@@ -128,8 +132,7 @@ private slots:
         qCDebug(phxLoop) << "started emulation";
 
         looperState = Playing;
-        const int miliseconds = 16;
-        startTimerWithInterval(miliseconds);
+        startTimerWithFPS(targetFPS);
 
       } else if (looperState == Paused) {
         qCDebug(phxLoop) << "The paused game will resume playing...";
@@ -156,6 +159,6 @@ private slots:
 
 private:
   RestServer messageServer;
-  QTimer emulationTimer;
+  SuperTimer emulationTimer;
   QTimer standbyModeTimer;
 };

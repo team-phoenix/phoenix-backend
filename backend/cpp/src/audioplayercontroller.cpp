@@ -2,7 +2,8 @@
 
 #include <QDebug>
 
-AudioController::AudioController()
+AudioController::AudioController(QObject* parent)
+  : QObject(parent)
 {
   audioPlayer.setRingBuffer(&ringBuffer);
 }
