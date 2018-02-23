@@ -3,71 +3,55 @@ import qbs.File
 import "utilities.qbs" as CommonPaths
 
 QtApplication {
-    id: app;
+    id: app
     name: "backend"
 
     property stringList commonPaths: {
-        var paths = [];
+        var paths = []
 
-        if ( qbs.targetOS.contains( "linux" ) ) {
-            paths.push( "/usr/lib/x86_64-linux-gnu/" )
-        } else if ( qbs.targetOS.contains( "windows" ) ) {
-            paths.push( "C:/msys64/mingw64/include" )
+        if (qbs.targetOS.contains("linux")) {
+            paths.push("/usr/lib/x86_64-linux-gnu/")
+        } else if (qbs.targetOS.contains("windows")) {
+            paths.push("C:/msys64/mingw64/include")
         }
 
-        return paths;
-
+        return paths
     }
 
-    Depends { name: "Qt"; submodules: ["core", "multimedia", "gui"] }
+    Depends {
+        name: "Qt"
+        submodules: ["core", "multimedia", "gui"]
+    }
 
     cpp.includePaths: {
-        var dirs = [];
-        dirs.push( "cpp/include")
-//        dirs.push( "../backend/cpp/include/input" )
-//        dirs.push( "../backend/cpp/include/audio" )
+        var dirs = []
+        dirs.push("src")
 
-
-        if ( qbs.targetOS.contains( "windows" ) ) {
-            dirs.push( "C:/msys64/mingw64/include/SDL2" );
+        if (qbs.targetOS.contains("windows")) {
+            dirs.push("C:/msys64/mingw64/include/SDL2")
         }
 
-        return dirs;
+        return dirs
     }
 
-    cpp.cxxLanguageVersion: "c++14";
-    cpp.dynamicLibraries: [ "mingw32", "SDL2main", "SDL2" ]
-    cpp.staticLibraries: [ "samplerate" ]
+    cpp.cxxLanguageVersion: "c++14"
+    cpp.dynamicLibraries: ["mingw32", "SDL2main", "SDL2"]
     cpp.libraryPaths: {
         var paths = []
 
-        if ( qbs.targetOS.contains( "windows" ) ) {
-            paths.push( "C:/msys64/mingw64/lib/" )
+        if (qbs.targetOS.contains("windows")) {
+            paths.push("C:/msys64/mingw64/lib/")
         }
 
-        return paths;
+        return paths
     }
 
     files: {
 
-        var headers = [
-                    "cpp/include/*.hpp",
-                    "cpp/include/*.h",
-//                    "cpp/include/audio/*.h",
-//                    "cpp/include/input/*.h",
-                ]
+        var headers = ["src/*.hpp", "src/*.h"]
 
-        var sources = [
-                    "cpp/src/*.cpp",
-//                    "cpp/src/audio/*.cpp",
-//                    "cpp/src/input/*.cpp",
-                    "cpp/src/main/*.cpp",
-                    "cpp/src/logging.cpp",
+        var sources = ["src/*.cpp", "src/main/*.cpp", "src/logging.cpp", "../externals/sdl_gamecontrollerdb/*.qrc"]
 
-                    "../externals/sdl_gamecontrollerdb/*.qrc",
-                ]
-
-        return headers.concat( sources ).concat( commonPaths )
+        return headers.concat(sources).concat(commonPaths)
     }
-
 }

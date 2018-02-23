@@ -1,16 +1,6 @@
-include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include)
-include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include/input )
-include_directories( ${CMAKE_CURRENT_LIST_DIR}/../cpp/include/audio )
-
 ##
 ## Externals
 ##
-
-find_package( Libsamplerate REQUIRED )
-if( LIBSAMPLERATE_FOUND )
-        include_directories( ${LIBSAMPLERATE_INCLUDE_DIR} )
-        target_link_libraries( ${PROJECT_NAME} ${LIBSAMPLERATE_LIBRARY} )
-endif()
 
 find_package( SDL2 REQUIRED )
 if( SDL2_FOUND )
@@ -24,6 +14,5 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed and rcc.
 set_target_properties( ${PROJECT_NAME} PROPERTIES AUTOMOC ON AUTORCC ON )
 
-
-find_package( Qt5 REQUIRED COMPONENTS Core Multimedia Gui Test )
-target_link_libraries( ${PROJECT_NAME} Qt5::Core Qt5::Multimedia Qt5::Gui Qt5::Test )
+find_package( Qt5 REQUIRED COMPONENTS Core Multimedia Gui )
+target_link_libraries( ${PROJECT_NAME} Qt5::Core Qt5::Multimedia Qt5::Gui )
