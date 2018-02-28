@@ -1,5 +1,5 @@
 #include "gameimporter.h"
-#include "logging.h"
+#include "logger.h"
 
 #include <QCryptographicHash>
 #include <QFile>

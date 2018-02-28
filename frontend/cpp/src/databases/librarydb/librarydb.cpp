@@ -1,6 +1,6 @@
 
 #include "librarydb.h"
-#include "logging.h"
+#include "logger.h"
 
 #include <QCoreApplication>
 #include <QStringBuilder>
