@@ -2,7 +2,7 @@ import qbs
 
 QtApplication {
     id: app
-    name: "backend"
+    name: "app-backend"
 
     files: ["src/main.cpp"]
 
